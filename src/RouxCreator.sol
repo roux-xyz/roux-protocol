@@ -24,6 +24,8 @@ contract RouxCreator is IRouxCreator, ERC1155 {
 
     address internal _owner;
 
+    address internal _creator;
+
     uint256 internal _tokenIds;
 
     mapping(uint256 => TokenData) internal _tokens;
@@ -48,11 +50,16 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         (address owner_) = abi.decode(params, (address));
 
         _owner = owner_;
+        _creator = owner_;
     }
 
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
+
+    function creator() external view returns (address) {
+        return _creator;
+    }
 
     function owner() external view returns (address) {
         return _owner;
