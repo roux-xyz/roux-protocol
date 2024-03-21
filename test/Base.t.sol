@@ -7,6 +7,13 @@ import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { RouxCreator } from "src/RouxCreator.sol";
 import { RouxCreatorFactory } from "src/RouxCreatorFactory.sol";
 
+import { ERC6551Account } from "src/ERC6551Account.sol";
+import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
+
+import { ICollection } from "src/interfaces/ICollection.sol";
+import { Collection } from "src/Collection.sol";
+import { CollectionFactory } from "src/CollectionFactory.sol";
+
 import "./Constants.t.sol";
 
 /**
@@ -43,6 +50,13 @@ abstract contract BaseTest is Test {
     IRouxCreator internal creatorImpl;
     IRouxCreator internal creator;
     RouxCreatorFactory internal factory;
+
+    ERC6551Registry internal erc6551Registry;
+    ERC6551Account internal accountImpl;
+    ICollection internal collectionImpl;
+    ICollection internal collection;
+    CollectionFactory internal collectionFactory;
+
     Users internal users;
 
     /* -------------------------------------------- */
@@ -70,19 +84,41 @@ abstract contract BaseTest is Test {
         creatorImpl = new RouxCreator();
         factory = new RouxCreatorFactory(address(creatorImpl));
 
+        /* tokenbound deployments */
+        erc6551Registry = new ERC6551Registry();
+        accountImpl = new ERC6551Account(address(erc6551Registry));
+
+        /* collection deployments */
+        collectionImpl = new Collection(address(erc6551Registry), address(accountImpl));
+        collectionFactory = new CollectionFactory(address(collectionImpl));
+
         vm.stopPrank();
 
         /* creator */
         vm.startPrank(users.creator_0);
 
         /* encode params */
-        bytes memory params = abi.encode(address(users.creator_0));
+        bytes memory rouxCreatorParams = abi.encode(address(users.creator_0));
 
         /* create token instance */
-        creator = RouxCreator(factory.create(params));
+        creator = RouxCreator(factory.create(rouxCreatorParams));
 
         /* add token */
         creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, TEST_TOKEN_URI);
+
+        /* create target array for collection */
+        address[] memory collectionItemTargets = new address[](1);
+        collectionItemTargets[0] = address(creator);
+
+        /* create token id array for collection */
+        uint256[] memory collectionItemIds = new uint256[](1);
+        collectionItemIds[0] = 1;
+
+        /* encode collection params */
+        bytes memory collectionParams = abi.encode(address(users.creator_0), collectionItemTargets, collectionItemIds);
+
+        /* create collection instance */
+        collection = Collection(collectionFactory.create(collectionParams));
 
         vm.stopPrank();
     }
