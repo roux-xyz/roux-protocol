@@ -10,6 +10,8 @@ interface ICollection is IERC721 {
 
     error OnlyOwner();
 
+    error InvalidItems();
+
     /* -------------------------------------------- */
     /* events                                       */
     /* -------------------------------------------- */

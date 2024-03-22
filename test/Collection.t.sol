@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 import { BaseTest } from "./Base.t.sol";
 
 import { ERC6551Account } from "src/ERC6551Account.sol";
+import { ICollection } from "src/interfaces/ICollection.sol";
 import { Collection } from "src/Collection.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 
@@ -14,6 +15,48 @@ contract CollectionTest is BaseTest {
 
     function setUp() public virtual override {
         BaseTest.setUp();
+    }
+
+    function test__RevertWhen_InvalidItems_ZeroAddress() external {
+        address[] memory collectionItemTargets = new address[](1);
+        collectionItemTargets[0] = address(0);
+
+        uint256[] memory collectionItemIds = new uint256[](1);
+        collectionItemIds[0] = 1;
+
+        vm.prank(users.creator_0);
+        vm.expectRevert(ICollection.InvalidItems.selector);
+        Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
+    }
+
+    function test__RevertWhen_InvalidItems_LengthMismatch() external {
+        address[] memory collectionItemTargets = new address[](2);
+        collectionItemTargets[0] = address(users.creator_0);
+        collectionItemTargets[1] = address(users.creator_0);
+
+        uint256[] memory collectionItemIds = new uint256[](1);
+        collectionItemIds[0] = 1;
+
+        vm.prank(users.creator_0);
+        vm.expectRevert(ICollection.InvalidItems.selector);
+        Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
+    }
+
+    function test__RevertWhen_InvalidItems_InvalidTokenId() external {
+        /* create new item */
+        vm.startPrank(users.creator_0);
+        creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, "https://new-token-2.com");
+
+        address[] memory collectionItemTargets = new address[](2);
+        collectionItemTargets[0] = address(creator);
+        collectionItemTargets[1] = address(creator);
+
+        uint256[] memory collectionItemIds = new uint256[](2);
+        collectionItemIds[0] = 1;
+        collectionItemIds[1] = 3;
+
+        vm.expectRevert(ICollection.InvalidItems.selector);
+        Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
     }
 
     function test__MintERC1155() external {

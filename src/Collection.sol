@@ -72,6 +72,8 @@ contract Collection is ICollection, ERC721 {
 
         _owner = owner_;
 
+        _validateItems(initialItemTargets, initialItemIds);
+
         _itemTargets = initialItemTargets;
         _itemIds = initialItemIds;
     }
@@ -123,6 +125,7 @@ contract Collection is ICollection, ERC721 {
 
     function addItems(address[] memory itemTargets, uint256[] memory itemIds) external {
         if (msg.sender != _owner) revert OnlyOwner();
+        _validateItems(itemTargets, itemIds);
 
         for (uint256 i = 0; i < itemTargets.length; i++) {
             _itemTargets.push(itemTargets[i]);
@@ -148,5 +151,18 @@ contract Collection is ICollection, ERC721 {
         _itemIds.pop();
 
         emit ItemRemoved(target, id);
+    }
+
+    /* -------------------------------------------- */
+    /* internal functions                           */
+    /* -------------------------------------------- */
+
+    function _validateItems(address[] memory itemTargets, uint256[] memory itemIds) internal view {
+        if (itemTargets.length != itemIds.length) revert InvalidItems();
+
+        for (uint256 i = 0; i < itemTargets.length; i++) {
+            if (itemTargets[i] == address(0)) revert InvalidItems();
+            if (itemIds[i] == 0 || itemIds[i] > IRouxCreator(itemTargets[i]).tokenId()) revert InvalidItems();
+        }
     }
 }
