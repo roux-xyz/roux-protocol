@@ -14,7 +14,7 @@ contract CollectionFactory is ICollectionFactory {
     /* state                                        */
     /* -------------------------------------------- */
 
-    EnumerableSet.AddressSet internal _tokens;
+    EnumerableSet.AddressSet internal _collections;
     address internal _collectionImplementation;
     address internal _owner;
 
@@ -31,11 +31,11 @@ contract CollectionFactory is ICollectionFactory {
     /* -------------------------------------------- */
 
     function isCollection(address token) external view returns (bool) {
-        return _tokens.contains(token);
+        return _collections.contains(token);
     }
 
     function getCollections() external view returns (address[] memory) {
-        return _tokens.values();
+        return _collections.values();
     }
 
     /* -------------------------------------------- */
@@ -46,7 +46,7 @@ contract CollectionFactory is ICollectionFactory {
         address collectionInstance = Clones.clone(_collectionImplementation);
         Address.functionCall(collectionInstance, abi.encodeWithSignature("initialize(bytes)", params));
 
-        _tokens.add(collectionInstance);
+        _collections.add(collectionInstance);
 
         emit NewCollection(collectionInstance);
 
