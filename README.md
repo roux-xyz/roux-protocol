@@ -1,66 +1,63 @@
-## Foundry
+## Roux Protocol
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+run `foundryup`
+run `forge install` to install dependencies
 
-Foundry consists of:
+### Deployment
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+`chmod +x deployment-manager.sh`
 
-## Documentation
+`export NETWORK=<network>`
 
-https://book.getfoundry.sh/
+If local:
 
-## Usage
+run `anvil` in a different terminal window
 
-### Build
+If not local:
 
-```shell
-$ forge build
-```
+`export ${CHAIN}_RPC_URL=<chain-url>`
+`export PRIVATE_KEY=<private-key>`
 
-### Test
+`./deployment-manager.sh <command> <args>`
 
-```shell
-$ forge test
-```
+Print ABI:
+`jq '.abi' ./out/<Contract>.sol/<Contract>.json`
 
-### Format
+### erc6551 registry
 
-```shell
-$ forge fmt
-```
+`0x000000006551c19487814612e58FE06813775758`
 
-### Gas Snapshots
+### Using cast to make calls
 
-```shell
-$ forge snapshot
-```
+**Set up Contract Address env vars**
 
-### Anvil
+1. `export $CONTRACT_FACTORY=0x...`
+2. `export $COL_FACTORY=0x...`
 
-```shell
-$ anvil
-```
+**Create RouxCreator from RouxCreatorFactory**
 
-### Deploy
+1. ABI-encode `params`: `cast abi-encode "f(address)" <ownerAddress>`
+2. Send txn: `cast send --private-key $PRIVATE_KEY --rpc-url $SEPOLIA_RPC_URL $CONTRACT_FACTORY "create(bytes)" <params>`
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+**Add Recipe Token**
 
-### Cast
+1. export contract instance created in `create` call above to env var $CREATOR
+2. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" <maxSupply> <price> <uri>`
+3. e.g. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" 10000 50000000000000000 https://test-token-creator-1.com`
 
-```shell
-$ cast <subcommand>
-```
+**Mint Recipe Token**
+_Note --value flag i.e. how much eth is being set with transaction_
 
-### Help
+1. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value <value>  $CREATOR "mint(address,uint256,uint256)" <to> <tokenId> <quantity>`
+2. e.g. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value 0.05ether  $CREATOR "mint(address,uint256,uint256)" 0xCCd88E7DFA55EA54667A52e9B54664fB21075bE5 1 1`
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+**Create Collection**
+
+1. ABI-encode `params`: `cast abi-encode "f(address,address[],uint256[])" <owner> "[<creatorAddr1>, <creatorAddr2>, ..., <creatorAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
+2. e.g. `cast abi-encode "f(address,address[],uint256[])" 0xb7e8482Db04DCaBF8b74FDbFdBCB0a743675bE9e "[0xa8f6658ecfae3e1531470efa5b00d78082c0050e]" "[1]"`
+3. `cast send --private-key $PK_CREATOR --rpc-url $SEPOLIA_RPC_URL $COL_FACTORY "create(bytes)" <params>`
+
+**Mint Collection**
+
+1. export contract instance created above to env var $COLLECTION
+2. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value 0.05ether $COLLECTION "mint()"`
