@@ -34,6 +34,12 @@ interface IRouxCreator is IERC1155 {
 
     function owner() external view returns (address);
 
+    function creator() external view returns (address);
+
+    function tokenId() external view returns (uint256);
+
+    function maxSupply(uint256 id) external view returns (uint256);
+
     function uri(uint256 id) external view returns (string memory);
 
     /* -------------------------------------------- */

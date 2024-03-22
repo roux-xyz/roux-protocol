@@ -60,6 +60,16 @@ contract CreatorTest is BaseTest {
         creator.mint{ value: 0.05 ether }(users.user_1, tokenId, 1);
     }
 
+    function test__TokenId() external {
+        assertEq(creator.tokenId(), 1);
+    }
+
+    function test__TokenId_AddToken() external {
+        vm.prank(users.creator_0);
+        creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, TEST_TOKEN_URI);
+        assertEq(creator.tokenId(), 2);
+    }
+
     function test__Owner() external {
         assertEq(creator.owner(), users.creator_0);
     }

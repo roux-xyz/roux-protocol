@@ -26,7 +26,7 @@ contract RouxCreator is IRouxCreator, ERC1155 {
 
     address internal _creator;
 
-    uint256 internal _tokenIds;
+    uint256 internal _tokenId;
 
     mapping(uint256 => TokenData) internal _tokens;
 
@@ -65,16 +65,24 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         return _owner;
     }
 
-    function totalSupply(uint256 id) public view override returns (uint256) {
-        return _tokens[id].totalSupply;
+    function tokenId() external view returns (uint256) {
+        return _tokenId;
     }
 
-    function uri(uint256 id) public view override(IRouxCreator, ERC1155) returns (string memory) {
-        return _tokens[id].uri;
+    function totalSupply(uint256 id) external view override returns (uint256) {
+        return _tokens[id].totalSupply;
     }
 
     function price(uint256 id) external view returns (uint256) {
         return _tokens[id].price;
+    }
+
+    function maxSupply(uint256 id) external view returns (uint256) {
+        return _tokens[id].maxSupply;
+    }
+
+    function uri(uint256 id) public view override(IRouxCreator, ERC1155) returns (string memory) {
+        return _tokens[id].uri;
     }
 
     /* -------------------------------------------- */
@@ -82,7 +90,7 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     function mint(address to, uint256 id, uint256 quantity) external payable {
-        if (id == 0 || id > _tokenIds) revert InvalidTokenId();
+        if (id == 0 || id > _tokenId) revert InvalidTokenId();
         if (quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
         if (msg.value < _tokens[id].price * quantity) revert InsufficientFunds();
 
@@ -91,16 +99,16 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         _mint(to, id, quantity, "");
     }
 
+    // @notice add a new token id to the contract
+    // @supply maxSupply of the token
+    function add(uint256 maxSupply_, uint256 price_, string memory tokenUri) external returns (uint256) {
+        if (msg.sender != _owner) revert OnlyOwner();
+        return _add(maxSupply_, price_, tokenUri);
+    }
+
     /* -------------------------------------------- */
     /* admin                                        */
     /* -------------------------------------------- */
-
-    // @notice add a new token id to the contract
-    // @supply maxSupply of the token
-    function add(uint256 maxSupply, uint256 price_, string memory tokenUri) external returns (uint256) {
-        if (msg.sender != _owner) revert OnlyOwner();
-        return _add(maxSupply, price_, tokenUri);
-    }
 
     function updateUri(uint256 id, string memory newUri) external {
         if (msg.sender != _owner) revert OnlyOwner();
@@ -117,12 +125,17 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         if (!success) revert TransferFailed();
     }
 
+    function updateOwner(address newOwner) external {
+        if (msg.sender != _owner) revert OnlyOwner();
+        _owner = newOwner;
+    }
+
     /* -------------------------------------------- */
     /* internal                                     */
     /* -------------------------------------------- */
 
     function _add(uint256 maxSupply, uint256 price_, string memory tokenUri) internal returns (uint256) {
-        uint256 id = ++_tokenIds;
+        uint256 id = ++_tokenId;
         _tokens[id] = TokenData({ maxSupply: maxSupply, totalSupply: 0, price: price_, uri: tokenUri });
 
         emit TokenAdded(id);
