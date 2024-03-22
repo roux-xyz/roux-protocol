@@ -8,7 +8,7 @@ interface ICollectionFactory is IFactory {
     /* events                                       */
     /* -------------------------------------------- */
 
-    event NewCollection(address instance);
+    event NewCollection(address indexed instance);
 
     /* -------------------------------------------- */
     /* view functions                               */
