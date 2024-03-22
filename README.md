@@ -1,6 +1,9 @@
 ## Roux Protocol
 
+### Setup
+
 run `foundryup`
+
 run `forge install` to install dependencies
 
 ### Deployment
@@ -9,18 +12,20 @@ run `forge install` to install dependencies
 
 `export NETWORK=<network>`
 
-If local:
+**If local:**
 
 run `anvil` in a different terminal window
 
-If not local:
+**If not local:**
 
 `export ${CHAIN}_RPC_URL=<chain-url>`
+
 `export PRIVATE_KEY=<private-key>`
 
 `./deployment-manager.sh <command> <args>`
 
-Print ABI:
+### Print ABI:
+
 `jq '.abi' ./out/<Contract>.sol/<Contract>.json`
 
 ### erc6551 registry
