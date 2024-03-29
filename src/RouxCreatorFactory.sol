@@ -16,6 +16,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     EnumerableSet.AddressSet internal _tokens;
     address internal _creatorImplementation;
     address internal _owner;
+    mapping(address => bool) internal _allowlist;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -23,6 +24,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
 
     constructor(address creatorImplementation_) {
         _creatorImplementation = creatorImplementation_;
+        _owner = msg.sender;
     }
 
     /* -------------------------------------------- */
@@ -40,8 +42,9 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
-
     function create(bytes calldata params) external returns (address) {
+        if (!_allowlist[msg.sender]) revert OnlyAllowlist();
+
         address creatorInstance = Clones.clone(_creatorImplementation);
         Address.functionCall(creatorInstance, abi.encodeWithSignature("initialize(bytes)", params));
 
@@ -50,6 +53,23 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
         emit NewCreator(creatorInstance);
 
         return creatorInstance;
+    }
+
+    /* -------------------------------------------- */
+    /* admin                                        */
+    /* -------------------------------------------- */
+
+    function addAllowlist(address[] memory accounts) external {
+        if (msg.sender != _owner) revert OnlyOwner();
+
+        for (uint256 i = 0; i < accounts.length; i++) {
+            _allowlist[accounts[i]] = true;
+        }
+    }
+
+    function removeAllowlist(address account) external {
+        if (msg.sender != _owner) revert OnlyOwner();
+        _allowlist[account] = false;
     }
 
     function updateImplementation(address newImpl) external {
