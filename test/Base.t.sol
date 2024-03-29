@@ -92,6 +92,11 @@ abstract contract BaseTest is Test {
         collectionImpl = new Collection(address(erc6551Registry), address(accountImpl));
         collectionFactory = new CollectionFactory(address(collectionImpl));
 
+        /* add creator to allowlist */
+        address[] memory allowlist = new address[](1);
+        allowlist[0] = address(users.creator_0);
+        factory.addAllowlist(allowlist);
+
         vm.stopPrank();
 
         /* creator */
