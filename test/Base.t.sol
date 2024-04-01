@@ -122,7 +122,8 @@ abstract contract BaseTest is Test {
         collectionItemIds[0] = 1;
 
         /* encode collection params */
-        bytes memory collectionParams = abi.encode(address(users.creator_0), collectionItemTargets, collectionItemIds);
+        bytes memory collectionParams =
+            abi.encode(address(users.creator_0), TEST_TOKEN_URI, collectionItemTargets, collectionItemIds);
 
         /* create collection instance */
         collection = Collection(collectionFactory.create(collectionParams));

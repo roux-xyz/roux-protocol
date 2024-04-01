@@ -18,8 +18,6 @@ interface ICollection is IERC721 {
 
     event ItemAdded(address target, uint256 itemId);
 
-    event ItemRemoved(address target, uint256 itemId);
-
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
@@ -27,6 +25,10 @@ interface ICollection is IERC721 {
     function collection() external view returns (address[] memory, uint256[] memory);
 
     function collectionPrice() external view returns (uint256);
+
+    function owner() external view returns (address);
+
+    function curator() external view returns (address);
 
     /* -------------------------------------------- */
     /* write                                        */
