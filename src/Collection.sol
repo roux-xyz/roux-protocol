@@ -33,6 +33,11 @@ contract Collection is ICollection, ERC721 {
     address internal _owner;
 
     /**
+     * @notice curator
+     */
+    address internal _curator;
+
+    /**
      * @notice array of item target addresses
      */
     address[] internal _itemTargets;
@@ -46,6 +51,11 @@ contract Collection is ICollection, ERC721 {
      * @notice token ids
      */
     uint256 internal _tokenIds;
+
+    /**
+     * @notice base uri
+     */
+    string internal _uri;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -67,10 +77,13 @@ contract Collection is ICollection, ERC721 {
         require(!_initialized, "Already initialized");
         _initialized = true;
 
-        (address owner_, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
-            abi.decode(params, (address, address[], uint256[]));
+        (address owner_, string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
+            abi.decode(params, (address, string, address[], uint256[]));
 
         _owner = owner_;
+        _curator = owner_;
+
+        _uri = baseURI;
 
         _validateItems(initialItemTargets, initialItemIds);
 
@@ -92,6 +105,18 @@ contract Collection is ICollection, ERC721 {
             price += IRouxCreator(_itemTargets[i]).price(_itemIds[i]);
         }
         return price;
+    }
+
+    function owner() external view override returns (address) {
+        return _owner;
+    }
+
+    function curator() external view override returns (address) {
+        return _curator;
+    }
+
+    function tokenURI(uint256) public view override returns (string memory) {
+        return _uri;
     }
 
     /* -------------------------------------------- */
@@ -135,24 +160,6 @@ contract Collection is ICollection, ERC721 {
         }
     }
 
-    function removeItem(uint256 index) external {
-        if (msg.sender != _owner) revert OnlyOwner();
-
-        /* cache item */
-        address target = _itemTargets[index];
-        uint256 id = _itemIds[index];
-
-        /* replace item at index with last item */
-        _itemTargets[index] = _itemTargets[_itemTargets.length - 1];
-        _itemIds[index] = _itemIds[_itemIds.length - 1];
-
-        /* pop last item */
-        _itemTargets.pop();
-        _itemIds.pop();
-
-        emit ItemRemoved(target, id);
-    }
-
     /* -------------------------------------------- */
     /* internal functions                           */
     /* -------------------------------------------- */
@@ -162,7 +169,7 @@ contract Collection is ICollection, ERC721 {
 
         for (uint256 i = 0; i < itemTargets.length; i++) {
             if (itemTargets[i] == address(0)) revert InvalidItems();
-            if (itemIds[i] == 0 || itemIds[i] > IRouxCreator(itemTargets[i]).tokenId()) revert InvalidItems();
+            if (itemIds[i] == 0 || itemIds[i] > IRouxCreator(itemTargets[i]).tokenCount()) revert InvalidItems();
         }
     }
 }

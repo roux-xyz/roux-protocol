@@ -7,6 +7,7 @@ import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { Collection } from "src/Collection.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./Constants.t.sol";
 
@@ -57,6 +58,23 @@ contract CollectionTest is BaseTest {
 
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
+    }
+
+    function test__Owner() external {
+        assertEq(collection.owner(), address(users.creator_0), "collection owner");
+    }
+
+    function test__Curator() external {
+        assertEq(collection.curator(), address(users.creator_0), "collection curator");
+    }
+
+    function test__CollectionPrice() external {
+        uint256 collectionPrice = collection.collectionPrice();
+        assertEq(collectionPrice, TEST_TOKEN_PRICE, "collection price");
+    }
+
+    function test__TokenURI() external {
+        assertEq(ERC721(address(collection)).tokenURI(1), TEST_TOKEN_URI, "collection tokenURI");
     }
 
     function test__MintERC1155() external {
