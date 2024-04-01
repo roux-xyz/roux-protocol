@@ -36,11 +36,13 @@ interface IRouxCreator is IERC1155 {
 
     function creator() external view returns (address);
 
-    function tokenId() external view returns (uint256);
+    function tokenCount() external view returns (uint256);
 
     function maxSupply(uint256 id) external view returns (uint256);
 
     function uri(uint256 id) external view returns (string memory);
+
+    function attribution(uint256 id) external view returns (address, uint96);
 
     /* -------------------------------------------- */
     /* write functions                              */
@@ -49,4 +51,14 @@ interface IRouxCreator is IERC1155 {
     function mint(address to, uint256 id, uint256 quantity) external payable;
 
     function add(uint256 maxSupply, uint256 price_, string memory tokenUri) external returns (uint256);
+
+    function add(
+        uint256 maxSupply,
+        uint256 price_,
+        string memory tokenUri,
+        address parentContract,
+        uint96 parentId
+    )
+        external
+        returns (uint256);
 }

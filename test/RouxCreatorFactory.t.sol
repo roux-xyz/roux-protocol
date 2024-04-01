@@ -18,7 +18,7 @@ contract RouxCreatorFactoryTest is BaseTest {
 
         bytes memory params = abi.encode(address(users.creator_0));
 
-        vm.prank(users.creator_1);
+        vm.prank(users.user_0);
         factory.create(params);
     }
 
