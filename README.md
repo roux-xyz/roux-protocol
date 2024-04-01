@@ -51,6 +51,7 @@ run `anvil` in a different terminal window
 3. e.g. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" 10000 50000000000000000 https://test-token-creator-1.com`
 
 **Mint Recipe Token**
+
 _Note --value flag i.e. how much eth is being set with transaction_
 
 1. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value <value>  $CREATOR "mint(address,uint256,uint256)" <to> <tokenId> <quantity>`
