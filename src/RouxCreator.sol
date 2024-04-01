@@ -3,16 +3,20 @@ pragma solidity 0.8.24;
 
 import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract RouxCreator is IRouxCreator, ERC1155 {
+    using SafeCast for uint256;
+
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
 
     struct TokenData {
-        uint256 maxSupply;
-        uint256 totalSupply;
-        uint256 price;
+        uint64 totalSupply;
+        uint64 maxSupply;
+        uint128 price;
+        uint256 attribution;
         string uri;
     }
 
@@ -65,7 +69,7 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         return _owner;
     }
 
-    function tokenId() external view returns (uint256) {
+    function tokenCount() external view returns (uint256) {
         return _tokenId;
     }
 
@@ -85,30 +89,53 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         return _tokens[id].uri;
     }
 
+    function attribution(uint256 id) external view returns (address, uint96) {
+        return _decodeAttribution(_tokens[id].attribution);
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
-    function mint(address to, uint256 id, uint256 quantity) external payable {
+    function mint(address to, uint256 id, uint256 quantity_) external payable {
+        uint64 _quantity = quantity_.toUint64();
+
         if (id == 0 || id > _tokenId) revert InvalidTokenId();
-        if (quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
-        if (msg.value < _tokens[id].price * quantity) revert InsufficientFunds();
+        if (_quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
+        if (msg.value < _tokens[id].price * _quantity) revert InsufficientFunds();
 
-        _tokens[id].totalSupply += quantity;
+        // update total quantity
+        _tokens[id].totalSupply += _quantity;
 
-        _mint(to, id, quantity, "");
-    }
-
-    // @notice add a new token id to the contract
-    // @supply maxSupply of the token
-    function add(uint256 maxSupply_, uint256 price_, string memory tokenUri) external returns (uint256) {
-        if (msg.sender != _owner) revert OnlyOwner();
-        return _add(maxSupply_, price_, tokenUri);
+        _mint(to, id, _quantity, "");
     }
 
     /* -------------------------------------------- */
     /* admin                                        */
     /* -------------------------------------------- */
+
+    // @notice add a new token id to the contract
+    function add(uint256 maxSupply_, uint256 price_, string memory tokenUri) external returns (uint256) {
+        if (msg.sender != _owner) revert OnlyOwner();
+
+        return _add(maxSupply_, price_, tokenUri, 0);
+    }
+
+    function add(
+        uint256 maxSupply_,
+        uint256 price_,
+        string memory tokenUri,
+        address parentContract,
+        uint96 parentId
+    )
+        external
+        returns (uint256)
+    {
+        if (msg.sender != _owner) revert OnlyOwner();
+        uint256 attribution_ = _encodeAttribution(parentContract, parentId);
+
+        return _add(maxSupply_, price_, tokenUri, attribution_);
+    }
 
     function updateUri(uint256 id, string memory newUri) external {
         if (msg.sender != _owner) revert OnlyOwner();
@@ -134,12 +161,38 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* internal                                     */
     /* -------------------------------------------- */
 
-    function _add(uint256 maxSupply, uint256 price_, string memory tokenUri) internal returns (uint256) {
+    function _add(
+        uint256 maxSupply_,
+        uint256 price_,
+        string memory tokenUri,
+        uint256 attribution_
+    )
+        internal
+        returns (uint256)
+    {
+        uint64 _maxSupply = maxSupply_.toUint64();
+        uint128 _price = price_.toUint128();
+
         uint256 id = ++_tokenId;
-        _tokens[id] = TokenData({ maxSupply: maxSupply, totalSupply: 0, price: price_, uri: tokenUri });
+
+        _tokens[id] = TokenData({
+            maxSupply: _maxSupply,
+            totalSupply: 0,
+            price: _price,
+            uri: tokenUri,
+            attribution: attribution_
+        });
 
         emit TokenAdded(id);
 
         return id;
+    }
+
+    function _encodeAttribution(address creator_, uint96 tokenId_) internal pure returns (uint256) {
+        return uint256(uint160(creator_)) << 96 | tokenId_;
+    }
+
+    function _decodeAttribution(uint256 attribution_) internal pure returns (address, uint96) {
+        return (address(uint160(attribution_ >> 96)), uint96(attribution_));
     }
 }
