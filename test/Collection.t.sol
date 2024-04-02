@@ -46,7 +46,13 @@ contract CollectionTest is BaseTest {
     function test__RevertWhen_InvalidItems_InvalidTokenId() external {
         /* create new item */
         vm.startPrank(users.creator_0);
-        creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, "https://new-token-2.com");
+        creator.add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://new-token-2.com"
+        );
 
         address[] memory collectionItemTargets = new address[](2);
         collectionItemTargets[0] = address(creator);
@@ -126,11 +132,23 @@ contract CollectionTest is BaseTest {
     function test__AddItems() external {
         /* create new item */
         vm.startPrank(users.creator_0);
-        creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, "https://new-token-2.com");
+        creator.add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://new-token-2.com"
+        );
 
         /* create new contract and item */
         address newCreatorContract = factory.create(abi.encode(address(users.creator_0)));
-        IRouxCreator(newCreatorContract).add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, "https://new-token-3.com");
+        IRouxCreator(newCreatorContract).add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://new-token-3.com"
+        );
 
         /* add new item to collection */
         address[] memory collectionItemTargets = new address[](2);
