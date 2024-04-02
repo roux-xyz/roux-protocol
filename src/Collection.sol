@@ -8,6 +8,17 @@ import { ICollection } from "src/interfaces/ICollection.sol";
 
 contract Collection is ICollection, ERC721 {
     /* -------------------------------------------- */
+    /* constants                                    */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice Collection storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:collection")) - 1)) & ~bytes32(uint256(0xff));
+     */
+    bytes32 internal constant COLLECTION_STORAGE_SLOT =
+        0x993ddef881c729427ec09d4ff4f3cf4f71f12e1245e1afac8dcb6d99ddecf100;
+
+    /* -------------------------------------------- */
     /* immutable state                              */
     /* -------------------------------------------- */
 
@@ -22,48 +33,28 @@ contract Collection is ICollection, ERC721 {
     address immutable initialAccountImplementation;
 
     /* -------------------------------------------- */
-    /* state                                        */
+    /* structures                                   */
     /* -------------------------------------------- */
 
-    bool internal _initialized;
-
-    /**
-     * @notice owner
-     */
-    address internal _owner;
-
-    /**
-     * @notice curator
-     */
-    address internal _curator;
-
-    /**
-     * @notice array of item target addresses
-     */
-    address[] internal _itemTargets;
-
-    /**
-     * @notice array of item ids
-     */
-    uint256[] internal _itemIds;
-
-    /**
-     * @notice token ids
-     */
-    uint256 internal _tokenIds;
-
-    /**
-     * @notice base uri
-     */
-    string internal _uri;
+    struct CollectionStorage {
+        bool _initialized;
+        address _owner;
+        address _curator;
+        address[] _itemTargets;
+        uint256[] _itemIds;
+        uint256 _tokenIds;
+        string _uri;
+    }
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
     constructor(address registry, address initialAccountImplementation_) ERC721("", "") {
+        CollectionStorage storage $ = _storage();
+
         /* disable initialization of implementation contract */
-        _initialized = true;
+        $._initialized = true;
 
         erc6551Registry = IERC6551Registry(registry);
         initialAccountImplementation = initialAccountImplementation_;
@@ -74,21 +65,37 @@ contract Collection is ICollection, ERC721 {
     /* -------------------------------------------- */
 
     function initialize(bytes calldata params) external {
-        require(!_initialized, "Already initialized");
-        _initialized = true;
+        CollectionStorage storage $ = _storage();
+
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
 
         (address owner_, string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
             abi.decode(params, (address, string, address[], uint256[]));
 
-        _owner = owner_;
-        _curator = owner_;
+        $._owner = owner_;
+        $._curator = owner_;
 
-        _uri = baseURI;
+        $._uri = baseURI;
 
         _validateItems(initialItemTargets, initialItemIds);
 
-        _itemTargets = initialItemTargets;
-        _itemIds = initialItemIds;
+        $._itemTargets = initialItemTargets;
+        $._itemIds = initialItemIds;
+    }
+
+    /* -------------------------------------------- */
+    /* storage                                      */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice Get Collection storage location
+     * @return $ Collection storage location
+     */
+    function _storage() internal pure returns (CollectionStorage storage $) {
+        assembly {
+            $.slot := COLLECTION_STORAGE_SLOT
+        }
     }
 
     /* -------------------------------------------- */
@@ -96,27 +103,37 @@ contract Collection is ICollection, ERC721 {
     /* -------------------------------------------- */
 
     function collection() external view returns (address[] memory, uint256[] memory) {
-        return (_itemTargets, _itemIds);
+        CollectionStorage storage $ = _storage();
+
+        return ($._itemTargets, $._itemIds);
     }
 
     function collectionPrice() external view returns (uint256) {
+        CollectionStorage storage $ = _storage();
+
         uint256 price;
-        for (uint256 i = 0; i < _itemTargets.length; i++) {
-            price += IRouxCreator(_itemTargets[i]).price(_itemIds[i]);
+        for (uint256 i = 0; i < $._itemTargets.length; i++) {
+            price += IRouxCreator($._itemTargets[i]).price($._itemIds[i]);
         }
         return price;
     }
 
     function owner() external view override returns (address) {
-        return _owner;
+        CollectionStorage storage $ = _storage();
+
+        return $._owner;
     }
 
     function curator() external view override returns (address) {
-        return _curator;
+        CollectionStorage storage $ = _storage();
+
+        return $._curator;
     }
 
     function tokenURI(uint256) public view override returns (string memory) {
-        return _uri;
+        CollectionStorage storage $ = _storage();
+
+        return $._uri;
     }
 
     /* -------------------------------------------- */
@@ -124,8 +141,10 @@ contract Collection is ICollection, ERC721 {
     /* -------------------------------------------- */
 
     function mint() public payable returns (uint256) {
+        CollectionStorage storage $ = _storage();
+
         /* increment token id */
-        uint256 collectionTokenId = ++_tokenIds;
+        uint256 collectionTokenId = ++$._tokenIds;
 
         /* mint collection nft */
         _mint(msg.sender, collectionTokenId);
@@ -136,9 +155,9 @@ contract Collection is ICollection, ERC721 {
         );
 
         /* mint to collection nft token bound account */
-        for (uint256 i = 0; i < _itemTargets.length; i++) {
-            uint256 price = IRouxCreator(_itemTargets[i]).price(_itemIds[i]);
-            IRouxCreator(_itemTargets[i]).mint{ value: price }(account, _itemIds[i], 1);
+        for (uint256 i = 0; i < $._itemTargets.length; i++) {
+            uint256 price = IRouxCreator($._itemTargets[i]).price($._itemIds[i]);
+            IRouxCreator($._itemTargets[i]).mint{ value: price }(account, $._itemIds[i], 1);
         }
 
         return collectionTokenId;
@@ -149,13 +168,15 @@ contract Collection is ICollection, ERC721 {
     /* -------------------------------------------- */
 
     function addItems(address[] memory itemTargets, uint256[] memory itemIds) external {
-        if (msg.sender != _owner) revert OnlyOwner();
+        CollectionStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
 
         _validateItems(itemTargets, itemIds);
 
         for (uint256 i = 0; i < itemTargets.length; i++) {
-            _itemTargets.push(itemTargets[i]);
-            _itemIds.push(itemIds[i]);
+            $._itemTargets.push(itemTargets[i]);
+            $._itemIds.push(itemIds[i]);
 
             emit ItemAdded(itemTargets[i], itemIds[i]);
         }

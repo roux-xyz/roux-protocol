@@ -10,21 +10,50 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* -------------------------------------------- */
-    /* state                                        */
+    /* constants                                    */
     /* -------------------------------------------- */
 
-    EnumerableSet.AddressSet internal _tokens;
-    address internal _creatorImplementation;
-    address internal _owner;
-    mapping(address => bool) internal _allowlist;
+    /**
+     * @notice RouxCreatorFactory storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:rouxCreatorFactory")) - 1)) & ~bytes32(uint256(0xff));
+     */
+    bytes32 internal constant ROUX_CREATOR_FACTORY_STORAGE_SLOT =
+        0x24504c471aa12fa2df69897858cc7dcb056c8474b1cbbf9fd320f90e6b17aa00;
+
+    /* -------------------------------------------- */
+    /* structures                                   */
+    /* -------------------------------------------- */
+
+    struct RouxCreatorFactoryStorage {
+        EnumerableSet.AddressSet _tokens;
+        address _creatorImplementation;
+        address _owner;
+        mapping(address => bool) _allowlist;
+    }
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
     constructor(address creatorImplementation_) {
-        _creatorImplementation = creatorImplementation_;
-        _owner = msg.sender;
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        $._creatorImplementation = creatorImplementation_;
+        $._owner = msg.sender;
+    }
+
+    /* -------------------------------------------- */
+    /* storage                                      */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice Get RouxCreatorFactory storage location
+     * @return $ RouxCreatorFactory storage location
+     */
+    function _storage() internal pure returns (RouxCreatorFactoryStorage storage $) {
+        assembly {
+            $.slot := ROUX_CREATOR_FACTORY_STORAGE_SLOT
+        }
     }
 
     /* -------------------------------------------- */
@@ -32,23 +61,29 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* -------------------------------------------- */
 
     function isCreator(address token) external view returns (bool) {
-        return _tokens.contains(token);
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        return $._tokens.contains(token);
     }
 
     function getCreators() external view returns (address[] memory) {
-        return _tokens.values();
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        return $._tokens.values();
     }
 
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
     function create(bytes calldata params) external returns (address) {
-        if (!_allowlist[msg.sender]) revert OnlyAllowlist();
+        RouxCreatorFactoryStorage storage $ = _storage();
 
-        address creatorInstance = Clones.clone(_creatorImplementation);
+        if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
+
+        address creatorInstance = Clones.clone($._creatorImplementation);
         Address.functionCall(creatorInstance, abi.encodeWithSignature("initialize(bytes)", params));
 
-        _tokens.add(creatorInstance);
+        $._tokens.add(creatorInstance);
 
         emit NewCreator(creatorInstance);
 
@@ -60,20 +95,26 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* -------------------------------------------- */
 
     function addAllowlist(address[] memory accounts) external {
-        if (msg.sender != _owner) revert OnlyOwner();
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            _allowlist[accounts[i]] = true;
+            $._allowlist[accounts[i]] = true;
         }
     }
 
     function removeAllowlist(address account) external {
-        if (msg.sender != _owner) revert OnlyOwner();
-        _allowlist[account] = false;
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
+        $._allowlist[account] = false;
     }
 
     function updateImplementation(address newImpl) external {
-        if (msg.sender != _owner) revert OnlyOwner();
-        _creatorImplementation = newImpl;
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
+        $._creatorImplementation = newImpl;
     }
 }

@@ -6,6 +6,17 @@ import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 
 contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
+    /* constants                                    */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice RouxCreator storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:rouxCreator")) - 1)) & ~bytes32(uint256(0xff));
+     */
+    bytes32 internal constant ROUX_CREATOR_STORAGE_SLOT =
+        0xb58054ed73afeea56f113b62f99d32ce889cc871485db9295a43d8f4bffd7800;
+
+    /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
 
@@ -19,27 +30,33 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         string uri;
     }
 
-    /* -------------------------------------------- */
-    /* state                                        */
-    /* -------------------------------------------- */
-
-    bool internal _initialized;
-
-    address internal _owner;
-
-    address internal _creator;
-
-    uint256 internal _tokenId;
-
-    mapping(uint256 => TokenData) internal _tokens;
+    /**
+     * @notice RouxCreator storage
+     * @custom:storage-location erc7201:rouxCreatorStorage
+     *
+     * @param _initialized Whether the contract has been initialized
+     * @param _owner The owner of the contract
+     * @param _creator The creator of the contract
+     * @param _tokenId The current token id
+     * @param _tokens The token data
+     */
+    struct RouxCreatorStorage {
+        bool _initialized;
+        address _owner;
+        address _creator;
+        uint256 _tokenId;
+        mapping(uint256 => TokenData) _tokens;
+    }
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
     constructor() ERC1155("") {
+        RouxCreatorStorage storage $ = _storage();
+
         /* disable initialization of implementation contract */
-        _initialized = true;
+        $._initialized = true;
     }
 
     /* -------------------------------------------- */
@@ -47,13 +64,29 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     function initialize(bytes calldata params) external {
-        require(!_initialized, "Already initialized");
-        _initialized = true;
+        RouxCreatorStorage storage $ = _storage();
+
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
 
         (address owner_) = abi.decode(params, (address));
 
-        _owner = owner_;
-        _creator = owner_;
+        $._owner = owner_;
+        $._creator = owner_;
+    }
+
+    /* -------------------------------------------- */
+    /* storage                                      */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice Get RouxCreator storage location
+     * @return $ RouxCreator storage location
+     */
+    function _storage() internal pure returns (RouxCreatorStorage storage $) {
+        assembly {
+            $.slot := ROUX_CREATOR_STORAGE_SLOT
+        }
     }
 
     /* -------------------------------------------- */
@@ -61,35 +94,51 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     function creator() external view returns (address) {
-        return _creator;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._creator;
     }
 
     function owner() external view returns (address) {
-        return _owner;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._owner;
     }
 
     function tokenCount() external view returns (uint256) {
-        return _tokenId;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._tokenId;
     }
 
     function totalSupply(uint256 id) external view override returns (uint256) {
-        return _tokens[id].totalSupply;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._tokens[id].totalSupply;
     }
 
     function price(uint256 id) external view returns (uint256) {
-        return _tokens[id].price;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._tokens[id].price;
     }
 
     function maxSupply(uint256 id) external view returns (uint256) {
-        return _tokens[id].maxSupply;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._tokens[id].maxSupply;
     }
 
     function uri(uint256 id) public view override(IRouxCreator, ERC1155) returns (string memory) {
-        return _tokens[id].uri;
+        RouxCreatorStorage storage $ = _storage();
+
+        return $._tokens[id].uri;
     }
 
     function attribution(uint256 id) external view returns (address, uint96) {
-        return _decodeAttribution(_tokens[id].attribution);
+        RouxCreatorStorage storage $ = _storage();
+
+        return _decodeAttribution($._tokens[id].attribution);
     }
 
     /* -------------------------------------------- */
@@ -97,10 +146,12 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     function mint(address to, uint256 id, uint64 quantity_) external payable {
+        RouxCreatorStorage storage $ = _storage();
+
         _validateMint(id, quantity_);
 
         // update total quantity
-        _tokens[id].totalSupply += quantity_;
+        $._tokens[id].totalSupply += quantity_;
 
         _mint(to, id, quantity_, "");
     }
@@ -120,7 +171,9 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         external
         returns (uint256)
     {
-        if (msg.sender != _owner) revert OnlyOwner();
+        RouxCreatorStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
 
         return _add({
             maxSupply_: maxSupply_,
@@ -144,7 +197,9 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         external
         returns (uint256)
     {
-        if (msg.sender != _owner) revert OnlyOwner();
+        RouxCreatorStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
         uint256 attribution_ = _encodeAttribution(parentContract, parentId);
 
         return _add({
@@ -158,23 +213,29 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     }
 
     function updateUri(uint256 id, string memory newUri) external {
-        if (msg.sender != _owner) revert OnlyOwner();
+        RouxCreatorStorage storage $ = _storage();
 
-        _tokens[id].uri = newUri;
+        if (msg.sender != $._owner) revert OnlyOwner();
+
+        $._tokens[id].uri = newUri;
 
         emit URI(newUri, id);
     }
 
     function withdraw() external {
-        if (msg.sender != _owner) revert OnlyOwner();
+        RouxCreatorStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
 
         (bool success,) = payable(msg.sender).call{ value: address(this).balance }("");
         if (!success) revert TransferFailed();
     }
 
     function updateOwner(address newOwner) external {
-        if (msg.sender != _owner) revert OnlyOwner();
-        _owner = newOwner;
+        RouxCreatorStorage storage $ = _storage();
+
+        if (msg.sender != $._owner) revert OnlyOwner();
+        $._owner = newOwner;
     }
 
     /* -------------------------------------------- */
@@ -192,9 +253,11 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         internal
         returns (uint256)
     {
-        uint256 id = ++_tokenId;
+        RouxCreatorStorage storage $ = _storage();
 
-        _tokens[id] = TokenData({
+        uint256 id = ++$._tokenId;
+
+        $._tokens[id] = TokenData({
             maxSupply: maxSupply_,
             totalSupply: 0,
             price: price_,
@@ -218,12 +281,14 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     }
 
     function _validateMint(uint256 id, uint64 quantity) internal view {
-        if (id == 0 || id > _tokenId) revert InvalidTokenId();
+        RouxCreatorStorage storage $ = _storage();
 
-        if (block.timestamp < _tokens[id].mintStart) revert MintNotStarted();
-        if (block.timestamp > _tokens[id].mintStart + _tokens[id].mintDuration) revert MintEnded();
+        if (id == 0 || id > $._tokenId) revert InvalidTokenId();
 
-        if (quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
-        if (msg.value < _tokens[id].price * quantity) revert InsufficientFunds();
+        if (block.timestamp < $._tokens[id].mintStart) revert MintNotStarted();
+        if (block.timestamp > $._tokens[id].mintStart + $._tokens[id].mintDuration) revert MintEnded();
+
+        if (quantity + $._tokens[id].totalSupply > $._tokens[id].maxSupply) revert MaxSupplyExceeded();
+        if (msg.value < $._tokens[id].price * quantity) revert InsufficientFunds();
     }
 }
