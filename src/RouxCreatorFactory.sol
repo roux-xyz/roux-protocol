@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
@@ -26,7 +26,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
 
     struct RouxCreatorFactoryStorage {
         EnumerableSet.AddressSet _tokens;
-        address _creatorImplementation;
+        address _creatorBeacon;
         address _owner;
         mapping(address => bool) _allowlist;
     }
@@ -35,10 +35,10 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address creatorImplementation_) {
+    constructor(address creatorBeacon) {
         RouxCreatorFactoryStorage storage $ = _storage();
 
-        $._creatorImplementation = creatorImplementation_;
+        $._creatorBeacon = creatorBeacon;
         $._owner = msg.sender;
     }
 
@@ -75,13 +75,14 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
+
     function create(bytes calldata params) external returns (address) {
         RouxCreatorFactoryStorage storage $ = _storage();
 
         if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address creatorInstance = Clones.clone($._creatorImplementation);
-        Address.functionCall(creatorInstance, abi.encodeWithSignature("initialize(bytes)", params));
+        address creatorInstance =
+            address(new BeaconProxy($._creatorBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
         $._tokens.add(creatorInstance);
 
@@ -109,12 +110,5 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
 
         if (msg.sender != $._owner) revert OnlyOwner();
         $._allowlist[account] = false;
-    }
-
-    function updateImplementation(address newImpl) external {
-        RouxCreatorFactoryStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
-        $._creatorImplementation = newImpl;
     }
 }
