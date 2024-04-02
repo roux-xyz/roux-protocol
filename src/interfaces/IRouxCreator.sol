@@ -18,6 +18,10 @@ interface IRouxCreator is IERC1155 {
 
     error OnlyOwner();
 
+    error MintNotStarted();
+
+    error MintEnded();
+
     /* -------------------------------------------- */
     /* events                                       */
     /* -------------------------------------------- */
@@ -48,13 +52,23 @@ interface IRouxCreator is IERC1155 {
     /* write functions                              */
     /* -------------------------------------------- */
 
-    function mint(address to, uint256 id, uint256 quantity) external payable;
-
-    function add(uint256 maxSupply, uint256 price_, string memory tokenUri) external returns (uint256);
+    function mint(address to, uint256 id, uint64 quantity) external payable;
 
     function add(
-        uint256 maxSupply,
-        uint256 price_,
+        uint64 maxSupply,
+        uint128 price_,
+        uint40 mintStart,
+        uint32 mintDuration,
+        string memory tokenUri
+    )
+        external
+        returns (uint256);
+
+    function add(
+        uint64 maxSupply,
+        uint128 price_,
+        uint40 mintStart,
+        uint32 mintDuration,
         string memory tokenUri,
         address parentContract,
         uint96 parentId

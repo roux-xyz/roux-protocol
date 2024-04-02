@@ -150,6 +150,7 @@ contract Collection is ICollection, ERC721 {
 
     function addItems(address[] memory itemTargets, uint256[] memory itemIds) external {
         if (msg.sender != _owner) revert OnlyOwner();
+
         _validateItems(itemTargets, itemIds);
 
         for (uint256 i = 0; i < itemTargets.length; i++) {

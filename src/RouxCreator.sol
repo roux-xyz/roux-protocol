@@ -3,11 +3,8 @@ pragma solidity 0.8.24;
 
 import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract RouxCreator is IRouxCreator, ERC1155 {
-    using SafeCast for uint256;
-
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
@@ -16,6 +13,8 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         uint64 totalSupply;
         uint64 maxSupply;
         uint128 price;
+        uint40 mintStart;
+        uint32 mintDuration;
         uint256 attribution;
         string uri;
     }
@@ -97,17 +96,13 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* write                                        */
     /* -------------------------------------------- */
 
-    function mint(address to, uint256 id, uint256 quantity_) external payable {
-        uint64 _quantity = quantity_.toUint64();
-
-        if (id == 0 || id > _tokenId) revert InvalidTokenId();
-        if (_quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
-        if (msg.value < _tokens[id].price * _quantity) revert InsufficientFunds();
+    function mint(address to, uint256 id, uint64 quantity_) external payable {
+        _validateMint(id, quantity_);
 
         // update total quantity
-        _tokens[id].totalSupply += _quantity;
+        _tokens[id].totalSupply += quantity_;
 
-        _mint(to, id, _quantity, "");
+        _mint(to, id, quantity_, "");
     }
 
     /* -------------------------------------------- */
@@ -115,15 +110,33 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     // @notice add a new token id to the contract
-    function add(uint256 maxSupply_, uint256 price_, string memory tokenUri) external returns (uint256) {
+    function add(
+        uint64 maxSupply_,
+        uint128 price_,
+        uint40 mintStart,
+        uint32 mintDuration,
+        string memory tokenUri
+    )
+        external
+        returns (uint256)
+    {
         if (msg.sender != _owner) revert OnlyOwner();
 
-        return _add(maxSupply_, price_, tokenUri, 0);
+        return _add({
+            maxSupply_: maxSupply_,
+            price_: price_,
+            tokenUri: tokenUri,
+            mintStart: mintStart,
+            mintDuration: mintDuration,
+            attribution_: 0
+        });
     }
 
     function add(
-        uint256 maxSupply_,
-        uint256 price_,
+        uint64 maxSupply_,
+        uint128 price_,
+        uint40 mintStart,
+        uint32 mintDuration,
         string memory tokenUri,
         address parentContract,
         uint96 parentId
@@ -134,7 +147,14 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         if (msg.sender != _owner) revert OnlyOwner();
         uint256 attribution_ = _encodeAttribution(parentContract, parentId);
 
-        return _add(maxSupply_, price_, tokenUri, attribution_);
+        return _add({
+            maxSupply_: maxSupply_,
+            price_: price_,
+            tokenUri: tokenUri,
+            mintStart: mintStart,
+            mintDuration: mintDuration,
+            attribution_: attribution_
+        });
     }
 
     function updateUri(uint256 id, string memory newUri) external {
@@ -162,24 +182,25 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* -------------------------------------------- */
 
     function _add(
-        uint256 maxSupply_,
-        uint256 price_,
+        uint64 maxSupply_,
+        uint128 price_,
         string memory tokenUri,
+        uint40 mintStart,
+        uint32 mintDuration,
         uint256 attribution_
     )
         internal
         returns (uint256)
     {
-        uint64 _maxSupply = maxSupply_.toUint64();
-        uint128 _price = price_.toUint128();
-
         uint256 id = ++_tokenId;
 
         _tokens[id] = TokenData({
-            maxSupply: _maxSupply,
+            maxSupply: maxSupply_,
             totalSupply: 0,
-            price: _price,
+            price: price_,
             uri: tokenUri,
+            mintStart: mintStart,
+            mintDuration: mintDuration,
             attribution: attribution_
         });
 
@@ -194,5 +215,15 @@ contract RouxCreator is IRouxCreator, ERC1155 {
 
     function _decodeAttribution(uint256 attribution_) internal pure returns (address, uint96) {
         return (address(uint160(attribution_ >> 96)), uint96(attribution_));
+    }
+
+    function _validateMint(uint256 id, uint64 quantity) internal view {
+        if (id == 0 || id > _tokenId) revert InvalidTokenId();
+
+        if (block.timestamp < _tokens[id].mintStart) revert MintNotStarted();
+        if (block.timestamp > _tokens[id].mintStart + _tokens[id].mintDuration) revert MintEnded();
+
+        if (quantity + _tokens[id].totalSupply > _tokens[id].maxSupply) revert MaxSupplyExceeded();
+        if (msg.value < _tokens[id].price * quantity) revert InsufficientFunds();
     }
 }

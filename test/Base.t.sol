@@ -111,7 +111,9 @@ abstract contract BaseTest is Test {
         creator = RouxCreator(factory.create(rouxCreatorParams));
 
         /* add token */
-        creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, TEST_TOKEN_URI);
+        creator.add(
+            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
+        );
 
         /* create target array for collection */
         address[] memory collectionItemTargets = new address[](1);
