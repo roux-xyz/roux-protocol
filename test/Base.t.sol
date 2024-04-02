@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { RouxCreator } from "src/RouxCreator.sol";
 import { RouxCreatorFactory } from "src/RouxCreatorFactory.sol";
@@ -47,8 +49,8 @@ abstract contract BaseTest is Test {
     /* state                                        */
     /* -------------------------------------------- */
 
-    IRouxCreator internal creatorImpl;
-    IRouxCreator internal creator;
+    RouxCreator internal creatorImpl;
+    RouxCreator internal creator;
     RouxCreatorFactory internal factory;
 
     ERC6551Registry internal erc6551Registry;
@@ -56,6 +58,8 @@ abstract contract BaseTest is Test {
     ICollection internal collectionImpl;
     ICollection internal collection;
     CollectionFactory internal collectionFactory;
+
+    UpgradeableBeacon internal creatorBeacon;
 
     Users internal users;
 
@@ -80,9 +84,17 @@ abstract contract BaseTest is Test {
         /* deployer */
         vm.startPrank(users.deployer);
 
-        /* creator deployments */
+        /* creator deployment */
         creatorImpl = new RouxCreator();
-        factory = new RouxCreatorFactory(address(creatorImpl));
+        vm.label({ account: address(creatorImpl), newLabel: "Creator Implementation" });
+
+        /* beacon deployment */
+        creatorBeacon = new UpgradeableBeacon(address(creatorImpl), users.deployer);
+        vm.label({ account: address(creatorBeacon), newLabel: "Creator Beacon" });
+
+        /* factory deployment */
+        factory = new RouxCreatorFactory(address(creatorBeacon));
+        vm.label({ account: address(factory), newLabel: "Creator Factory" });
 
         /* tokenbound deployments */
         erc6551Registry = new ERC6551Registry();

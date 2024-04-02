@@ -46,5 +46,22 @@ contract RouxCreatorFactoryTest is BaseTest {
         assert(factory.isCreator(newCreator));
     }
 
-    function test__RemoveAllowlist() external { }
+    function test__RemoveAllowlist() external {
+        /* add to allowlist */
+        address[] memory allowlist = new address[](1);
+        allowlist[0] = users.creator_1;
+
+        vm.prank(users.deployer);
+        RouxCreatorFactory(factory).addAllowlist(allowlist);
+
+        /* remove creator from allowlist */
+        vm.prank(users.deployer);
+        RouxCreatorFactory(factory).removeAllowlist(users.creator_1);
+
+        /* attempt to create new creator */
+        vm.prank(users.creator_1);
+        vm.expectRevert(IRouxCreatorFactory.OnlyAllowlist.selector);
+        bytes memory newParams = abi.encode(address(users.creator_1));
+        factory.create(newParams);
+    }
 }

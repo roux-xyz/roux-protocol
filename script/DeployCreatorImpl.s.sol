@@ -5,10 +5,16 @@ import "forge-std/Script.sol";
 
 import { RouxCreator } from "src/RouxCreator.sol";
 import { BaseScript } from "./Base.s.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract DeployCreatorImpl is BaseScript {
-    function run() public broadcast {
+    function run(address owner) public broadcast {
+        /* deploy implementation */
         RouxCreator creatorImpl = new RouxCreator();
         console.log("Creator Implementation: ", address(creatorImpl));
+
+        /* deploy beacon */
+        UpgradeableBeacon creatorBeacon = new UpgradeableBeacon(address(creatorImpl), owner);
+        console.log("Creator Beacon: ", address(creatorBeacon));
     }
 }

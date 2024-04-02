@@ -16,6 +16,11 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     bytes32 internal constant ROUX_CREATOR_STORAGE_SLOT =
         0xb58054ed73afeea56f113b62f99d32ce889cc871485db9295a43d8f4bffd7800;
 
+    /**
+     * @notice Implementation version
+     */
+    string public constant IMPLEMENTATION_VERSION = "1.0";
+
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
@@ -109,6 +114,10 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         RouxCreatorStorage storage $ = _storage();
 
         return $._tokenId;
+    }
+
+    function implementationVersion() external pure returns (string memory) {
+        return IMPLEMENTATION_VERSION;
     }
 
     function totalSupply(uint256 id) external view override returns (uint256) {
