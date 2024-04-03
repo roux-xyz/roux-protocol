@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { RouxCreator } from "src/RouxCreator.sol";
 import { BaseTest } from "./Base.t.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 
 import "./Constants.t.sol";
 
@@ -23,7 +24,7 @@ contract CreatorTest is BaseTest {
     }
 
     function test__RevertWhen_OnlyOwner_AddToken() external {
-        vm.expectRevert(IRouxCreator.OnlyOwner.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
         creator.add(
             TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
@@ -31,7 +32,7 @@ contract CreatorTest is BaseTest {
     }
 
     function test__RevertWhen_OnlyOwner_UpdateUri() external {
-        vm.expectRevert(IRouxCreator.OnlyOwner.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
         RouxCreator(address(creator)).updateUri(1, "https://new.com");
     }
@@ -40,7 +41,7 @@ contract CreatorTest is BaseTest {
         vm.startPrank(users.user_0);
         creator.mint{ value: TEST_TOKEN_PRICE }(users.user_0, 1, 1);
 
-        vm.expectRevert(IRouxCreator.OnlyOwner.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         RouxCreator(address(creator)).withdraw();
         vm.stopPrank();
     }
@@ -101,6 +102,10 @@ contract CreatorTest is BaseTest {
 
     function test__Owner() external {
         assertEq(creator.owner(), users.creator_0);
+    }
+
+    function test__Creator() external {
+        assertEq(creator.creator(), users.creator_0);
     }
 
     function test__TotalSupply() external {
@@ -167,7 +172,7 @@ contract CreatorTest is BaseTest {
         bytes memory rouxCreatorParams = abi.encode(address(users.creator_1));
 
         /* create creator instance */
-        RouxCreator creator1 = RouxCreator(factory.create(rouxCreatorParams));
+        RouxCreator creator1 = RouxCreator(factory.create());
 
         /* create forked token with attribution */
         creator1.add(

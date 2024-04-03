@@ -61,8 +61,8 @@ _Note --value flag i.e. how much eth is being sent with transaction_
 
 **Create Collection**
 
-1. ABI-encode `params`: `cast abi-encode "f(address,string,address[],uint256[])" <owner> <baseURI> "[<creatorAddr1>, <creatorAddr2>, ..., <creatorAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
-2. e.g. `cast abi-encode "f(address,address[],uint256[])" 0xb7e8482Db04DCaBF8b74FDbFdBCB0a743675bE9e http://example.com "[0xa8f6658ecfae3e1531470efa5b00d78082c0050e]" "[1]"`
+1. ABI-encode `params`: `cast abi-encode "f(address,string,address[],uint256[])" <baseURI> "[<creatorAddr1>, <creatorAddr2>, ..., <creatorAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
+2. e.g. `cast abi-encode "f(address,address[],uint256[])" http://example.com "[0xa8f6658ecfae3e1531470efa5b00d78082c0050e]" "[1]"`
 3. `cast send --private-key $PK_CREATOR --rpc-url $SEPOLIA_RPC_URL $COL_FACTORY "create(bytes)" <params>`
 
 **Mint Collection**

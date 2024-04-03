@@ -55,8 +55,8 @@ abstract contract BaseTest is Test {
 
     ERC6551Registry internal erc6551Registry;
     ERC6551Account internal accountImpl;
-    ICollection internal collectionImpl;
-    ICollection internal collection;
+    Collection internal collectionImpl;
+    Collection internal collection;
     CollectionFactory internal collectionFactory;
 
     UpgradeableBeacon internal creatorBeacon;
@@ -116,11 +116,8 @@ abstract contract BaseTest is Test {
         /* creator */
         vm.startPrank(users.creator_0);
 
-        /* encode params */
-        bytes memory rouxCreatorParams = abi.encode(address(users.creator_0));
-
         /* create token instance */
-        creator = RouxCreator(factory.create(rouxCreatorParams));
+        creator = RouxCreator(factory.create());
 
         /* add token */
         creator.add(
@@ -136,8 +133,7 @@ abstract contract BaseTest is Test {
         collectionItemIds[0] = 1;
 
         /* encode collection params */
-        bytes memory collectionParams =
-            abi.encode(address(users.creator_0), TEST_TOKEN_URI, collectionItemTargets, collectionItemIds);
+        bytes memory collectionParams = abi.encode(TEST_TOKEN_URI, collectionItemTargets, collectionItemIds);
 
         /* create collection instance */
         collection = Collection(collectionFactory.create(collectionParams));

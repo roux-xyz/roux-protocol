@@ -41,7 +41,7 @@ usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  deploy-creator-impl <owner>"
+    echo "  deploy-creator-impl"
     echo "  deploy-creator-factory <implementation>"
     echo "  deploy-erc6551-account <erc6551Registry>"
     echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl>"
@@ -66,18 +66,18 @@ fi
 case $1 in
 
     "deploy-creator-impl")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <owner>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 <command>"
             exit 1
         fi
 
         echo "Deploying Creator Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCreatorImpl.s.sol:DeployCreatorImpl" "--sig run(address) $2"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCreatorImpl.s.sol:DeployCreatorImpl" "--sig run()"
         ;;
 
     "deploy-creator-factory")
         if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <implementation>"
+            echo "Invalid param count; Usage: $0 <command> <beacon>"
             exit 1
         fi
 

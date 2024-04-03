@@ -2,11 +2,12 @@
 pragma solidity 0.8.24;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 
-contract Collection is ICollection, ERC721 {
+contract Collection is ICollection, ERC721, OwnableRoles {
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
@@ -38,7 +39,6 @@ contract Collection is ICollection, ERC721 {
 
     struct CollectionStorage {
         bool _initialized;
-        address _owner;
         address _curator;
         address[] _itemTargets;
         uint256[] _itemIds;
@@ -70,11 +70,10 @@ contract Collection is ICollection, ERC721 {
         require(!$._initialized, "Already initialized");
         $._initialized = true;
 
-        (address owner_, string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
-            abi.decode(params, (address, string, address[], uint256[]));
+        (string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
+            abi.decode(params, (string, address[], uint256[]));
 
-        $._owner = owner_;
-        $._curator = owner_;
+        _initializeOwner(msg.sender);
 
         $._uri = baseURI;
 
@@ -116,12 +115,6 @@ contract Collection is ICollection, ERC721 {
             price += IRouxCreator($._itemTargets[i]).price($._itemIds[i]);
         }
         return price;
-    }
-
-    function owner() external view override returns (address) {
-        CollectionStorage storage $ = _storage();
-
-        return $._owner;
     }
 
     function curator() external view override returns (address) {
@@ -167,10 +160,8 @@ contract Collection is ICollection, ERC721 {
     /* admin                                        */
     /* -------------------------------------------- */
 
-    function addItems(address[] memory itemTargets, uint256[] memory itemIds) external {
+    function addItems(address[] memory itemTargets, uint256[] memory itemIds) external onlyOwner {
         CollectionStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
 
         _validateItems(itemTargets, itemIds);
 
@@ -180,6 +171,13 @@ contract Collection is ICollection, ERC721 {
 
             emit ItemAdded(itemTargets[i], itemIds[i]);
         }
+    }
+
+    function initializeCurator(address curator_) external onlyOwner {
+        CollectionStorage storage $ = _storage();
+
+        if ($._curator != address(0)) revert CuratorAlreadyInitialized();
+        $._curator = curator_;
     }
 
     /* -------------------------------------------- */

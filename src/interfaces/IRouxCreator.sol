@@ -16,11 +16,11 @@ interface IRouxCreator is IERC1155 {
 
     error TransferFailed();
 
-    error OnlyOwner();
-
     error MintNotStarted();
 
     error MintEnded();
+
+    error CreatorAlreadyInitialized();
 
     /* -------------------------------------------- */
     /* events                                       */
@@ -35,8 +35,6 @@ interface IRouxCreator is IERC1155 {
     function price(uint256 id) external view returns (uint256);
 
     function totalSupply(uint256 id) external view returns (uint256);
-
-    function owner() external view returns (address);
 
     function creator() external view returns (address);
 
@@ -75,4 +73,6 @@ interface IRouxCreator is IERC1155 {
     )
         external
         returns (uint256);
+
+    function initializeCreator(address creator_) external;
 }
