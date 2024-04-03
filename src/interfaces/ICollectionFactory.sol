@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { IFactory } from "./IFactory.sol";
-
-interface ICollectionFactory is IFactory {
+interface ICollectionFactory {
     /* -------------------------------------------- */
     /* events                                       */
     /* -------------------------------------------- */

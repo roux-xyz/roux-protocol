@@ -4,9 +4,11 @@ pragma solidity 0.8.24;
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
+import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 
-contract RouxCreatorFactory is IRouxCreatorFactory {
+contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* -------------------------------------------- */
@@ -39,7 +41,8 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
         RouxCreatorFactoryStorage storage $ = _storage();
 
         $._creatorBeacon = creatorBeacon;
-        $._owner = msg.sender;
+
+        _initializeOwner(msg.sender);
     }
 
     /* -------------------------------------------- */
@@ -76,13 +79,15 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* write                                        */
     /* -------------------------------------------- */
 
-    function create(bytes calldata params) external returns (address) {
+    function create() external returns (address) {
         RouxCreatorFactoryStorage storage $ = _storage();
 
         if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address creatorInstance =
-            address(new BeaconProxy($._creatorBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
+        address creatorInstance = address(new BeaconProxy($._creatorBeacon, abi.encodeWithSignature("initialize()")));
+
+        IRouxCreator(creatorInstance).initializeCreator(msg.sender);
+        Ownable(creatorInstance).transferOwnership(msg.sender);
 
         $._tokens.add(creatorInstance);
 
@@ -95,20 +100,17 @@ contract RouxCreatorFactory is IRouxCreatorFactory {
     /* admin                                        */
     /* -------------------------------------------- */
 
-    function addAllowlist(address[] memory accounts) external {
+    function addAllowlist(address[] memory accounts) external onlyOwner {
         RouxCreatorFactoryStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             $._allowlist[accounts[i]] = true;
         }
     }
 
-    function removeAllowlist(address account) external {
+    function removeAllowlist(address account) external onlyOwner {
         RouxCreatorFactoryStorage storage $ = _storage();
 
-        if (msg.sender != $._owner) revert OnlyOwner();
         $._allowlist[account] = false;
     }
 }

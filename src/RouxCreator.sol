@@ -3,8 +3,9 @@ pragma solidity 0.8.24;
 
 import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
-contract RouxCreator is IRouxCreator, ERC1155 {
+contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
@@ -17,7 +18,7 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         0xb58054ed73afeea56f113b62f99d32ce889cc871485db9295a43d8f4bffd7800;
 
     /**
-     * @notice Implementation version
+     * @notice implementation version
      */
     string public constant IMPLEMENTATION_VERSION = "1.0";
 
@@ -47,7 +48,6 @@ contract RouxCreator is IRouxCreator, ERC1155 {
      */
     struct RouxCreatorStorage {
         bool _initialized;
-        address _owner;
         address _creator;
         uint256 _tokenId;
         mapping(uint256 => TokenData) _tokens;
@@ -68,16 +68,14 @@ contract RouxCreator is IRouxCreator, ERC1155 {
     /* initializer                                  */
     /* -------------------------------------------- */
 
-    function initialize(bytes calldata params) external {
+    function initialize() external {
         RouxCreatorStorage storage $ = _storage();
 
         require(!$._initialized, "Already initialized");
         $._initialized = true;
 
-        (address owner_) = abi.decode(params, (address));
-
-        $._owner = owner_;
-        $._creator = owner_;
+        /* factory will transfer ownership to its caller */
+        _initializeOwner(msg.sender);
     }
 
     /* -------------------------------------------- */
@@ -102,12 +100,6 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         RouxCreatorStorage storage $ = _storage();
 
         return $._creator;
-    }
-
-    function owner() external view returns (address) {
-        RouxCreatorStorage storage $ = _storage();
-
-        return $._owner;
     }
 
     function tokenCount() external view returns (uint256) {
@@ -178,12 +170,9 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         string memory tokenUri
     )
         external
+        onlyOwner
         returns (uint256)
     {
-        RouxCreatorStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
-
         return _add({
             maxSupply_: maxSupply_,
             price_: price_,
@@ -204,11 +193,9 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         uint96 parentId
     )
         external
+        onlyOwner
         returns (uint256)
     {
-        RouxCreatorStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
         uint256 attribution_ = _encodeAttribution(parentContract, parentId);
 
         return _add({
@@ -221,30 +208,24 @@ contract RouxCreator is IRouxCreator, ERC1155 {
         });
     }
 
-    function updateUri(uint256 id, string memory newUri) external {
+    function updateUri(uint256 id, string memory newUri) external onlyOwner {
         RouxCreatorStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
 
         $._tokens[id].uri = newUri;
 
         emit URI(newUri, id);
     }
 
-    function withdraw() external {
-        RouxCreatorStorage storage $ = _storage();
-
-        if (msg.sender != $._owner) revert OnlyOwner();
-
+    function withdraw() external onlyOwner {
         (bool success,) = payable(msg.sender).call{ value: address(this).balance }("");
         if (!success) revert TransferFailed();
     }
 
-    function updateOwner(address newOwner) external {
+    function initializeCreator(address creator_) external onlyOwner {
         RouxCreatorStorage storage $ = _storage();
 
-        if (msg.sender != $._owner) revert OnlyOwner();
-        $._owner = newOwner;
+        if ($._creator != address(0)) revert CreatorAlreadyInitialized();
+        $._creator = creator_;
     }
 
     /* -------------------------------------------- */

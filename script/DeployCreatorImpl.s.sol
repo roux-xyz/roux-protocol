@@ -8,13 +8,14 @@ import { BaseScript } from "./Base.s.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract DeployCreatorImpl is BaseScript {
-    function run(address owner) public broadcast {
+    function run() public broadcast {
         /* deploy implementation */
         RouxCreator creatorImpl = new RouxCreator();
         console.log("Creator Implementation: ", address(creatorImpl));
 
         /* deploy beacon */
-        UpgradeableBeacon creatorBeacon = new UpgradeableBeacon(address(creatorImpl), owner);
+        UpgradeableBeacon creatorBeacon = new UpgradeableBeacon(address(creatorImpl), msg.sender);
         console.log("Creator Beacon: ", address(creatorBeacon));
+        console.log("Owner: ", msg.sender);
     }
 }

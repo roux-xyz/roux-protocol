@@ -141,7 +141,7 @@ contract CollectionTest is BaseTest {
         );
 
         /* create new contract and item */
-        address newCreatorContract = factory.create(abi.encode(address(users.creator_0)));
+        address newCreatorContract = factory.create();
         IRouxCreator(newCreatorContract).add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,

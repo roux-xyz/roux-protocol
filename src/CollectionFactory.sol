@@ -4,10 +4,11 @@ pragma solidity 0.8.24;
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-
+import { Ownable } from "solady/auth/Ownable.sol";
 import { ICollectionFactory } from "./interfaces/ICollectionFactory.sol";
+import { Collection } from "src/Collection.sol";
 
-contract CollectionFactory is ICollectionFactory {
+contract CollectionFactory is ICollectionFactory, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* -------------------------------------------- */
@@ -39,6 +40,8 @@ contract CollectionFactory is ICollectionFactory {
         CollectionFactoryStorage storage $ = _storage();
 
         $._collectionImplementation = collectionImplementation_;
+
+        _initializeOwner(msg.sender);
     }
 
     /* -------------------------------------------- */
@@ -81,6 +84,9 @@ contract CollectionFactory is ICollectionFactory {
         address collectionInstance = Clones.clone($._collectionImplementation);
         Address.functionCall(collectionInstance, abi.encodeWithSignature("initialize(bytes)", params));
 
+        Collection(collectionInstance).initializeCurator(msg.sender);
+        Ownable(collectionInstance).transferOwnership(msg.sender);
+
         $._collections.add(collectionInstance);
 
         emit NewCollection(collectionInstance);
@@ -88,10 +94,9 @@ contract CollectionFactory is ICollectionFactory {
         return collectionInstance;
     }
 
-    function updateImplementation(address newImpl) external {
+    function updateImplementation(address newImpl) external onlyOwner {
         CollectionFactoryStorage storage $ = _storage();
 
-        if (msg.sender != $._owner) revert OnlyOwner();
         $._collectionImplementation = newImpl;
     }
 }
