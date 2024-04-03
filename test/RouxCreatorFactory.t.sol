@@ -32,12 +32,12 @@ contract RouxCreatorFactoryTest is BaseTest {
 
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_1;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         RouxCreatorFactory(factory).addAllowlist(allowlist);
 
-        vm.prank(users.creator_1);
+        vm.prank(users.creator_2);
         address newCreator = factory.create();
 
         assert(factory.isCreator(newCreator));
@@ -46,17 +46,17 @@ contract RouxCreatorFactoryTest is BaseTest {
     function test__RemoveAllowlist() external {
         /* add to allowlist */
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_1;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         RouxCreatorFactory(factory).addAllowlist(allowlist);
 
         /* remove creator from allowlist */
         vm.prank(users.deployer);
-        RouxCreatorFactory(factory).removeAllowlist(users.creator_1);
+        RouxCreatorFactory(factory).removeAllowlist(users.creator_2);
 
         /* attempt to create new creator */
-        vm.prank(users.creator_1);
+        vm.prank(users.creator_2);
         vm.expectRevert(IRouxCreatorFactory.OnlyAllowlist.selector);
         factory.create();
     }

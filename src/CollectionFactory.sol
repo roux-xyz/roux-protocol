@@ -29,7 +29,7 @@ contract CollectionFactory is ICollectionFactory, Ownable {
     struct CollectionFactoryStorage {
         EnumerableSet.AddressSet _collections;
         address _collectionImplementation;
-        address _owner;
+        mapping(address => bool) _allowlist;
     }
 
     /* -------------------------------------------- */
@@ -81,6 +81,8 @@ contract CollectionFactory is ICollectionFactory, Ownable {
     function create(bytes calldata params) external returns (address) {
         CollectionFactoryStorage storage $ = _storage();
 
+        if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
+
         address collectionInstance = Clones.clone($._collectionImplementation);
         Address.functionCall(collectionInstance, abi.encodeWithSignature("initialize(bytes)", params));
 
@@ -94,9 +96,27 @@ contract CollectionFactory is ICollectionFactory, Ownable {
         return collectionInstance;
     }
 
+    /* -------------------------------------------- */
+    /* Admin                                        */
+    /* -------------------------------------------- */
+
     function updateImplementation(address newImpl) external onlyOwner {
         CollectionFactoryStorage storage $ = _storage();
 
         $._collectionImplementation = newImpl;
+    }
+
+    function addAllowlist(address[] memory accounts) external onlyOwner {
+        CollectionFactoryStorage storage $ = _storage();
+
+        for (uint256 i = 0; i < accounts.length; i++) {
+            $._allowlist[accounts[i]] = true;
+        }
+    }
+
+    function removeAllowlist(address account) external onlyOwner {
+        CollectionFactoryStorage storage $ = _storage();
+
+        $._allowlist[account] = false;
     }
 }

@@ -105,11 +105,17 @@ abstract contract BaseTest is Test {
         collectionFactory = new CollectionFactory(address(collectionImpl));
 
         /* add creators to allowlist */
-        address[] memory allowlist = new address[](3);
+        address[] memory allowlist = new address[](2);
         allowlist[0] = address(users.creator_0);
         allowlist[1] = address(users.creator_1);
-        allowlist[2] = address(users.creator_2);
         factory.addAllowlist(allowlist);
+
+        /* add curators to allowlist */
+        address[] memory curatorAllowlist = new address[](3);
+        curatorAllowlist[0] = address(users.creator_0);
+        curatorAllowlist[1] = address(users.creator_1);
+        curatorAllowlist[2] = address(users.curator_0);
+        collectionFactory.addAllowlist(curatorAllowlist);
 
         vm.stopPrank();
 

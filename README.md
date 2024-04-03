@@ -41,10 +41,7 @@ run `anvil` in a different terminal window
 
 **Create RouxCreator from RouxCreatorFactory**
 
----
-
-1. ABI-encode `params`: `cast abi-encode "f(address)" <ownerAddress>`
-2. Send txn: `cast send --private-key $PRIVATE_KEY --rpc-url $SEPOLIA_RPC_URL $CONTRACT_FACTORY "create(bytes)" <params>`
+`cast send --private-key $PRIVATE_KEY --rpc-url $SEPOLIA_RPC_URL $CONTRACT_FACTORY "create()"`
 
 **Add Recipe Token**
 
