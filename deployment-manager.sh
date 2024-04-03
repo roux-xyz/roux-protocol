@@ -42,7 +42,7 @@ usage() {
     echo ""
     echo "Commands:"
     echo "  deploy-creator-impl"
-    echo "  deploy-creator-factory <implementation>"
+    echo "  deploy-creator-factory <beacon>"
     echo "  deploy-erc6551-account <erc6551Registry>"
     echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl>"
     echo "  deploy-collection-factory <collectionImpl>"
