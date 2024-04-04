@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { RouxCreator } from "src/RouxCreator.sol";
@@ -51,15 +52,18 @@ abstract contract BaseTest is Test {
 
     RouxCreator internal creatorImpl;
     RouxCreator internal creator;
+    RouxCreatorFactory internal factoryImpl;
     RouxCreatorFactory internal factory;
 
     ERC6551Registry internal erc6551Registry;
     ERC6551Account internal accountImpl;
     Collection internal collectionImpl;
     Collection internal collection;
+    CollectionFactory internal collectionFactoryImpl;
     CollectionFactory internal collectionFactory;
 
     UpgradeableBeacon internal creatorBeacon;
+    UpgradeableBeacon internal collectionBeacon;
 
     Users internal users;
 
@@ -81,6 +85,17 @@ abstract contract BaseTest is Test {
             admin: createUser("admin")
         });
 
+        _deployCreator();
+        _deployCreatorFactory();
+        _deployTokenBoundContracts();
+        _deployCollection();
+        _deployCollectionFactory();
+        _allowlistUsers();
+        _addToken();
+        _addCollection();
+    }
+
+    function _deployCreator() internal {
         /* deployer */
         vm.startPrank(users.deployer);
 
@@ -92,17 +107,73 @@ abstract contract BaseTest is Test {
         creatorBeacon = new UpgradeableBeacon(address(creatorImpl), users.deployer);
         vm.label({ account: address(creatorBeacon), newLabel: "Creator Beacon" });
 
+        vm.stopPrank();
+    }
+
+    function _deployCreatorFactory() internal {
+        /* deployer */
+        vm.startPrank(users.deployer);
+
         /* factory deployment */
-        factory = new RouxCreatorFactory(address(creatorBeacon));
-        vm.label({ account: address(factory), newLabel: "Creator Factory" });
+        factoryImpl = new RouxCreatorFactory(address(creatorBeacon));
+        vm.label({ account: address(factory), newLabel: "Creator Factory Implementation" });
+
+        /* encode params */
+        bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
+
+        /* Deploy proxy */
+        factory = RouxCreatorFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
+        vm.label({ account: address(factory), newLabel: "Roux Creator Factory" });
+
+        vm.stopPrank();
+    }
+
+    function _deployTokenBoundContracts() internal {
+        /* deployer */
+        vm.startPrank(users.deployer);
 
         /* tokenbound deployments */
         erc6551Registry = new ERC6551Registry();
         accountImpl = new ERC6551Account(address(erc6551Registry));
 
-        /* collection deployments */
+        vm.stopPrank();
+    }
+
+    function _deployCollection() internal {
+        /* deployer */
+        vm.startPrank(users.deployer);
+
+        /* collection implementation deployment */
         collectionImpl = new Collection(address(erc6551Registry), address(accountImpl));
-        collectionFactory = new CollectionFactory(address(collectionImpl));
+        vm.label({ account: address(collectionImpl), newLabel: "Collection Implementation" });
+
+        /* collection beacon deployment */
+        collectionBeacon = new UpgradeableBeacon(address(collectionImpl), users.deployer);
+        vm.label({ account: address(creatorBeacon), newLabel: "Collection Beacon" });
+
+        vm.stopPrank();
+    }
+
+    function _deployCollectionFactory() internal {
+        /* deployer */
+        vm.startPrank(users.deployer);
+
+        /* collection factory impl */
+        collectionFactoryImpl = new CollectionFactory(address(collectionBeacon));
+        vm.label({ account: address(collectionFactoryImpl), newLabel: "Collection Factory Implementation" });
+
+        /* encode params */
+        bytes memory initData = abi.encodeWithSelector(collectionFactory.initialize.selector);
+
+        /* deploy proxy */
+        collectionFactory = CollectionFactory(address(new ERC1967Proxy(address(collectionFactoryImpl), initData)));
+        vm.label({ account: address(factory), newLabel: "Roux Collection Factory" });
+
+        vm.stopPrank();
+    }
+
+    function _allowlistUsers() internal {
+        vm.startPrank(users.deployer);
 
         /* add creators to allowlist */
         address[] memory allowlist = new address[](2);
@@ -118,7 +189,9 @@ abstract contract BaseTest is Test {
         collectionFactory.addAllowlist(curatorAllowlist);
 
         vm.stopPrank();
+    }
 
+    function _addToken() internal {
         /* creator */
         vm.startPrank(users.creator_0);
 
@@ -129,6 +202,12 @@ abstract contract BaseTest is Test {
         creator.add(
             TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
         );
+
+        vm.stopPrank();
+    }
+
+    function _addCollection() internal {
+        vm.startPrank(users.creator_0);
 
         /* create target array for collection */
         address[] memory collectionItemTargets = new address[](1);

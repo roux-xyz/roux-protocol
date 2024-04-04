@@ -31,7 +31,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
         uint64 maxSupply;
         uint128 price;
         uint40 mintStart;
-        uint32 mintDuration;
+        uint40 mintEnd;
         uint256 attribution;
         string uri;
     }
@@ -166,7 +166,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
         uint64 maxSupply_,
         uint128 price_,
         uint40 mintStart,
-        uint32 mintDuration,
+        uint40 mintDuration,
         string memory tokenUri
     )
         external
@@ -187,7 +187,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
         uint64 maxSupply_,
         uint128 price_,
         uint40 mintStart,
-        uint32 mintDuration,
+        uint40 mintDuration,
         string memory tokenUri,
         address parentContract,
         uint96 parentId
@@ -237,7 +237,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
         uint128 price_,
         string memory tokenUri,
         uint40 mintStart,
-        uint32 mintDuration,
+        uint40 mintDuration,
         uint256 attribution_
     )
         internal
@@ -253,7 +253,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
             price: price_,
             uri: tokenUri,
             mintStart: mintStart,
-            mintDuration: mintDuration,
+            mintEnd: mintStart + mintDuration,
             attribution: attribution_
         });
 
@@ -276,7 +276,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
         if (id == 0 || id > $._tokenId) revert InvalidTokenId();
 
         if (block.timestamp < $._tokens[id].mintStart) revert MintNotStarted();
-        if (block.timestamp > $._tokens[id].mintStart + $._tokens[id].mintDuration) revert MintEnded();
+        if (block.timestamp > $._tokens[id].mintEnd) revert MintEnded();
 
         if (quantity + $._tokens[id].totalSupply > $._tokens[id].maxSupply) revert MaxSupplyExceeded();
         if (msg.value < $._tokens[id].price * quantity) revert InsufficientFunds();

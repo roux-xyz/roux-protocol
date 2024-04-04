@@ -56,7 +56,7 @@ interface IRouxCreator is IERC1155 {
         uint64 maxSupply,
         uint128 price_,
         uint40 mintStart,
-        uint32 mintDuration,
+        uint40 mintDuration,
         string memory tokenUri
     )
         external
@@ -66,7 +66,7 @@ interface IRouxCreator is IERC1155 {
         uint64 maxSupply,
         uint128 price_,
         uint40 mintStart,
-        uint32 mintDuration,
+        uint40 mintDuration,
         string memory tokenUri,
         address parentContract,
         uint96 parentId
