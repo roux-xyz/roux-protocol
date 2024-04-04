@@ -16,6 +16,5 @@ contract DeployCreatorImpl is BaseScript {
         /* deploy beacon */
         UpgradeableBeacon creatorBeacon = new UpgradeableBeacon(address(creatorImpl), msg.sender);
         console.log("Creator Beacon: ", address(creatorBeacon));
-        console.log("Owner: ", msg.sender);
     }
 }

@@ -6,7 +6,7 @@ import { BaseTest } from "./Base.t.sol";
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { Collection } from "src/Collection.sol";
-import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { RouxCreator } from "src/RouxCreator.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./Constants.t.sol";
@@ -64,6 +64,14 @@ contract CollectionTest is BaseTest {
 
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
+    }
+
+    function test__Name() external {
+        assertEq(collection.name(), TEST_COLLECTION_NAME, "collection name");
+    }
+
+    function test__Symbol() external {
+        assertEq(collection.symbol(), TEST_COLLECTION_SYMBOL, "collection symbol");
     }
 
     function test__Owner() external {
@@ -142,7 +150,7 @@ contract CollectionTest is BaseTest {
 
         /* create new contract and item */
         address newCreatorContract = factory.create();
-        IRouxCreator(newCreatorContract).add(
+        RouxCreator(newCreatorContract).add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
@@ -191,6 +199,6 @@ contract CollectionTest is BaseTest {
 
         assertEq(creator.balanceOf(account, 1), 1, "1155 balanceOf id 1");
         assertEq(creator.balanceOf(account, 2), 1, "1155 balanceOf id 2");
-        assertEq(IRouxCreator(newCreatorContract).balanceOf(account, 1), 1, "new 1155 balanceOf id 1");
+        assertEq(RouxCreator(newCreatorContract).balanceOf(account, 1), 1, "new 1155 balanceOf id 1");
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 
@@ -57,7 +57,7 @@ contract RouxCreator is IRouxCreator, ERC1155, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor() ERC1155("") {
+    constructor() {
         RouxCreatorStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */

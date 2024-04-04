@@ -25,7 +25,9 @@ contract CollectionFactoryTest is BaseTest {
         collectionItemIds[0] = 1;
 
         /* encode collection params */
-        collectionParams = abi.encode(TEST_TOKEN_URI, collectionItemTargets, collectionItemIds);
+        collectionParams = abi.encode(
+            TEST_COLLECTION_NAME, TEST_COLLECTION_SYMBOL, TEST_TOKEN_URI, collectionItemTargets, collectionItemIds
+        );
     }
 
     function test__RevertWhen_OnlyAllowlist() external {

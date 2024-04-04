@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
@@ -40,6 +40,8 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     struct CollectionStorage {
         bool _initialized;
         address _curator;
+        string _name;
+        string _symbol;
         address[] _itemTargets;
         uint256[] _itemIds;
         uint256 _tokenIds;
@@ -50,7 +52,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address registry, address initialAccountImplementation_) ERC721("", "") {
+    constructor(address registry, address initialAccountImplementation_) {
         CollectionStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */
@@ -70,16 +72,22 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         require(!$._initialized, "Already initialized");
         $._initialized = true;
 
-        (string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
-            abi.decode(params, (string, address[], uint256[]));
+        (
+            string memory name_,
+            string memory symbol_,
+            string memory baseURI,
+            address[] memory initialItemTargets,
+            uint256[] memory initialItemIds
+        ) = abi.decode(params, (string, string, string, address[], uint256[]));
+
+        _validateItems(initialItemTargets, initialItemIds);
 
         /* factory will transfer ownership to its caller */
         _initializeOwner(msg.sender);
 
+        $._name = name_;
+        $._symbol = symbol_;
         $._uri = baseURI;
-
-        _validateItems(initialItemTargets, initialItemIds);
-
         $._itemTargets = initialItemTargets;
         $._itemIds = initialItemIds;
     }
@@ -102,6 +110,24 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* view                                         */
     /* -------------------------------------------- */
 
+    function name() public view override returns (string memory) {
+        CollectionStorage storage $ = _storage();
+
+        return $._name;
+    }
+
+    function symbol() public view override returns (string memory) {
+        CollectionStorage storage $ = _storage();
+
+        return $._symbol;
+    }
+
+    function tokenURI(uint256) public view override returns (string memory) {
+        CollectionStorage storage $ = _storage();
+
+        return $._uri;
+    }
+
     function collection() external view returns (address[] memory, uint256[] memory) {
         CollectionStorage storage $ = _storage();
 
@@ -122,12 +148,6 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         CollectionStorage storage $ = _storage();
 
         return $._curator;
-    }
-
-    function tokenURI(uint256) public view override returns (string memory) {
-        CollectionStorage storage $ = _storage();
-
-        return $._uri;
     }
 
     /* -------------------------------------------- */
