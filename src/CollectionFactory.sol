@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+
 import { ICollectionFactory } from "./interfaces/ICollectionFactory.sol";
 import { Collection } from "src/Collection.sol";
 
@@ -27,20 +29,49 @@ contract CollectionFactory is ICollectionFactory, Ownable {
     /* -------------------------------------------- */
 
     struct CollectionFactoryStorage {
+        bool _initialized;
         EnumerableSet.AddressSet _collections;
         address _collectionImplementation;
         mapping(address => bool) _allowlist;
     }
 
     /* -------------------------------------------- */
+    /* immutable state                              */
+    /* -------------------------------------------- */
+
+    address internal immutable _collectionBeacon;
+
+    /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address collectionImplementation_) {
+    constructor(address collectionBeacon) {
         CollectionFactoryStorage storage $ = _storage();
 
-        $._collectionImplementation = collectionImplementation_;
+        /* disable initialization of implementation contract */
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
 
+        _collectionBeacon = collectionBeacon;
+
+        _initializeOwner(msg.sender);
+        renounceOwnership();
+    }
+
+    /* -------------------------------------------- */
+    /* initializer                                  */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice Initialize CollectionFactory
+     */
+    function initialize() external {
+        CollectionFactoryStorage storage $ = _storage();
+
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
+
+        /* Set owner of proxy */
         _initializeOwner(msg.sender);
     }
 
@@ -83,8 +114,8 @@ contract CollectionFactory is ICollectionFactory, Ownable {
 
         if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address collectionInstance = Clones.clone($._collectionImplementation);
-        Address.functionCall(collectionInstance, abi.encodeWithSignature("initialize(bytes)", params));
+        address collectionInstance =
+            address(new BeaconProxy(_collectionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
         Collection(collectionInstance).initializeCurator(msg.sender);
         Ownable(collectionInstance).transferOwnership(msg.sender);
@@ -100,12 +131,6 @@ contract CollectionFactory is ICollectionFactory, Ownable {
     /* Admin                                        */
     /* -------------------------------------------- */
 
-    function updateImplementation(address newImpl) external onlyOwner {
-        CollectionFactoryStorage storage $ = _storage();
-
-        $._collectionImplementation = newImpl;
-    }
-
     function addAllowlist(address[] memory accounts) external onlyOwner {
         CollectionFactoryStorage storage $ = _storage();
 
@@ -118,5 +143,22 @@ contract CollectionFactory is ICollectionFactory, Ownable {
         CollectionFactoryStorage storage $ = _storage();
 
         $._allowlist[account] = false;
+    }
+
+    /**
+     * @notice get proxy implementation
+     * @return implementation address
+     */
+    function getImplementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
+    }
+
+    /**
+     * @notice upgrade proxy
+     * @param newImplementation new implementation contract
+     * @param data optional calldata
+     */
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 }

@@ -73,6 +73,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         (string memory baseURI, address[] memory initialItemTargets, uint256[] memory initialItemIds) =
             abi.decode(params, (string, address[], uint256[]));
 
+        /* factory will transfer ownership to its caller */
         _initializeOwner(msg.sender);
 
         $._uri = baseURI;

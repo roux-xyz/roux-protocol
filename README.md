@@ -46,7 +46,7 @@ run `anvil` in a different terminal window
 **Add Recipe Token**
 
 1. export contract instance created in `create` call above to env var $CREATOR
-2. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint64,uint128,uint40,uint32,string)" <maxSupply> <price>  <mintStart> <mintDuration> <uri>`
+2. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint64,uint128,uint40,uint40,string)" <maxSupply> <price>  <mintStart> <mintDuration> <uri>`
 3. e.g. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" 10000 50000000000000000 1711956272 31536000 https://test-token-creator-1.com`
 
 **Mint Recipe Token**

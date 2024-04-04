@@ -45,6 +45,35 @@ contract CollectionFactoryTest is BaseTest {
         CollectionFactory(collectionFactory).addAllowlist(allowlist);
     }
 
+    function test__RevertWhen_AlreadyInitialized() external {
+        /* verify current implementation */
+        assertEq(collectionFactory.getImplementation(), address(collectionFactoryImpl));
+
+        /* deploy new factory */
+        vm.startPrank(users.deployer);
+        CollectionFactory newFactoryImpl = new CollectionFactory(address(collectionBeacon));
+
+        /* init data */
+        bytes memory initData = abi.encodeWithSelector(collectionFactory.initialize.selector);
+
+        /* upgrade */
+        vm.expectRevert("Already initialized");
+        collectionFactory.upgradeToAndCall(address(newFactoryImpl), initData);
+
+        vm.stopPrank();
+    }
+
+    function test__Owner() external {
+        assertEq(collectionFactory.owner(), address(users.deployer));
+    }
+
+    function test__TransferOwnership() external {
+        vm.prank(users.deployer);
+        collectionFactory.transferOwnership(users.creator_0);
+
+        assertEq(collectionFactory.owner(), address(users.creator_0));
+    }
+
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_2;
@@ -74,5 +103,22 @@ contract CollectionFactoryTest is BaseTest {
         vm.prank(users.creator_2);
         vm.expectRevert(ICollectionFactory.OnlyAllowlist.selector);
         collectionFactory.create(collectionParams);
+    }
+
+    function test__UpgradeFactory() external {
+        /* verify current implementation */
+        assertEq(collectionFactory.getImplementation(), address(collectionFactoryImpl));
+
+        /* deploy new factory */
+        vm.startPrank(users.deployer);
+        CollectionFactory newFactoryImpl = new CollectionFactory(address(collectionBeacon));
+
+        /* upgrade */
+        collectionFactory.upgradeToAndCall(address(newFactoryImpl), "");
+
+        vm.stopPrank();
+
+        /* verify */
+        assertEq(collectionFactory.getImplementation(), address(newFactoryImpl));
     }
 }

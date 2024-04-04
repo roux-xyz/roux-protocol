@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+
 import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 
@@ -27,11 +29,17 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     struct RouxCreatorFactoryStorage {
+        bool _initialized;
         EnumerableSet.AddressSet _tokens;
-        address _creatorBeacon;
         address _owner;
         mapping(address => bool) _allowlist;
     }
+
+    /* -------------------------------------------- */
+    /* immutable state                              */
+    /* -------------------------------------------- */
+
+    address internal immutable _creatorBeacon;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -40,8 +48,31 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     constructor(address creatorBeacon) {
         RouxCreatorFactoryStorage storage $ = _storage();
 
-        $._creatorBeacon = creatorBeacon;
+        /* disable initialization of implementation contract */
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
 
+        _creatorBeacon = creatorBeacon;
+
+        /* renounce ownership of implementation contract */
+        _initializeOwner(msg.sender);
+        renounceOwnership();
+    }
+
+    /* -------------------------------------------- */
+    /* initializer                                  */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice initialize RouxCreatorFactory
+     */
+    function initialize() external {
+        RouxCreatorFactoryStorage storage $ = _storage();
+
+        require(!$._initialized, "Already initialized");
+        $._initialized = true;
+
+        /* Set owner of proxy */
         _initializeOwner(msg.sender);
     }
 
@@ -50,7 +81,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice Get RouxCreatorFactory storage location
+     * @notice get RouxCreatorFactory storage location
      * @return $ RouxCreatorFactory storage location
      */
     function _storage() internal pure returns (RouxCreatorFactoryStorage storage $) {
@@ -84,7 +115,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
 
         if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address creatorInstance = address(new BeaconProxy($._creatorBeacon, abi.encodeWithSignature("initialize()")));
+        address creatorInstance = address(new BeaconProxy(_creatorBeacon, abi.encodeWithSignature("initialize()")));
 
         IRouxCreator(creatorInstance).initializeCreator(msg.sender);
         Ownable(creatorInstance).transferOwnership(msg.sender);
@@ -112,5 +143,22 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
         RouxCreatorFactoryStorage storage $ = _storage();
 
         $._allowlist[account] = false;
+    }
+
+    /**
+     * @notice get proxy implementation
+     * @return implementation address
+     */
+    function getImplementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
+    }
+
+    /**
+     * @notice upgrade proxy
+     * @param newImplementation new implementation contract
+     * @param data optional calldata
+     */
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 }
