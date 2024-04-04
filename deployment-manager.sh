@@ -45,8 +45,7 @@ usage() {
     echo "  deploy-creator-factory <beacon>"
     echo "  deploy-erc6551-account <erc6551Registry>"
     echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl>"
-    echo "  deploy-collection-factory <collectionImpl>"
-    echo "  create-creator <creatorFactory> <user>"
+    echo "  deploy-collection-factory <collectionBeacon>"
     echo ""
     echo "Options:"
     echo "  NETWORK: Set this environment variable to either 'local', 'sepolia', or 'mainnet'"
@@ -122,7 +121,7 @@ case $1 in
 
     "deploy-collection-factory")
         if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <collectionImpl>"
+            echo "Invalid param count; Usage: $0 <command> <collectionBeacon>"
             exit 1
         fi
 
