@@ -27,7 +27,13 @@ contract CreatorTest is BaseTest {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
         creator.add(
-            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            TEST_TOKEN_URI,
+            address(0),
+            0
         );
     }
 
@@ -53,8 +59,9 @@ contract CreatorTest is BaseTest {
 
     function test__RevertWhen_MaxSupplyExceeded() external {
         vm.prank(users.creator_0);
-        uint256 tokenId =
-            creator.add(1, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, "https://test.com");
+        uint256 tokenId = creator.add(
+            1, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, "https://test.com", address(0), 0
+        );
 
         vm.prank(users.user_0);
         creator.mint{ value: TEST_TOKEN_PRICE }(users.user_0, tokenId, 1);
@@ -68,8 +75,9 @@ contract CreatorTest is BaseTest {
         uint40 mintStart = uint40(block.timestamp + 7 days);
 
         vm.prank(users.creator_0);
-        uint256 tokenId =
-            creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, mintStart, TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI);
+        uint256 tokenId = creator.add(
+            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, mintStart, TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI, address(0), 0
+        );
 
         vm.prank(users.user_0);
         vm.expectRevert(IRouxCreator.MintNotStarted.selector);
@@ -78,8 +86,9 @@ contract CreatorTest is BaseTest {
 
     function test__RevertsWhen__MintEnded() external {
         vm.prank(users.creator_0);
-        uint256 tokenId =
-            creator.add(TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), 1 days, TEST_TOKEN_URI);
+        uint256 tokenId = creator.add(
+            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), 1 days, TEST_TOKEN_URI, address(0), 0
+        );
 
         vm.warp(block.timestamp + 1 days + 1 seconds);
 
@@ -95,7 +104,13 @@ contract CreatorTest is BaseTest {
     function test__TokenId_AddToken() external {
         vm.prank(users.creator_0);
         creator.add(
-            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            TEST_TOKEN_URI,
+            address(0),
+            0
         );
         assertEq(creator.tokenCount(), 2);
     }
@@ -148,7 +163,9 @@ contract CreatorTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://test.com"
+            "https://test.com",
+            address(0),
+            0
         );
 
         vm.prank(users.user_0);
@@ -163,13 +180,12 @@ contract CreatorTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://test.com"
+            "https://test.com",
+            address(0),
+            0
         );
 
         vm.startPrank(users.creator_1);
-
-        /* encode params */
-        bytes memory rouxCreatorParams = abi.encode(address(users.creator_1));
 
         /* create creator instance */
         RouxCreator creator1 = RouxCreator(factory.create());
@@ -185,10 +201,64 @@ contract CreatorTest is BaseTest {
             1
         );
 
-        (address attribution, uint96 parentId) = creator1.attribution(1);
+        (address attribution, uint256 parentId) = creator1.attribution(1);
 
         assertEq(attribution, users.creator_0);
         assertEq(parentId, 1);
+    }
+
+    function test__AddToken_WithAttribution_SecondaryBranch() external {
+        vm.prank(users.creator_0);
+        creator.add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://test.com",
+            address(0),
+            0
+        );
+
+        vm.startPrank(users.creator_1);
+
+        /* create creator instance */
+        RouxCreator creator1 = RouxCreator(factory.create());
+
+        /* create forked token with attribution */
+        uint256 tokenId = creator1.add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://test-forked.com",
+            users.creator_0,
+            1
+        );
+
+        (address attribution, uint256 parentId) = creator1.attribution(tokenId);
+
+        assertEq(attribution, users.creator_0);
+        assertEq(parentId, 1);
+        assertEq(creator1.uri(1), "https://test-forked.com");
+
+        /* create forked token from the fork with attribution */
+        vm.startPrank(users.creator_0);
+
+        uint256 tokenId2 = creator.add(
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            "https://test-secondary-forked.com",
+            address(creator1),
+            1
+        );
+
+        (address attribution2, uint256 parentId2) = creator.attribution(tokenId2);
+
+        assertEq(attribution2, address(creator1));
+        assertEq(parentId2, 1);
+        assertEq(creator.uri(tokenId2), "https://test-secondary-forked.com");
     }
 
     function test__AddMultipleTokens() external {
@@ -198,16 +268,22 @@ contract CreatorTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://test1.com"
+            "https://test1.com",
+            address(0),
+            0
         );
         creator.add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://test2.com"
+            "https://test2.com",
+            address(0),
+            0
         );
-        creator.add(10_000, 0.1 ether, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, "https://test3.com");
+        creator.add(
+            10_000, 0.1 ether, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, "https://test3.com", address(0), 0
+        );
         vm.stopPrank();
 
         vm.startPrank(users.user_0);

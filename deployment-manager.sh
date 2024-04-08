@@ -44,7 +44,7 @@ usage() {
     echo "  deploy-creator-impl"
     echo "  deploy-creator-factory <beacon>"
     echo "  deploy-erc6551-account <erc6551Registry>"
-    echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl>"
+    echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl> <rouxCreatorFactory>"
     echo "  deploy-collection-factory <collectionBeacon>"
     echo ""
     echo "Options:"
@@ -110,13 +110,13 @@ case $1 in
         ;;
     
     "deploy-collection-impl")
-        if [ "$#" -ne 3 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551Registry> <erc6551AccountImpl>"
+        if [ "$#" -ne 4 ]; then
+            echo "Invalid param count; Usage: $0 <command> <erc6551Registry> <erc6551AccountImpl> <rouxCreatorFactory>"
             exit 1
         fi
 
         echo "Deploying Collection Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCollectionImpl.s.sol:DeployCollectionImpl" "--sig run(address,address) $2 $3"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCollectionImpl.s.sol:DeployCollectionImpl" "--sig run(address,address,address) $2 $3 $4"
         ;;
 
     "deploy-collection-factory")

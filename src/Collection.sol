@@ -6,6 +6,7 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
+import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
 
 contract Collection is ICollection, ERC721, OwnableRoles {
     /* -------------------------------------------- */
@@ -13,11 +14,18 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* -------------------------------------------- */
 
     /**
-     * @notice Collection storage slot
+     * @notice collection storage slot
      * @dev keccak256(abi.encode(uint256(keccak256("erc7201:collection")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant COLLECTION_STORAGE_SLOT =
         0x993ddef881c729427ec09d4ff4f3cf4f71f12e1245e1afac8dcb6d99ddecf100;
+
+    bytes32 internal constant ROUX_COLLECTION_SALT = keccak256("ROUX_COLLECTION");
+
+    /**
+     * @notice implementation version
+     */
+    string public constant IMPLEMENTATION_VERSION = "1.0";
 
     /* -------------------------------------------- */
     /* immutable state                              */
@@ -32,6 +40,11 @@ contract Collection is ICollection, ERC721, OwnableRoles {
      * @notice initial account implementation
      */
     address immutable initialAccountImplementation;
+
+    /**
+     * @notice rouxCreator factory
+     */
+    IRouxCreatorFactory immutable rouxCreatorFactory;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -52,14 +65,16 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address registry, address initialAccountImplementation_) {
+    constructor(address registry_, address initialAccountImplementation_, address rouxCreatorFactory_) {
         CollectionStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */
         $._initialized = true;
 
-        erc6551Registry = IERC6551Registry(registry);
+        erc6551Registry = IERC6551Registry(registry_);
         initialAccountImplementation = initialAccountImplementation_;
+
+        rouxCreatorFactory = IRouxCreatorFactory(rouxCreatorFactory_);
     }
 
     /* -------------------------------------------- */
@@ -75,21 +90,21 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         (
             string memory name_,
             string memory symbol_,
-            string memory baseURI,
-            address[] memory initialItemTargets,
-            uint256[] memory initialItemIds
+            string memory baseURI_,
+            address[] memory initialItemTargets_,
+            uint256[] memory initialItemIds_
         ) = abi.decode(params, (string, string, string, address[], uint256[]));
 
-        _validateItems(initialItemTargets, initialItemIds);
+        _validateItems(initialItemTargets_, initialItemIds_);
 
         /* factory will transfer ownership to its caller */
         _initializeOwner(msg.sender);
 
         $._name = name_;
         $._symbol = symbol_;
-        $._uri = baseURI;
-        $._itemTargets = initialItemTargets;
-        $._itemIds = initialItemIds;
+        $._uri = baseURI_;
+        $._itemTargets = initialItemTargets_;
+        $._itemIds = initialItemIds_;
     }
 
     /* -------------------------------------------- */
@@ -110,22 +125,20 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* view                                         */
     /* -------------------------------------------- */
 
-    function name() public view override returns (string memory) {
-        CollectionStorage storage $ = _storage();
+    function implementationVersion() external pure returns (string memory) {
+        return IMPLEMENTATION_VERSION;
+    }
 
-        return $._name;
+    function name() public view override returns (string memory) {
+        return _storage()._name;
     }
 
     function symbol() public view override returns (string memory) {
-        CollectionStorage storage $ = _storage();
-
-        return $._symbol;
+        return _storage()._symbol;
     }
 
     function tokenURI(uint256) public view override returns (string memory) {
-        CollectionStorage storage $ = _storage();
-
-        return $._uri;
+        return _storage()._uri;
     }
 
     function collection() external view returns (address[] memory, uint256[] memory) {
@@ -144,10 +157,16 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         return price;
     }
 
-    function curator() external view override returns (address) {
-        CollectionStorage storage $ = _storage();
+    function curator() external view returns (address) {
+        return _storage()._curator;
+    }
 
-        return $._curator;
+    function totalSupply() external view returns (uint256) {
+        return _storage()._tokenIds;
+    }
+
+    function exists(uint256 tokenId_) external view returns (bool) {
+        return _exists(tokenId_);
     }
 
     /* -------------------------------------------- */
@@ -165,7 +184,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
         /* erc 6551 */
         address account = erc6551Registry.createAccount(
-            initialAccountImplementation, 0, block.chainid, address(this), collectionTokenId
+            initialAccountImplementation, ROUX_COLLECTION_SALT, block.chainid, address(this), collectionTokenId
         );
 
         /* mint to collection nft token bound account */
@@ -205,12 +224,12 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* internal functions                           */
     /* -------------------------------------------- */
 
-    function _validateItems(address[] memory itemTargets, uint256[] memory itemIds) internal view {
-        if (itemTargets.length != itemIds.length) revert InvalidItems();
+    function _validateItems(address[] memory itemTargets_, uint256[] memory itemIds_) internal view {
+        if (itemTargets_.length != itemIds_.length) revert InvalidItems();
 
-        for (uint256 i = 0; i < itemTargets.length; i++) {
-            if (itemTargets[i] == address(0)) revert InvalidItems();
-            if (itemIds[i] == 0 || itemIds[i] > IRouxCreator(itemTargets[i]).tokenCount()) revert InvalidItems();
+        for (uint256 i = 0; i < itemTargets_.length; i++) {
+            if (!rouxCreatorFactory.isCreator(itemTargets_[i])) revert InvalidItems();
+            if (itemIds_[i] == 0 || itemIds_[i] > IRouxCreator(itemTargets_[i]).tokenCount()) revert InvalidItems();
         }
     }
 }

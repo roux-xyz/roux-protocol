@@ -51,7 +51,9 @@ contract CollectionTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://new-token-2.com"
+            "https://new-token-2.com",
+            address(0),
+            0
         );
 
         address[] memory collectionItemTargets = new address[](2);
@@ -91,17 +93,20 @@ contract CollectionTest is BaseTest {
         assertEq(ERC721(address(collection)).tokenURI(1), TEST_TOKEN_URI, "collection tokenURI");
     }
 
-    function test__MintERC1155() external {
+    function test__MintCollection() external {
         uint256 collectionPrice = collection.collectionPrice();
 
         vm.prank(users.user_0);
         uint256 collectionTokenId = collection.mint{ value: collectionPrice }();
 
-        account =
-            erc6551Registry.account(address(accountImpl), 0, block.chainid, address(collection), collectionTokenId);
+        account = erc6551Registry.account(
+            address(accountImpl), keccak256("ROUX_COLLECTION"), block.chainid, address(collection), collectionTokenId
+        );
 
         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");
+        assertEq(collection.totalSupply(), 1, "collection totalSupply");
+        assertTrue(collection.exists(1), "collection exists");
 
         assertEq(creator.balanceOf(account, 1), 1, "1155 balanceOf");
 
@@ -112,14 +117,15 @@ contract CollectionTest is BaseTest {
         assertEq(ERC6551Account(payable(account)).owner(), users.user_0, "collection owner");
     }
 
-    function test__MintAndTransferERC1155() external {
+    function test__MintCollectionAndTransferToken() external {
         uint256 collectionPrice = collection.collectionPrice();
 
         vm.prank(users.user_0);
         uint256 collectionTokenId = collection.mint{ value: collectionPrice }();
 
-        account =
-            erc6551Registry.account(address(accountImpl), 0, block.chainid, address(collection), collectionTokenId);
+        account = erc6551Registry.account(
+            address(accountImpl), keccak256("ROUX_COLLECTION"), block.chainid, address(collection), collectionTokenId
+        );
 
         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");
@@ -145,7 +151,9 @@ contract CollectionTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://new-token-2.com"
+            "https://new-token-2.com",
+            address(0),
+            0
         );
 
         /* create new contract and item */
@@ -155,7 +163,9 @@ contract CollectionTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://new-token-3.com"
+            "https://new-token-3.com",
+            address(0),
+            0
         );
 
         /* add new item to collection */
@@ -191,8 +201,9 @@ contract CollectionTest is BaseTest {
         vm.prank(users.user_0);
         uint256 collectionTokenId = collection.mint{ value: collectionPrice }();
 
-        account =
-            erc6551Registry.account(address(accountImpl), 0, block.chainid, address(collection), collectionTokenId);
+        account = erc6551Registry.account(
+            address(accountImpl), keccak256("ROUX_COLLECTION"), block.chainid, address(collection), collectionTokenId
+        );
 
         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");

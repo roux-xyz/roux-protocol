@@ -32,6 +32,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
         bool _initialized;
         EnumerableSet.AddressSet _tokens;
         address _owner;
+        bool _enableAllowlist;
         mapping(address => bool) _allowlist;
     }
 
@@ -74,6 +75,9 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
 
         /* Set owner of proxy */
         _initializeOwner(msg.sender);
+
+        /* enable allowlist */
+        $._enableAllowlist = true;
     }
 
     /* -------------------------------------------- */
@@ -95,15 +99,11 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     function isCreator(address token) external view returns (bool) {
-        RouxCreatorFactoryStorage storage $ = _storage();
-
-        return $._tokens.contains(token);
+        return _storage()._tokens.contains(token);
     }
 
     function getCreators() external view returns (address[] memory) {
-        RouxCreatorFactoryStorage storage $ = _storage();
-
-        return $._tokens.values();
+        return _storage()._tokens.values();
     }
 
     /* -------------------------------------------- */
@@ -113,7 +113,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     function create() external returns (address) {
         RouxCreatorFactoryStorage storage $ = _storage();
 
-        if (!$._allowlist[msg.sender]) revert OnlyAllowlist();
+        if ($._enableAllowlist && !$._allowlist[msg.sender]) revert OnlyAllowlist();
 
         address creatorInstance = address(new BeaconProxy(_creatorBeacon, abi.encodeWithSignature("initialize()")));
 
@@ -131,6 +131,10 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* admin                                        */
     /* -------------------------------------------- */
 
+    function setAllowlist(bool enable) external onlyOwner {
+        _storage()._enableAllowlist = enable;
+    }
+
     function addAllowlist(address[] memory accounts) external onlyOwner {
         RouxCreatorFactoryStorage storage $ = _storage();
 
@@ -140,10 +144,12 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     }
 
     function removeAllowlist(address account) external onlyOwner {
-        RouxCreatorFactoryStorage storage $ = _storage();
-
-        $._allowlist[account] = false;
+        _storage()._allowlist[account] = false;
     }
+
+    /* -------------------------------------------- */
+    /* proxy                                        */
+    /* -------------------------------------------- */
 
     /**
      * @notice get proxy implementation
