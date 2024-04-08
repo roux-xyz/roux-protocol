@@ -101,7 +101,7 @@ abstract contract BaseTest is Test {
 
         /* creator deployment */
         creatorImpl = new RouxCreator();
-        vm.label({ account: address(creatorImpl), newLabel: "Creator Implementation" });
+        vm.label({ account: address(creatorImpl), newLabel: "Creator" });
 
         /* beacon deployment */
         creatorBeacon = new UpgradeableBeacon(address(creatorImpl), users.deployer);
@@ -144,7 +144,7 @@ abstract contract BaseTest is Test {
         vm.startPrank(users.deployer);
 
         /* collection implementation deployment */
-        collectionImpl = new Collection(address(erc6551Registry), address(accountImpl));
+        collectionImpl = new Collection(address(erc6551Registry), address(accountImpl), address(factory));
         vm.label({ account: address(collectionImpl), newLabel: "Collection Implementation" });
 
         /* collection beacon deployment */
@@ -181,7 +181,7 @@ abstract contract BaseTest is Test {
         allowlist[1] = address(users.creator_1);
         factory.addAllowlist(allowlist);
 
-        /* add curators to allowlist */
+        /* add curators to curator allowlist */
         address[] memory curatorAllowlist = new address[](3);
         curatorAllowlist[0] = address(users.creator_0);
         curatorAllowlist[1] = address(users.creator_1);
@@ -200,7 +200,13 @@ abstract contract BaseTest is Test {
 
         /* add token */
         creator.add(
-            TEST_TOKEN_MAX_SUPPLY, TEST_TOKEN_PRICE, uint40(block.timestamp), TEST_TOKEN_MINT_DURATION, TEST_TOKEN_URI
+            TEST_TOKEN_MAX_SUPPLY,
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            TEST_TOKEN_MINT_DURATION,
+            TEST_TOKEN_URI,
+            address(0),
+            0
         );
 
         vm.stopPrank();

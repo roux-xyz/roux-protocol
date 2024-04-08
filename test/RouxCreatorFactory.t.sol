@@ -53,6 +53,18 @@ contract RouxCreatorFactoryTest is BaseTest {
         assertEq(factory.owner(), address(users.deployer));
     }
 
+    function test__DisableAllowlist() external {
+        /* disable allowlist */
+        vm.prank(users.deployer);
+        factory.setAllowlist(false);
+
+        /* allow anyone to create */
+        vm.prank(users.user_0);
+        address newCreator = factory.create();
+
+        assert(factory.isCreator(newCreator));
+    }
+
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
         factory.transferOwnership(users.creator_0);
