@@ -229,7 +229,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
         for (uint256 i = 0; i < itemTargets_.length; i++) {
             if (!rouxCreatorFactory.isCreator(itemTargets_[i])) revert InvalidItems();
-            if (itemIds_[i] == 0 || itemIds_[i] > IRouxCreator(itemTargets_[i]).tokenCount()) revert InvalidItems();
+            if (itemIds_[i] == 0 || !IRouxCreator(itemTargets_[i]).exists(itemIds_[i])) revert InvalidItems();
         }
     }
 }

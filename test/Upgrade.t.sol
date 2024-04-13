@@ -17,7 +17,7 @@ contract UpgradeTest is BaseTest {
         assertEq(creatorBeacon.implementation(), address(creatorImpl));
 
         /* deploy new creator implementation */
-        IRouxCreator newCreatorImpl = new RouxCreator();
+        IRouxCreator newCreatorImpl = new RouxCreator(address(administrator));
 
         /* set new implementation in beacon */
         vm.prank(users.deployer);
