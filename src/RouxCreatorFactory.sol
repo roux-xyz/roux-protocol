@@ -28,6 +28,16 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* structures                                   */
     /* -------------------------------------------- */
 
+    /**
+     * @notice RouxCreator storage
+     * @custom:storage-location erc7201:rouxCreatorFactory
+     *
+     * @param _initialized whether the contract has been initialized
+     * @param _tokens set of creator tokens
+     * @param _owner owner of the contract
+     * @param _enableAllowlist whether to enable allowlist
+     * @param _allowlist allowlist of creators
+     */
     struct RouxCreatorFactoryStorage {
         bool _initialized;
         EnumerableSet.AddressSet _tokens;
@@ -117,7 +127,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
 
         address creatorInstance = address(new BeaconProxy(_creatorBeacon, abi.encodeWithSignature("initialize()")));
 
-        IRouxCreator(creatorInstance).initializeCreator(msg.sender);
+        IRouxCreator(creatorInstance).setCreator(msg.sender);
         Ownable(creatorInstance).transferOwnership(msg.sender);
 
         $._tokens.add(creatorInstance);

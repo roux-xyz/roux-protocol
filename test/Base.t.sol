@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+import { RouxAdministrator } from "src/RouxAdministrator.sol";
 import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
 import { RouxCreator } from "src/RouxCreator.sol";
 import { RouxCreatorFactory } from "src/RouxCreatorFactory.sol";
@@ -50,6 +51,9 @@ abstract contract BaseTest is Test {
     /* state                                        */
     /* -------------------------------------------- */
 
+    RouxAdministrator internal administratorImpl;
+    RouxAdministrator internal administrator;
+
     RouxCreator internal creatorImpl;
     RouxCreator internal creator;
     RouxCreatorFactory internal factoryImpl;
@@ -73,18 +77,19 @@ abstract contract BaseTest is Test {
 
     function setUp() public virtual {
         users = Users({
-            deployer: createUser("deployer"),
-            user_0: createUser("user_0"),
-            user_1: createUser("user_1"),
-            user_2: createUser("user_2"),
-            user_3: createUser("user_3"),
-            creator_0: createUser("creator_0"),
-            creator_1: createUser("creator_1"),
-            creator_2: createUser("creator_2"),
-            curator_0: createUser("curator_0"),
-            admin: createUser("admin")
+            deployer: _createUser("deployer"),
+            user_0: _createUser("user_0"),
+            user_1: _createUser("user_1"),
+            user_2: _createUser("user_2"),
+            user_3: _createUser("user_3"),
+            creator_0: _createUser("creator_0"),
+            creator_1: _createUser("creator_1"),
+            creator_2: _createUser("creator_2"),
+            curator_0: _createUser("curator_0"),
+            admin: _createUser("admin")
         });
 
+        _deployAdministrator();
         _deployCreator();
         _deployCreatorFactory();
         _deployTokenBoundContracts();
@@ -95,12 +100,27 @@ abstract contract BaseTest is Test {
         _addCollection();
     }
 
+    function _deployAdministrator() internal {
+        /* deployer */
+        vm.startPrank(users.deployer);
+
+        /* administrator deployment */
+        administratorImpl = new RouxAdministrator();
+        vm.label({ account: address(administratorImpl), newLabel: "Roux Administrator Implementation" });
+
+        /* deploy proxy */
+        administrator = RouxAdministrator(address(new ERC1967Proxy(address(administratorImpl), "")));
+        vm.label({ account: address(administrator), newLabel: "Roux Administrator Proxy" });
+
+        vm.stopPrank();
+    }
+
     function _deployCreator() internal {
         /* deployer */
         vm.startPrank(users.deployer);
 
         /* creator deployment */
-        creatorImpl = new RouxCreator();
+        creatorImpl = new RouxCreator(address(administrator));
         vm.label({ account: address(creatorImpl), newLabel: "Creator" });
 
         /* beacon deployment */
@@ -200,13 +220,15 @@ abstract contract BaseTest is Test {
 
         /* add token */
         creator.add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            TEST_TOKEN_URI,
-            address(0),
-            0
+            TEST_TOKEN_MAX_SUPPLY, // max supply
+            TEST_TOKEN_PRICE, // token price
+            uint40(block.timestamp), // mint start
+            TEST_TOKEN_MINT_DURATION, // mint duration
+            TEST_TOKEN_URI, // token uri
+            users.creator_0, // funds recipient
+            address(0), // attribution parent
+            0, // parent id
+            TEST_PROFIT_SHARE // profit share in bps
         );
 
         vm.stopPrank();
@@ -238,9 +260,52 @@ abstract contract BaseTest is Test {
     /* utility functions                            */
     /* -------------------------------------------- */
 
-    function createUser(string memory name) internal returns (address payable addr) {
+    function _createUser(string memory name) internal returns (address payable addr) {
         addr = payable(makeAddr(name));
         vm.label({ account: addr, newLabel: name });
         vm.deal({ account: addr, newBalance: 100 ether });
+    }
+
+    function _createForks(uint256 forks) internal returns (RouxCreator[] memory) {
+        /* allowlist creator2 */
+        vm.prank(users.deployer);
+        address[] memory allowlist = new address[](1);
+        allowlist[0] = address(users.creator_2);
+        factory.addAllowlist(allowlist);
+
+        /* user array */
+        address[] memory userArr = new address[](3);
+        userArr[0] = users.creator_0;
+        userArr[1] = users.creator_1;
+        userArr[2] = users.creator_2;
+
+        uint256 num = forks + 1;
+        RouxCreator[] memory creators = new RouxCreator[](num);
+        creators[0] = creator;
+
+        for (uint256 i = 1; i < num; i++) {
+            address user = userArr[i % userArr.length];
+            vm.startPrank(user);
+
+            /* create creator instance */
+            RouxCreator edition = RouxCreator(factory.create());
+            creators[i] = edition;
+
+            /* create forked token with attribution */
+            edition.add(
+                TEST_TOKEN_MAX_SUPPLY,
+                TEST_TOKEN_PRICE,
+                uint40(block.timestamp),
+                TEST_TOKEN_MINT_DURATION,
+                TEST_TOKEN_URI,
+                user,
+                address(creators[i - 1]),
+                1,
+                TEST_PROFIT_SHARE
+            );
+            vm.stopPrank();
+        }
+
+        return creators;
     }
 }

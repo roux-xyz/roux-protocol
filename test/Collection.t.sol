@@ -52,8 +52,10 @@ contract CollectionTest is BaseTest {
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
             "https://new-token-2.com",
+            users.creator_0,
             address(0),
-            0
+            0,
+            TEST_PROFIT_SHARE
         );
 
         address[] memory collectionItemTargets = new address[](2);
@@ -117,7 +119,25 @@ contract CollectionTest is BaseTest {
         assertEq(ERC6551Account(payable(account)).owner(), users.user_0, "collection owner");
     }
 
-    function test__MintCollectionAndTransferToken() external {
+    function test__MintCollection_AndTransfer() external {
+        uint256 collectionPrice = collection.collectionPrice();
+
+        vm.startPrank(users.user_0);
+        uint256 collectionTokenId = collection.mint{ value: collectionPrice }();
+
+        account = erc6551Registry.account(
+            address(accountImpl), keccak256("ROUX_COLLECTION"), block.chainid, address(collection), collectionTokenId
+        );
+
+        assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
+
+        collection.transferFrom(users.user_0, users.user_1, 1);
+
+        assertEq(collection.ownerOf(1), users.user_1, "collection ownerOf");
+        assertEq(collection.balanceOf(users.user_0), 0, "collection balanceOf user_0");
+    }
+
+    function test__MintCollection_AndTransferToken() external {
         uint256 collectionPrice = collection.collectionPrice();
 
         vm.prank(users.user_0);
@@ -152,8 +172,10 @@ contract CollectionTest is BaseTest {
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
             "https://new-token-2.com",
+            users.creator_0,
             address(0),
-            0
+            0,
+            TEST_PROFIT_SHARE
         );
 
         /* create new contract and item */
@@ -163,9 +185,11 @@ contract CollectionTest is BaseTest {
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
-            "https://new-token-3.com",
+            "https://new-token-2.com",
+            users.creator_0,
             address(0),
-            0
+            0,
+            TEST_PROFIT_SHARE
         );
 
         /* add new item to collection */
