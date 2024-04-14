@@ -39,15 +39,15 @@ run `anvil` in a different terminal window
 1. `export $CONTRACT_FACTORY=0x...`
 2. `export $COL_FACTORY=0x...`
 
-**Create RouxCreator from RouxCreatorFactory**
+**Create RouxEdition from RouxEditionFactory**
 
 `cast send --private-key $PRIVATE_KEY --rpc-url $SEPOLIA_RPC_URL $CONTRACT_FACTORY "create()"`
 
 **Add Recipe Token**
 
-1. export contract instance created in `create` call above to env var $CREATOR
-2. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint64,uint128,uint40,uint40,string)" <maxSupply> <price>  <mintStart> <mintDuration> <uri>`
-3. e.g. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" 10000 50000000000000000 1711956272 31536000 https://test-token-creator-1.com`
+1. export contract instance created in `create` call above to env var $EDTIION
+2. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $EDITION "add(uint64,uint128,uint40,uint40,string)" <maxSupply> <price>  <mintStart> <mintDuration> <uri>`
+3. e.g. `cast send --private-key $PK --rpc-url $SEPOLIA_RPC_URL $CREATOR "add(uint256,uint256,string)" 10000 50000000000000000 1711956272 31536000 https://test-token-edition-1.com`
 
 **Mint Recipe Token**
 
@@ -58,7 +58,7 @@ _Note --value flag i.e. how much eth is being sent with transaction_
 
 **Create Collection**
 
-1. ABI-encode `params`: `cast abi-encode "f(string,stringstring,address[],uint256[])" <name> <symbol> <baseURI> "[<creatorAddr1>, <creatorAddr2>, ..., <creatorAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
+1. ABI-encode `params`: `cast abi-encode "f(string,stringstring,address[],uint256[])" <name> <symbol> <baseURI> "[<editionAddr1>, <editionAddr2>, ..., <editionAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
 2. e.g. `cast abi-encode "f(address,address[],uint256[])" "Test Token" TST http://example.com "[0xa8f6658ecfae3e1531470efa5b00d78082c0050e]" "[1]"`
 3. `cast send --private-key $PK_CREATOR --rpc-url $SEPOLIA_RPC_URL $COL_FACTORY "create(bytes)" <params>`
 

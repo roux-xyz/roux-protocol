@@ -7,9 +7,9 @@ import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/Upgradea
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { RouxAdministrator } from "src/RouxAdministrator.sol";
-import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
-import { RouxCreator } from "src/RouxCreator.sol";
-import { RouxCreatorFactory } from "src/RouxCreatorFactory.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
@@ -40,9 +40,9 @@ abstract contract BaseTest is Test {
         address payable user_1;
         address payable user_2;
         address payable user_3;
-        address payable creator_0;
-        address payable creator_1;
-        address payable creator_2;
+        address payable edition_0;
+        address payable edition_1;
+        address payable edition_2;
         address payable curator_0;
         address payable admin;
     }
@@ -54,10 +54,10 @@ abstract contract BaseTest is Test {
     RouxAdministrator internal administratorImpl;
     RouxAdministrator internal administrator;
 
-    RouxCreator internal creatorImpl;
-    RouxCreator internal creator;
-    RouxCreatorFactory internal factoryImpl;
-    RouxCreatorFactory internal factory;
+    RouxEdition internal editionImpl;
+    RouxEdition internal edition;
+    RouxEditionFactory internal factoryImpl;
+    RouxEditionFactory internal factory;
 
     ERC6551Registry internal erc6551Registry;
     ERC6551Account internal accountImpl;
@@ -66,7 +66,7 @@ abstract contract BaseTest is Test {
     CollectionFactory internal collectionFactoryImpl;
     CollectionFactory internal collectionFactory;
 
-    UpgradeableBeacon internal creatorBeacon;
+    UpgradeableBeacon internal editionBeacon;
     UpgradeableBeacon internal collectionBeacon;
 
     Users internal users;
@@ -82,16 +82,16 @@ abstract contract BaseTest is Test {
             user_1: _createUser("user_1"),
             user_2: _createUser("user_2"),
             user_3: _createUser("user_3"),
-            creator_0: _createUser("creator_0"),
-            creator_1: _createUser("creator_1"),
-            creator_2: _createUser("creator_2"),
+            edition_0: _createUser("edition_0"),
+            edition_1: _createUser("edition_1"),
+            edition_2: _createUser("edition_2"),
             curator_0: _createUser("curator_0"),
             admin: _createUser("admin")
         });
 
         _deployAdministrator();
-        _deployCreator();
-        _deployCreatorFactory();
+        _deployEdition();
+        _deployEditionFactory();
         _deployTokenBoundContracts();
         _deployCollection();
         _deployCollectionFactory();
@@ -115,34 +115,34 @@ abstract contract BaseTest is Test {
         vm.stopPrank();
     }
 
-    function _deployCreator() internal {
+    function _deployEdition() internal {
         /* deployer */
         vm.startPrank(users.deployer);
 
-        /* creator deployment */
-        creatorImpl = new RouxCreator(address(administrator));
-        vm.label({ account: address(creatorImpl), newLabel: "Creator" });
+        /* edition deployment */
+        editionImpl = new RouxEdition(address(administrator));
+        vm.label({ account: address(editionImpl), newLabel: "Creator" });
 
         /* beacon deployment */
-        creatorBeacon = new UpgradeableBeacon(address(creatorImpl), users.deployer);
-        vm.label({ account: address(creatorBeacon), newLabel: "Creator Beacon" });
+        editionBeacon = new UpgradeableBeacon(address(editionImpl), users.deployer);
+        vm.label({ account: address(editionBeacon), newLabel: "Creator Beacon" });
 
         vm.stopPrank();
     }
 
-    function _deployCreatorFactory() internal {
+    function _deployEditionFactory() internal {
         /* deployer */
         vm.startPrank(users.deployer);
 
         /* factory deployment */
-        factoryImpl = new RouxCreatorFactory(address(creatorBeacon));
+        factoryImpl = new RouxEditionFactory(address(editionBeacon));
         vm.label({ account: address(factory), newLabel: "Creator Factory Implementation" });
 
         /* encode params */
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
 
         /* Deploy proxy */
-        factory = RouxCreatorFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
+        factory = RouxEditionFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
         vm.label({ account: address(factory), newLabel: "Roux Creator Factory" });
 
         vm.stopPrank();
@@ -169,7 +169,7 @@ abstract contract BaseTest is Test {
 
         /* collection beacon deployment */
         collectionBeacon = new UpgradeableBeacon(address(collectionImpl), users.deployer);
-        vm.label({ account: address(creatorBeacon), newLabel: "Collection Beacon" });
+        vm.label({ account: address(editionBeacon), newLabel: "Collection Beacon" });
 
         vm.stopPrank();
     }
@@ -195,16 +195,16 @@ abstract contract BaseTest is Test {
     function _allowlistUsers() internal {
         vm.startPrank(users.deployer);
 
-        /* add creators to allowlist */
+        /* add editions to allowlist */
         address[] memory allowlist = new address[](2);
-        allowlist[0] = address(users.creator_0);
-        allowlist[1] = address(users.creator_1);
+        allowlist[0] = address(users.edition_0);
+        allowlist[1] = address(users.edition_1);
         factory.addAllowlist(allowlist);
 
         /* add curators to curator allowlist */
         address[] memory curatorAllowlist = new address[](3);
-        curatorAllowlist[0] = address(users.creator_0);
-        curatorAllowlist[1] = address(users.creator_1);
+        curatorAllowlist[0] = address(users.edition_0);
+        curatorAllowlist[1] = address(users.edition_1);
         curatorAllowlist[2] = address(users.curator_0);
         collectionFactory.addAllowlist(curatorAllowlist);
 
@@ -212,20 +212,20 @@ abstract contract BaseTest is Test {
     }
 
     function _addToken() internal {
-        /* creator */
-        vm.startPrank(users.creator_0);
+        /* edition */
+        vm.startPrank(users.edition_0);
 
         /* create token instance */
-        creator = RouxCreator(factory.create());
+        edition = RouxEdition(factory.create());
 
         /* add token */
-        creator.add(
+        edition.add(
             TEST_TOKEN_MAX_SUPPLY, // max supply
             TEST_TOKEN_PRICE, // token price
             uint40(block.timestamp), // mint start
             TEST_TOKEN_MINT_DURATION, // mint duration
             TEST_TOKEN_URI, // token uri
-            users.creator_0, // funds recipient
+            users.edition_0, // funds recipient
             address(0), // attribution parent
             0, // parent id
             TEST_PROFIT_SHARE // profit share in bps
@@ -235,11 +235,11 @@ abstract contract BaseTest is Test {
     }
 
     function _addCollection() internal {
-        vm.startPrank(users.creator_0);
+        vm.startPrank(users.edition_0);
 
         /* create target array for collection */
         address[] memory collectionItemTargets = new address[](1);
-        collectionItemTargets[0] = address(creator);
+        collectionItemTargets[0] = address(edition);
 
         /* create token id array for collection */
         uint256[] memory collectionItemIds = new uint256[](1);
@@ -266,46 +266,46 @@ abstract contract BaseTest is Test {
         vm.deal({ account: addr, newBalance: 100 ether });
     }
 
-    function _createForks(uint256 forks) internal returns (RouxCreator[] memory) {
-        /* allowlist creator2 */
+    function _createForks(uint256 forks) internal returns (RouxEdition[] memory) {
+        /* allowlist edition2 */
         vm.prank(users.deployer);
         address[] memory allowlist = new address[](1);
-        allowlist[0] = address(users.creator_2);
+        allowlist[0] = address(users.edition_2);
         factory.addAllowlist(allowlist);
 
         /* user array */
         address[] memory userArr = new address[](3);
-        userArr[0] = users.creator_0;
-        userArr[1] = users.creator_1;
-        userArr[2] = users.creator_2;
+        userArr[0] = users.edition_0;
+        userArr[1] = users.edition_1;
+        userArr[2] = users.edition_2;
 
         uint256 num = forks + 1;
-        RouxCreator[] memory creators = new RouxCreator[](num);
-        creators[0] = creator;
+        RouxEdition[] memory editions = new RouxEdition[](num);
+        editions[0] = edition;
 
         for (uint256 i = 1; i < num; i++) {
             address user = userArr[i % userArr.length];
             vm.startPrank(user);
 
-            /* create creator instance */
-            RouxCreator edition = RouxCreator(factory.create());
-            creators[i] = edition;
+            /* create edition instance */
+            RouxEdition instance = RouxEdition(factory.create());
+            editions[i] = instance;
 
             /* create forked token with attribution */
-            edition.add(
+            instance.add(
                 TEST_TOKEN_MAX_SUPPLY,
                 TEST_TOKEN_PRICE,
                 uint40(block.timestamp),
                 TEST_TOKEN_MINT_DURATION,
                 TEST_TOKEN_URI,
                 user,
-                address(creators[i - 1]),
+                address(editions[i - 1]),
                 1,
                 TEST_PROFIT_SHARE
             );
             vm.stopPrank();
         }
 
-        return creators;
+        return editions;
     }
 }

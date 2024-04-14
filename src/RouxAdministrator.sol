@@ -5,7 +5,7 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { RouxCreator } from "src/RouxCreator.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
 import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 
 contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
@@ -16,11 +16,12 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     /* -------------------------------------------- */
 
     /**
-     * @notice RouxCreator storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxAdministrator")) - 1)) & ~bytes32(uint256(0xff));
+     * @notice RouxAdministrator storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxAdministrator.rouxAdministrationStorage")) - 1)) &
+     *      ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_ADMINISTRATOR_STORAGE_SLOT =
-        0x4be32876def4625ab071f1bff1d9e7d2611bdacdac42b0d884554f7446afc300;
+        0x54aeba14fcc33b5cf6350741e30cfdd5249ab55bc8e60ba8d3af833d27edab00;
 
     /**
      * @notice basis point scale
@@ -44,8 +45,8 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     /* -------------------------------------------- */
 
     /**
-     * @notice RouxCreator storage
-     * @custom:storage-location erc7201:rouxAdministrator
+     * @notice RouxEdition storage
+     * @custom:storage-location erc7201:rouxAdministrator.rouxAdministratorStorage
      */
     struct RouxAdministrationStorage {
         bool _initialized;
@@ -164,6 +165,9 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
         // get current depth of parent edition and tokenId
         (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 
+        // revert if funds recipient is zero address
+        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
+
         // revert if addition exceeds max depth
         if (depth + 1 > MAX_DEPTH) revert MaxDepthExceeded();
 
@@ -171,12 +175,12 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
         if (profitShare > BASIS_POINT_SCALE) revert InvalidProfitShare();
 
         // set attribution for edition + token id
-        _storage()._administrationData[msg.sender][tokenId] = AdministrationData({
-            parentEdition: parentEdition,
-            parentTokenId: parentTokenId,
-            fundsRecipient: fundsRecipient,
-            profitShare: profitShare
-        });
+        AdministrationData storage d = _storage()._administrationData[msg.sender][tokenId];
+
+        d.parentEdition = parentEdition;
+        d.parentTokenId = parentTokenId;
+        d.fundsRecipient = fundsRecipient;
+        d.profitShare = profitShare;
     }
 
     /**
@@ -201,11 +205,8 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
         // get storage
         RouxAdministrationStorage storage $ = _storage();
 
-        // cache edition's funding recipient
+        // cache edition's funds recipient
         address fundsRecipient = $._administrationData[edition][tokenId].fundsRecipient;
-
-        // ensure funding recipient has been set
-        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
         // disburse pending balance
         uint256 pendingBalance = $._pending[edition][tokenId];

@@ -41,10 +41,10 @@ usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  deploy-creator-impl"
-    echo "  deploy-creator-factory <beacon>"
+    echo "  deploy-edition-impl"
+    echo "  deploy-edition-factory <beacon>"
     echo "  deploy-erc6551-account <erc6551Registry>"
-    echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl> <rouxCreatorFactory>"
+    echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl> <RouxEditionFactory>"
     echo "  deploy-collection-factory <collectionBeacon>"
     echo ""
     echo "Options:"
@@ -64,24 +64,24 @@ fi
 
 case $1 in
 
-    "deploy-creator-impl")
+    "deploy-edition-impl")
         if [ "$#" -ne 1 ]; then
             echo "Invalid param count; Usage: $0 <command>"
             exit 1
         fi
 
-        echo "Deploying Creator Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCreatorImpl.s.sol:DeployCreatorImpl" "--sig run()"
+        echo "Deploying Edition Implementation"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run()"
         ;;
 
-    "deploy-creator-factory")
+    "deploy-edition-factory")
         if [ "$#" -ne 2 ]; then
             echo "Invalid param count; Usage: $0 <command> <beacon>"
             exit 1
         fi
 
-        echo "Deploying CreatorFactory"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCreatorFactory.s.sol:DeployCreatorFactory" "--sig run(address) $2"
+        echo "Deploying EditionFactory"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $2"
         ;;
 
     "deploy-erc6551-registry")
@@ -111,7 +111,7 @@ case $1 in
     
     "deploy-collection-impl")
         if [ "$#" -ne 4 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551Registry> <erc6551AccountImpl> <rouxCreatorFactory>"
+            echo "Invalid param count; Usage: $0 <command> <erc6551Registry> <erc6551AccountImpl> <RouxEditionFactory>"
             exit 1
         fi
 
