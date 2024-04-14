@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -228,7 +228,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         if (itemTargets_.length != itemIds_.length) revert InvalidItems();
 
         for (uint256 i = 0; i < itemTargets_.length; i++) {
-            if (!RouxEditionFactory.isCreator(itemTargets_[i])) revert InvalidItems();
+            if (!RouxEditionFactory.isEdition(itemTargets_[i])) revert InvalidItems();
             if (itemIds_[i] == 0 || !IRouxEdition(itemTargets_[i]).exists(itemIds_[i])) revert InvalidItems();
         }
     }

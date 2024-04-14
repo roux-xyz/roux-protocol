@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
@@ -17,66 +17,48 @@ contract AdministratorTest is BaseTest {
     function test_RevertsWhen_Root_MaxDepthExceeded() external {
         RouxEdition[] memory editions = _createForks(MAX_FORK_DEPTH);
 
-        /* get root */
-        vm.expectRevert(IRouxAdministrator.MaxDepthExceeded.selector);
+        // modify default administration data
+        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
+        a.parentEdition = address(editions[MAX_FORK_DEPTH]);
+        a.parentTokenId = 1;
 
         /* attempt to add another fork */
-        vm.prank(users.edition_0);
-        edition.add(
-            1,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            TEST_TOKEN_URI,
-            users.edition_0,
-            address(editions[MAX_FORK_DEPTH]),
-            1,
-            TEST_PROFIT_SHARE
-        );
+        vm.prank(users.creator_0);
+        vm.expectRevert(IRouxAdministrator.MaxDepthExceeded.selector);
+        edition.add(defaultTokenSaleData, a, TEST_TOKEN_URI, users.creator_0);
     }
 
     function test__RevertsWhen_SetAdministration_FundsRecipientIsZero() external {
-        vm.prank(users.edition_0);
+        // modify default administration data
+        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
+        a.fundsRecipient = address(0);
+
+        vm.prank(users.creator_0);
         vm.expectRevert(IRouxAdministrator.InvalidFundsRecipient.selector);
-        edition.add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            TEST_TOKEN_URI,
-            address(0), // funds recipient
-            address(0),
-            0,
-            TEST_PROFIT_SHARE
-        );
+        edition.add(defaultTokenSaleData, a, TEST_TOKEN_URI, users.creator_0);
     }
 
     function test__RevertsWhen_UpgradeToAndCall_OnlyOwner() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         /* attempt to upgrade to and call */
-        vm.prank(users.edition_0);
+        vm.prank(users.creator_0);
         administrator.upgradeToAndCall(address(edition), "");
     }
 
     function test__Root_Depth1() external {
-        vm.startPrank(users.edition_1);
+        // modify default administration data
+        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
+        a.parentEdition = address(edition);
+        a.parentTokenId = 1;
+
+        vm.startPrank(users.creator_1);
 
         /* create edition instance */
-        RouxEdition edition1 = RouxEdition(factory.create());
+        RouxEdition edition1 = RouxEdition(factory.create(""));
 
         /* create forked token with attribution */
-        edition1.add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            TEST_TOKEN_URI,
-            users.edition_1,
-            address(edition),
-            1,
-            TEST_PROFIT_SHARE
-        );
+        edition1.add(defaultTokenSaleData, a, TEST_TOKEN_URI, users.creator_1);
         vm.stopPrank();
 
         /* get root */
@@ -123,7 +105,7 @@ contract AdministratorTest is BaseTest {
         /* sanity checks */
         assertEq(editions.length, n + 1); // original + n forks
         for (uint256 i = 0; i < n + 1; i++) {
-            assertEq(factory.isCreator(address(editions[i])), true);
+            assertEq(factory.isEdition(address(editions[i])), true);
         }
     }
 }

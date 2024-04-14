@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { BaseTest } from "./Base.t.sol";
 
@@ -25,38 +25,28 @@ contract CollectionTest is BaseTest {
         uint256[] memory collectionItemIds = new uint256[](1);
         collectionItemIds[0] = 1;
 
-        vm.prank(users.edition_0);
+        vm.prank(users.creator_0);
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
     }
 
     function test__RevertWhen_InvalidItems_LengthMismatch() external {
         address[] memory collectionItemTargets = new address[](2);
-        collectionItemTargets[0] = address(users.edition_0);
-        collectionItemTargets[1] = address(users.edition_0);
+        collectionItemTargets[0] = address(users.creator_0);
+        collectionItemTargets[1] = address(users.creator_0);
 
         uint256[] memory collectionItemIds = new uint256[](1);
         collectionItemIds[0] = 1;
 
-        vm.prank(users.edition_0);
+        vm.prank(users.creator_0);
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
     }
 
     function test__RevertWhen_InvalidItems_InvalidTokenId() external {
         /* create new item */
-        vm.startPrank(users.edition_0);
-        edition.add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            "https://new-token-2.com",
-            users.edition_0,
-            address(0),
-            0,
-            TEST_PROFIT_SHARE
-        );
+        vm.startPrank(users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0);
 
         address[] memory collectionItemTargets = new address[](2);
         collectionItemTargets[0] = address(edition);
@@ -79,11 +69,11 @@ contract CollectionTest is BaseTest {
     }
 
     function test__Owner() external {
-        assertEq(collection.owner(), address(users.edition_0), "collection owner");
+        assertEq(collection.owner(), address(users.creator_0), "collection owner");
     }
 
     function test__Curator() external {
-        assertEq(collection.curator(), address(users.edition_0), "collection curator");
+        assertEq(collection.curator(), address(users.creator_0), "collection curator");
     }
 
     function test__CollectionPrice() external {
@@ -165,31 +155,13 @@ contract CollectionTest is BaseTest {
 
     function test__AddItems() external {
         /* create new item */
-        vm.startPrank(users.edition_0);
-        edition.add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            "https://new-token-2.com",
-            users.edition_0,
-            address(0),
-            0,
-            TEST_PROFIT_SHARE
-        );
+        vm.startPrank(users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0);
 
         /* create new contract and item */
-        address newCreatorContract = factory.create();
+        address newCreatorContract = factory.create("");
         RouxEdition(newCreatorContract).add(
-            TEST_TOKEN_MAX_SUPPLY,
-            TEST_TOKEN_PRICE,
-            uint40(block.timestamp),
-            TEST_TOKEN_MINT_DURATION,
-            "https://new-token-2.com",
-            users.edition_0,
-            address(0),
-            0,
-            TEST_PROFIT_SHARE
+            defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0
         );
 
         /* add new item to collection */
