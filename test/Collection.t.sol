@@ -6,7 +6,7 @@ import { BaseTest } from "./Base.t.sol";
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { Collection } from "src/Collection.sol";
-import { RouxCreator } from "src/RouxCreator.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./Constants.t.sol";
@@ -25,42 +25,42 @@ contract CollectionTest is BaseTest {
         uint256[] memory collectionItemIds = new uint256[](1);
         collectionItemIds[0] = 1;
 
-        vm.prank(users.creator_0);
+        vm.prank(users.edition_0);
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
     }
 
     function test__RevertWhen_InvalidItems_LengthMismatch() external {
         address[] memory collectionItemTargets = new address[](2);
-        collectionItemTargets[0] = address(users.creator_0);
-        collectionItemTargets[1] = address(users.creator_0);
+        collectionItemTargets[0] = address(users.edition_0);
+        collectionItemTargets[1] = address(users.edition_0);
 
         uint256[] memory collectionItemIds = new uint256[](1);
         collectionItemIds[0] = 1;
 
-        vm.prank(users.creator_0);
+        vm.prank(users.edition_0);
         vm.expectRevert(ICollection.InvalidItems.selector);
         Collection(address(collection)).addItems(collectionItemTargets, collectionItemIds);
     }
 
     function test__RevertWhen_InvalidItems_InvalidTokenId() external {
         /* create new item */
-        vm.startPrank(users.creator_0);
-        creator.add(
+        vm.startPrank(users.edition_0);
+        edition.add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
             "https://new-token-2.com",
-            users.creator_0,
+            users.edition_0,
             address(0),
             0,
             TEST_PROFIT_SHARE
         );
 
         address[] memory collectionItemTargets = new address[](2);
-        collectionItemTargets[0] = address(creator);
-        collectionItemTargets[1] = address(creator);
+        collectionItemTargets[0] = address(edition);
+        collectionItemTargets[1] = address(edition);
 
         uint256[] memory collectionItemIds = new uint256[](2);
         collectionItemIds[0] = 1;
@@ -79,11 +79,11 @@ contract CollectionTest is BaseTest {
     }
 
     function test__Owner() external {
-        assertEq(collection.owner(), address(users.creator_0), "collection owner");
+        assertEq(collection.owner(), address(users.edition_0), "collection owner");
     }
 
     function test__Curator() external {
-        assertEq(collection.curator(), address(users.creator_0), "collection curator");
+        assertEq(collection.curator(), address(users.edition_0), "collection curator");
     }
 
     function test__CollectionPrice() external {
@@ -110,7 +110,7 @@ contract CollectionTest is BaseTest {
         assertEq(collection.totalSupply(), 1, "collection totalSupply");
         assertTrue(collection.exists(1), "collection exists");
 
-        assertEq(creator.balanceOf(account, 1), 1, "1155 balanceOf");
+        assertEq(edition.balanceOf(account, 1), 1, "1155 balanceOf");
 
         (uint256 chainId, address tokenContract, uint256 tokenId) = ERC6551Account(payable(account)).token();
         assertEq(chainId, block.chainid, "chainId");
@@ -150,29 +150,29 @@ contract CollectionTest is BaseTest {
         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");
 
-        assertEq(creator.balanceOf(account, 1), 1, "1155 balanceOf prior to transfer");
+        assertEq(edition.balanceOf(account, 1), 1, "1155 balanceOf prior to transfer");
 
         bytes memory data = abi.encodeWithSignature(
             "safeTransferFrom(address,address,uint256,uint256,bytes)", account, users.user_1, 1, 1, ""
         );
 
         vm.prank(users.user_0);
-        ERC6551Account(payable(account)).execute(address(creator), 0, data, ERC6551Account.Operation.Call);
+        ERC6551Account(payable(account)).execute(address(edition), 0, data, ERC6551Account.Operation.Call);
 
-        assertEq(creator.balanceOf(account, 1), 0, "1155 balanceOf account post transfer");
-        assertEq(creator.balanceOf(users.user_1, 1), 1, "1155 balanceOf id post transfer");
+        assertEq(edition.balanceOf(account, 1), 0, "1155 balanceOf account post transfer");
+        assertEq(edition.balanceOf(users.user_1, 1), 1, "1155 balanceOf id post transfer");
     }
 
     function test__AddItems() external {
         /* create new item */
-        vm.startPrank(users.creator_0);
-        creator.add(
+        vm.startPrank(users.edition_0);
+        edition.add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
             "https://new-token-2.com",
-            users.creator_0,
+            users.edition_0,
             address(0),
             0,
             TEST_PROFIT_SHARE
@@ -180,13 +180,13 @@ contract CollectionTest is BaseTest {
 
         /* create new contract and item */
         address newCreatorContract = factory.create();
-        RouxCreator(newCreatorContract).add(
+        RouxEdition(newCreatorContract).add(
             TEST_TOKEN_MAX_SUPPLY,
             TEST_TOKEN_PRICE,
             uint40(block.timestamp),
             TEST_TOKEN_MINT_DURATION,
             "https://new-token-2.com",
-            users.creator_0,
+            users.edition_0,
             address(0),
             0,
             TEST_PROFIT_SHARE
@@ -194,7 +194,7 @@ contract CollectionTest is BaseTest {
 
         /* add new item to collection */
         address[] memory collectionItemTargets = new address[](2);
-        collectionItemTargets[0] = address(creator);
+        collectionItemTargets[0] = address(edition);
         collectionItemTargets[1] = newCreatorContract;
 
         uint256[] memory collectionItemIds = new uint256[](2);
@@ -208,10 +208,10 @@ contract CollectionTest is BaseTest {
         assertEq(itemTargets.length, 3, "collection item targets length");
         assertEq(itemIds.length, 3, "collection item ids length");
 
-        assertEq(itemTargets[0], address(creator), "collection item target 0");
+        assertEq(itemTargets[0], address(edition), "collection item target 0");
         assertEq(itemIds[0], 1, "collection item id 0");
 
-        assertEq(itemTargets[1], address(creator), "collection item target 1");
+        assertEq(itemTargets[1], address(edition), "collection item target 1");
         assertEq(itemIds[1], 2, "collection item id 1");
 
         assertEq(itemTargets[2], newCreatorContract, "collection item target 2");
@@ -232,8 +232,8 @@ contract CollectionTest is BaseTest {
         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");
 
-        assertEq(creator.balanceOf(account, 1), 1, "1155 balanceOf id 1");
-        assertEq(creator.balanceOf(account, 2), 1, "1155 balanceOf id 2");
-        assertEq(RouxCreator(newCreatorContract).balanceOf(account, 1), 1, "new 1155 balanceOf id 1");
+        assertEq(edition.balanceOf(account, 1), 1, "1155 balanceOf id 1");
+        assertEq(edition.balanceOf(account, 2), 1, "1155 balanceOf id 2");
+        assertEq(RouxEdition(newCreatorContract).balanceOf(account, 1), 1, "new 1155 balanceOf id 1");
     }
 }

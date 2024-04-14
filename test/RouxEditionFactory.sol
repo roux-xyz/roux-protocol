@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.24;
 
-import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
-import { RouxCreatorFactory } from "src/RouxCreatorFactory.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./Constants.t.sol";
 
-contract RouxCreatorFactoryTest is BaseTest {
+contract RouxEditionFactoryTest is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
     }
 
     function test__RevertWhen_OnlyAllowlist() external {
-        vm.expectRevert(IRouxCreatorFactory.OnlyAllowlist.selector);
+        vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
 
         vm.prank(users.user_0);
         factory.create();
@@ -25,10 +25,10 @@ contract RouxCreatorFactoryTest is BaseTest {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_1;
+        allowlist[0] = users.edition_1;
 
-        vm.prank(users.creator_0);
-        RouxCreatorFactory(factory).addAllowlist(allowlist);
+        vm.prank(users.edition_0);
+        RouxEditionFactory(factory).addAllowlist(allowlist);
     }
 
     function test__RevertWhen_AlreadyInitialized() external {
@@ -37,7 +37,7 @@ contract RouxCreatorFactoryTest is BaseTest {
 
         /* deploy new factory */
         vm.startPrank(users.deployer);
-        RouxCreatorFactory newFactoryImpl = new RouxCreatorFactory(address(creatorBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
         /* init data */
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
@@ -67,19 +67,19 @@ contract RouxCreatorFactoryTest is BaseTest {
 
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
-        factory.transferOwnership(users.creator_0);
+        factory.transferOwnership(users.edition_0);
 
-        assertEq(factory.owner(), address(users.creator_0));
+        assertEq(factory.owner(), address(users.edition_0));
     }
 
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_2;
+        allowlist[0] = users.edition_2;
 
         vm.prank(users.deployer);
-        RouxCreatorFactory(factory).addAllowlist(allowlist);
+        RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        vm.prank(users.creator_2);
+        vm.prank(users.edition_2);
         address newCreator = factory.create();
 
         assert(factory.isCreator(newCreator));
@@ -88,18 +88,18 @@ contract RouxCreatorFactoryTest is BaseTest {
     function test__RemoveAllowlist() external {
         /* add to allowlist */
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_2;
+        allowlist[0] = users.edition_2;
 
         vm.prank(users.deployer);
-        RouxCreatorFactory(factory).addAllowlist(allowlist);
+        RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        /* remove creator from allowlist */
+        /* remove edition from allowlist */
         vm.prank(users.deployer);
-        RouxCreatorFactory(factory).removeAllowlist(users.creator_2);
+        RouxEditionFactory(factory).removeAllowlist(users.edition_2);
 
-        /* attempt to create new creator */
-        vm.prank(users.creator_2);
-        vm.expectRevert(IRouxCreatorFactory.OnlyAllowlist.selector);
+        /* attempt to create new edition */
+        vm.prank(users.edition_2);
+        vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
         factory.create();
     }
 
@@ -109,7 +109,7 @@ contract RouxCreatorFactoryTest is BaseTest {
 
         /* deploy new factory */
         vm.startPrank(users.deployer);
-        RouxCreatorFactory newFactoryImpl = new RouxCreatorFactory(address(creatorBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
         /* upgrade */
         factory.upgradeToAndCall(address(newFactoryImpl), "");

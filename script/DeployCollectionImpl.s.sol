@@ -8,12 +8,12 @@ import { Collection } from "src/Collection.sol";
 import { BaseScript } from "./Base.s.sol";
 
 contract DeployCollectionImpl is BaseScript {
-    function run(address erc6551Registry, address erc6551Account, address rouxCreatorFactory) public broadcast {
-        Collection collectionImpl = new Collection(erc6551Registry, erc6551Account, rouxCreatorFactory);
+    function run(address erc6551Registry, address erc6551Account, address RouxEditionFactory) public broadcast {
+        Collection collectionImpl = new Collection(erc6551Registry, erc6551Account, RouxEditionFactory);
         console.log("Collection Implementation: ", address(collectionImpl));
 
         /* deploy beacon */
-        UpgradeableBeacon creatorBeacon = new UpgradeableBeacon(address(collectionImpl), msg.sender);
-        console.log("Creator Beacon: ", address(creatorBeacon));
+        UpgradeableBeacon editionBeacon = new UpgradeableBeacon(address(collectionImpl), msg.sender);
+        console.log("Creator Beacon: ", address(editionBeacon));
     }
 }

@@ -4,9 +4,9 @@ pragma solidity 0.8.24;
 import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
-import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 
 contract Collection is ICollection, ERC721, OwnableRoles {
     /* -------------------------------------------- */
@@ -15,10 +15,10 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
     /**
      * @notice collection storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:collection")) - 1)) & ~bytes32(uint256(0xff));
+     * @dev keccak256(abi.encode(uint256(keccak256("collection.collectioStorage")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant COLLECTION_STORAGE_SLOT =
-        0x993ddef881c729427ec09d4ff4f3cf4f71f12e1245e1afac8dcb6d99ddecf100;
+        0x1959ff118a65166ce2c660a11d77796bbd2faa19745e8d647947d7e574017700;
 
     bytes32 internal constant ROUX_COLLECTION_SALT = keccak256("ROUX_COLLECTION");
 
@@ -42,9 +42,9 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     address immutable initialAccountImplementation;
 
     /**
-     * @notice rouxCreator factory
+     * @notice RouxEdition factory
      */
-    IRouxCreatorFactory immutable rouxCreatorFactory;
+    IRouxEditionFactory immutable RouxEditionFactory;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -65,7 +65,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address registry_, address initialAccountImplementation_, address rouxCreatorFactory_) {
+    constructor(address registry_, address initialAccountImplementation_, address RouxEditionFactory_) {
         CollectionStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */
@@ -74,7 +74,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         erc6551Registry = IERC6551Registry(registry_);
         initialAccountImplementation = initialAccountImplementation_;
 
-        rouxCreatorFactory = IRouxCreatorFactory(rouxCreatorFactory_);
+        RouxEditionFactory = IRouxEditionFactory(RouxEditionFactory_);
     }
 
     /* -------------------------------------------- */
@@ -152,7 +152,7 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
         uint256 price;
         for (uint256 i = 0; i < $._itemTargets.length; i++) {
-            price += IRouxCreator($._itemTargets[i]).price($._itemIds[i]);
+            price += IRouxEdition($._itemTargets[i]).price($._itemIds[i]);
         }
         return price;
     }
@@ -189,8 +189,8 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
         /* mint to collection nft token bound account */
         for (uint256 i = 0; i < $._itemTargets.length; i++) {
-            uint256 price = IRouxCreator($._itemTargets[i]).price($._itemIds[i]);
-            IRouxCreator($._itemTargets[i]).mint{ value: price }(account, $._itemIds[i], 1);
+            uint256 price = IRouxEdition($._itemTargets[i]).price($._itemIds[i]);
+            IRouxEdition($._itemTargets[i]).mint{ value: price }(account, $._itemIds[i], 1);
         }
 
         return collectionTokenId;
@@ -228,8 +228,8 @@ contract Collection is ICollection, ERC721, OwnableRoles {
         if (itemTargets_.length != itemIds_.length) revert InvalidItems();
 
         for (uint256 i = 0; i < itemTargets_.length; i++) {
-            if (!rouxCreatorFactory.isCreator(itemTargets_[i])) revert InvalidItems();
-            if (itemIds_[i] == 0 || !IRouxCreator(itemTargets_[i]).exists(itemIds_[i])) revert InvalidItems();
+            if (!RouxEditionFactory.isCreator(itemTargets_[i])) revert InvalidItems();
+            if (itemIds_[i] == 0 || !IRouxEdition(itemTargets_[i]).exists(itemIds_[i])) revert InvalidItems();
         }
     }
 }

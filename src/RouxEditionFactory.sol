@@ -7,10 +7,10 @@ import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.so
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import { IRouxCreatorFactory } from "src/interfaces/IRouxCreatorFactory.sol";
-import { IRouxCreator } from "src/interfaces/IRouxCreator.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 
-contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
+contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* -------------------------------------------- */
@@ -18,8 +18,8 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice RouxCreatorFactory storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:rouxCreatorFactory")) - 1)) & ~bytes32(uint256(0xff));
+     * @notice RouxEditionFactory storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:RouxEditionFactory")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_CREATOR_FACTORY_STORAGE_SLOT =
         0x24504c471aa12fa2df69897858cc7dcb056c8474b1cbbf9fd320f90e6b17aa00;
@@ -29,16 +29,16 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice RouxCreator storage
-     * @custom:storage-location erc7201:rouxCreatorFactory
+     * @notice RouxEdition storage
+     * @custom:storage-location erc7201:RouxEditionFactory
      *
      * @param _initialized whether the contract has been initialized
-     * @param _tokens set of creator tokens
+     * @param _tokens set of edition tokens
      * @param _owner owner of the contract
      * @param _enableAllowlist whether to enable allowlist
-     * @param _allowlist allowlist of creators
+     * @param _allowlist allowlist of editions
      */
-    struct RouxCreatorFactoryStorage {
+    struct RouxEditionFactoryStorage {
         bool _initialized;
         EnumerableSet.AddressSet _tokens;
         address _owner;
@@ -50,20 +50,20 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* immutable state                              */
     /* -------------------------------------------- */
 
-    address internal immutable _creatorBeacon;
+    address internal immutable _editionBeacon;
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address creatorBeacon) {
-        RouxCreatorFactoryStorage storage $ = _storage();
+    constructor(address editionBeacon) {
+        RouxEditionFactoryStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */
         require(!$._initialized, "Already initialized");
         $._initialized = true;
 
-        _creatorBeacon = creatorBeacon;
+        _editionBeacon = editionBeacon;
 
         /* renounce ownership of implementation contract */
         _initializeOwner(msg.sender);
@@ -75,10 +75,10 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice initialize RouxCreatorFactory
+     * @notice initialize RouxEditionFactory
      */
     function initialize() external {
-        RouxCreatorFactoryStorage storage $ = _storage();
+        RouxEditionFactoryStorage storage $ = _storage();
 
         require(!$._initialized, "Already initialized");
         $._initialized = true;
@@ -95,10 +95,10 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice get RouxCreatorFactory storage location
-     * @return $ RouxCreatorFactory storage location
+     * @notice get RouxEditionFactory storage location
+     * @return $ RouxEditionFactory storage location
      */
-    function _storage() internal pure returns (RouxCreatorFactoryStorage storage $) {
+    function _storage() internal pure returns (RouxEditionFactoryStorage storage $) {
         assembly {
             $.slot := ROUX_CREATOR_FACTORY_STORAGE_SLOT
         }
@@ -121,20 +121,20 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     /* -------------------------------------------- */
 
     function create() external returns (address) {
-        RouxCreatorFactoryStorage storage $ = _storage();
+        RouxEditionFactoryStorage storage $ = _storage();
 
         if ($._enableAllowlist && !$._allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address creatorInstance = address(new BeaconProxy(_creatorBeacon, abi.encodeWithSignature("initialize()")));
+        address editionInstance = address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize()")));
 
-        IRouxCreator(creatorInstance).setCreator(msg.sender);
-        Ownable(creatorInstance).transferOwnership(msg.sender);
+        IRouxEdition(editionInstance).setCreator(msg.sender);
+        Ownable(editionInstance).transferOwnership(msg.sender);
 
-        $._tokens.add(creatorInstance);
+        $._tokens.add(editionInstance);
 
-        emit NewCreator(creatorInstance);
+        emit NewCreator(editionInstance);
 
-        return creatorInstance;
+        return editionInstance;
     }
 
     /* -------------------------------------------- */
@@ -146,7 +146,7 @@ contract RouxCreatorFactory is IRouxCreatorFactory, Ownable {
     }
 
     function addAllowlist(address[] memory accounts) external onlyOwner {
-        RouxCreatorFactoryStorage storage $ = _storage();
+        RouxEditionFactoryStorage storage $ = _storage();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             $._allowlist[accounts[i]] = true;
