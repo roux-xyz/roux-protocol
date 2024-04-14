@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 interface IRouxAdministrator {
     /* -------------------------------------------- */
@@ -139,14 +139,7 @@ interface IRouxAdministrator {
      * @dev this should be called by the edition contract, as the attribution mapping
      *       is keyed by the edition contract address and token id
      */
-    function setAdministrationData(
-        uint256 tokenId,
-        address parentEdition,
-        uint256 parentTokenId,
-        address fundsRecipient,
-        uint16 profitShare
-    )
-        external;
+    function setAdministrationData(uint256 tokenId, AdministrationData calldata a) external;
 
     /**
      * @notice disburse mint funds to edition and pending balance

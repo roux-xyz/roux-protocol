@@ -7,6 +7,7 @@ import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/Upgradea
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { RouxAdministrator } from "src/RouxAdministrator.sol";
+import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
@@ -40,9 +41,9 @@ abstract contract BaseTest is Test {
         address payable user_1;
         address payable user_2;
         address payable user_3;
-        address payable edition_0;
-        address payable edition_1;
-        address payable edition_2;
+        address payable creator_0;
+        address payable creator_1;
+        address payable creator_2;
         address payable curator_0;
         address payable admin;
     }
@@ -50,6 +51,9 @@ abstract contract BaseTest is Test {
     /* -------------------------------------------- */
     /* state                                        */
     /* -------------------------------------------- */
+
+    IRouxEdition.TokenSaleData internal defaultTokenSaleData;
+    IRouxAdministrator.AdministrationData internal defaultAdministrationData;
 
     RouxAdministrator internal administratorImpl;
     RouxAdministrator internal administrator;
@@ -82,11 +86,28 @@ abstract contract BaseTest is Test {
             user_1: _createUser("user_1"),
             user_2: _createUser("user_2"),
             user_3: _createUser("user_3"),
-            edition_0: _createUser("edition_0"),
-            edition_1: _createUser("edition_1"),
-            edition_2: _createUser("edition_2"),
+            creator_0: _createUser("creator_0"),
+            creator_1: _createUser("creator_1"),
+            creator_2: _createUser("creator_2"),
             curator_0: _createUser("curator_0"),
             admin: _createUser("admin")
+        });
+
+        // set default token sale data
+        defaultTokenSaleData = IRouxEdition.TokenSaleData({
+            price: TEST_TOKEN_PRICE,
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp) + TEST_TOKEN_MINT_DURATION,
+            maxSupply: TEST_TOKEN_MAX_SUPPLY,
+            maxMintable: type(uint16).max
+        });
+
+        // set default administration data
+        defaultAdministrationData = IRouxAdministrator.AdministrationData({
+            parentEdition: address(0),
+            parentTokenId: 0,
+            fundsRecipient: users.creator_0,
+            profitShare: TEST_PROFIT_SHARE
         });
 
         _deployAdministrator();
@@ -101,14 +122,14 @@ abstract contract BaseTest is Test {
     }
 
     function _deployAdministrator() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* administrator deployment */
+        // administrator deployment
         administratorImpl = new RouxAdministrator();
         vm.label({ account: address(administratorImpl), newLabel: "Roux Administrator Implementation" });
 
-        /* deploy proxy */
+        // deploy proxy
         administrator = RouxAdministrator(address(new ERC1967Proxy(address(administratorImpl), "")));
         vm.label({ account: address(administrator), newLabel: "Roux Administrator Proxy" });
 
@@ -116,14 +137,14 @@ abstract contract BaseTest is Test {
     }
 
     function _deployEdition() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* edition deployment */
+        // edition deployment
         editionImpl = new RouxEdition(address(administrator));
         vm.label({ account: address(editionImpl), newLabel: "Creator" });
 
-        /* beacon deployment */
+        // beacon deployment
         editionBeacon = new UpgradeableBeacon(address(editionImpl), users.deployer);
         vm.label({ account: address(editionBeacon), newLabel: "Creator Beacon" });
 
@@ -131,17 +152,17 @@ abstract contract BaseTest is Test {
     }
 
     function _deployEditionFactory() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* factory deployment */
+        // factory deployment
         factoryImpl = new RouxEditionFactory(address(editionBeacon));
         vm.label({ account: address(factory), newLabel: "Creator Factory Implementation" });
 
-        /* encode params */
+        // encode params
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
 
-        /* Deploy proxy */
+        // Deploy proxy
         factory = RouxEditionFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
         vm.label({ account: address(factory), newLabel: "Roux Creator Factory" });
 
@@ -149,10 +170,10 @@ abstract contract BaseTest is Test {
     }
 
     function _deployTokenBoundContracts() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* tokenbound deployments */
+        // tokenbound deployments
         erc6551Registry = new ERC6551Registry();
         accountImpl = new ERC6551Account(address(erc6551Registry));
 
@@ -160,14 +181,14 @@ abstract contract BaseTest is Test {
     }
 
     function _deployCollection() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* collection implementation deployment */
+        // collection implementation deployment
         collectionImpl = new Collection(address(erc6551Registry), address(accountImpl), address(factory));
         vm.label({ account: address(collectionImpl), newLabel: "Collection Implementation" });
 
-        /* collection beacon deployment */
+        // collection beacon deployment
         collectionBeacon = new UpgradeableBeacon(address(collectionImpl), users.deployer);
         vm.label({ account: address(editionBeacon), newLabel: "Collection Beacon" });
 
@@ -175,17 +196,17 @@ abstract contract BaseTest is Test {
     }
 
     function _deployCollectionFactory() internal {
-        /* deployer */
+        // deployer
         vm.startPrank(users.deployer);
 
-        /* collection factory impl */
+        // collection factory impl
         collectionFactoryImpl = new CollectionFactory(address(collectionBeacon));
         vm.label({ account: address(collectionFactoryImpl), newLabel: "Collection Factory Implementation" });
 
-        /* encode params */
+        // encode params
         bytes memory initData = abi.encodeWithSelector(collectionFactory.initialize.selector);
 
-        /* deploy proxy */
+        // deploy proxy
         collectionFactory = CollectionFactory(address(new ERC1967Proxy(address(collectionFactoryImpl), initData)));
         vm.label({ account: address(factory), newLabel: "Roux Collection Factory" });
 
@@ -195,16 +216,16 @@ abstract contract BaseTest is Test {
     function _allowlistUsers() internal {
         vm.startPrank(users.deployer);
 
-        /* add editions to allowlist */
+        // add editions to allowlist
         address[] memory allowlist = new address[](2);
-        allowlist[0] = address(users.edition_0);
-        allowlist[1] = address(users.edition_1);
+        allowlist[0] = address(users.creator_0);
+        allowlist[1] = address(users.creator_1);
         factory.addAllowlist(allowlist);
 
-        /* add curators to curator allowlist */
+        // add curators to curator allowlist
         address[] memory curatorAllowlist = new address[](3);
-        curatorAllowlist[0] = address(users.edition_0);
-        curatorAllowlist[1] = address(users.edition_1);
+        curatorAllowlist[0] = address(users.creator_0);
+        curatorAllowlist[1] = address(users.creator_1);
         curatorAllowlist[2] = address(users.curator_0);
         collectionFactory.addAllowlist(curatorAllowlist);
 
@@ -212,30 +233,20 @@ abstract contract BaseTest is Test {
     }
 
     function _addToken() internal {
-        /* edition */
-        vm.startPrank(users.edition_0);
+        // edition
+        vm.startPrank(users.creator_0);
 
-        /* create token instance */
-        edition = RouxEdition(factory.create());
+        // create edition instance
+        edition = RouxEdition(factory.create(""));
 
         /* add token */
-        edition.add(
-            TEST_TOKEN_MAX_SUPPLY, // max supply
-            TEST_TOKEN_PRICE, // token price
-            uint40(block.timestamp), // mint start
-            TEST_TOKEN_MINT_DURATION, // mint duration
-            TEST_TOKEN_URI, // token uri
-            users.edition_0, // funds recipient
-            address(0), // attribution parent
-            0, // parent id
-            TEST_PROFIT_SHARE // profit share in bps
-        );
+        edition.add(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, address(users.creator_0));
 
         vm.stopPrank();
     }
 
     function _addCollection() internal {
-        vm.startPrank(users.edition_0);
+        vm.startPrank(users.creator_0);
 
         /* create target array for collection */
         address[] memory collectionItemTargets = new address[](1);
@@ -270,14 +281,14 @@ abstract contract BaseTest is Test {
         /* allowlist edition2 */
         vm.prank(users.deployer);
         address[] memory allowlist = new address[](1);
-        allowlist[0] = address(users.edition_2);
+        allowlist[0] = address(users.creator_2);
         factory.addAllowlist(allowlist);
 
         /* user array */
         address[] memory userArr = new address[](3);
-        userArr[0] = users.edition_0;
-        userArr[1] = users.edition_1;
-        userArr[2] = users.edition_2;
+        userArr[0] = users.creator_0;
+        userArr[1] = users.creator_1;
+        userArr[2] = users.creator_2;
 
         uint256 num = forks + 1;
         RouxEdition[] memory editions = new RouxEdition[](num);
@@ -288,21 +299,19 @@ abstract contract BaseTest is Test {
             vm.startPrank(user);
 
             /* create edition instance */
-            RouxEdition instance = RouxEdition(factory.create());
+            RouxEdition instance = RouxEdition(factory.create(""));
             editions[i] = instance;
 
+            // create administration struct
+            IRouxAdministrator.AdministrationData memory administrationData = IRouxAdministrator.AdministrationData({
+                parentEdition: address(editions[i - 1]),
+                parentTokenId: 1,
+                fundsRecipient: user,
+                profitShare: TEST_PROFIT_SHARE
+            });
+
             /* create forked token with attribution */
-            instance.add(
-                TEST_TOKEN_MAX_SUPPLY,
-                TEST_TOKEN_PRICE,
-                uint40(block.timestamp),
-                TEST_TOKEN_MINT_DURATION,
-                TEST_TOKEN_URI,
-                user,
-                address(editions[i - 1]),
-                1,
-                TEST_PROFIT_SHARE
-            );
+            instance.add(defaultTokenSaleData, administrationData, TEST_TOKEN_URI, user);
             vm.stopPrank();
         }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -19,10 +19,11 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
 
     /**
      * @notice RouxEditionFactory storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:RouxEditionFactory")) - 1)) & ~bytes32(uint256(0xff));
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxEditionFactory.rouxEditionFactoryStorage")) - 1)) &
+     *      ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_CREATOR_FACTORY_STORAGE_SLOT =
-        0x24504c471aa12fa2df69897858cc7dcb056c8474b1cbbf9fd320f90e6b17aa00;
+        0x13ea773dc95198298e0d9b6bbd2aef489fb654cd1810ac18d17a86ab80293a00;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -30,20 +31,20 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
 
     /**
      * @notice RouxEdition storage
-     * @custom:storage-location erc7201:RouxEditionFactory
+     * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
      *
-     * @param _initialized whether the contract has been initialized
-     * @param _tokens set of edition tokens
-     * @param _owner owner of the contract
-     * @param _enableAllowlist whether to enable allowlist
-     * @param _allowlist allowlist of editions
+     * @param initialized whether the contract has been initialized
+     * @param tokens set of edition tokens
+     * @param owner owner of the contract
+     * @param enableAllowlist whether to enable allowlist
+     * @param allowlist allowlist of editions
      */
     struct RouxEditionFactoryStorage {
-        bool _initialized;
-        EnumerableSet.AddressSet _tokens;
-        address _owner;
-        bool _enableAllowlist;
-        mapping(address => bool) _allowlist;
+        bool initialized;
+        EnumerableSet.AddressSet tokens;
+        address owner;
+        bool enableAllowlist;
+        mapping(address => bool) allowlist;
     }
 
     /* -------------------------------------------- */
@@ -60,8 +61,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
         RouxEditionFactoryStorage storage $ = _storage();
 
         /* disable initialization of implementation contract */
-        require(!$._initialized, "Already initialized");
-        $._initialized = true;
+        require(!$.initialized, "Already initialized");
+        $.initialized = true;
 
         _editionBeacon = editionBeacon;
 
@@ -80,14 +81,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     function initialize() external {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        require(!$._initialized, "Already initialized");
-        $._initialized = true;
+        require(!$.initialized, "Already initialized");
+        $.initialized = true;
 
         /* Set owner of proxy */
         _initializeOwner(msg.sender);
 
         /* enable allowlist */
-        $._enableAllowlist = true;
+        $.enableAllowlist = true;
     }
 
     /* -------------------------------------------- */
@@ -108,29 +109,29 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     /* view                                         */
     /* -------------------------------------------- */
 
-    function isCreator(address token) external view returns (bool) {
-        return _storage()._tokens.contains(token);
+    function isEdition(address token) external view returns (bool) {
+        return _storage().tokens.contains(token);
     }
 
-    function getCreators() external view returns (address[] memory) {
-        return _storage()._tokens.values();
+    function getEditions() external view returns (address[] memory) {
+        return _storage().tokens.values();
     }
 
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
-    function create() external returns (address) {
+    function create(bytes calldata params) external returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        if ($._enableAllowlist && !$._allowlist[msg.sender]) revert OnlyAllowlist();
+        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert OnlyAllowlist();
 
-        address editionInstance = address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize()")));
+        address editionInstance =
+            address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
-        IRouxEdition(editionInstance).setCreator(msg.sender);
         Ownable(editionInstance).transferOwnership(msg.sender);
 
-        $._tokens.add(editionInstance);
+        $.tokens.add(editionInstance);
 
         emit NewCreator(editionInstance);
 
@@ -142,19 +143,19 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     /* -------------------------------------------- */
 
     function setAllowlist(bool enable) external onlyOwner {
-        _storage()._enableAllowlist = enable;
+        _storage().enableAllowlist = enable;
     }
 
     function addAllowlist(address[] memory accounts) external onlyOwner {
         RouxEditionFactoryStorage storage $ = _storage();
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            $._allowlist[accounts[i]] = true;
+            $.allowlist[accounts[i]] = true;
         }
     }
 
     function removeAllowlist(address account) external onlyOwner {
-        _storage()._allowlist[account] = false;
+        _storage().allowlist[account] = false;
     }
 
     /* -------------------------------------------- */

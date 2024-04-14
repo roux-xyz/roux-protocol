@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
@@ -153,34 +153,21 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     /**
      * @inheritdoc IRouxAdministrator
      */
-    function setAdministrationData(
-        uint256 tokenId,
-        address parentEdition,
-        uint256 parentTokenId,
-        address fundsRecipient,
-        uint16 profitShare
-    )
-        external
-    {
+    function setAdministrationData(uint256 tokenId, AdministrationData calldata a) external {
         // get current depth of parent edition and tokenId
-        (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
+        (,, uint256 depth) = _root(a.parentEdition, a.parentTokenId, 0);
 
         // revert if funds recipient is zero address
-        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
+        if (a.fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
         // revert if addition exceeds max depth
         if (depth + 1 > MAX_DEPTH) revert MaxDepthExceeded();
 
         // revert if profit share exceeds basis point scale
-        if (profitShare > BASIS_POINT_SCALE) revert InvalidProfitShare();
+        if (a.profitShare > BASIS_POINT_SCALE) revert InvalidProfitShare();
 
         // set attribution for edition + token id
-        AdministrationData storage d = _storage()._administrationData[msg.sender][tokenId];
-
-        d.parentEdition = parentEdition;
-        d.parentTokenId = parentTokenId;
-        d.fundsRecipient = fundsRecipient;
-        d.profitShare = profitShare;
+        _storage()._administrationData[msg.sender][tokenId] = a;
     }
 
     /**

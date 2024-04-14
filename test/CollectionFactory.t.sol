@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { CollectionFactory } from "src/CollectionFactory.sol";
@@ -41,9 +41,9 @@ contract CollectionFactoryTest is BaseTest {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_1;
+        allowlist[0] = users.creator_1;
 
-        vm.prank(users.edition_0);
+        vm.prank(users.creator_0);
         CollectionFactory(collectionFactory).addAllowlist(allowlist);
     }
 
@@ -71,19 +71,19 @@ contract CollectionFactoryTest is BaseTest {
 
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
-        collectionFactory.transferOwnership(users.edition_0);
+        collectionFactory.transferOwnership(users.creator_0);
 
-        assertEq(collectionFactory.owner(), address(users.edition_0));
+        assertEq(collectionFactory.owner(), address(users.creator_0));
     }
 
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_2;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         CollectionFactory(collectionFactory).addAllowlist(allowlist);
 
-        vm.prank(users.edition_2);
+        vm.prank(users.creator_2);
         address newCollection = collectionFactory.create(collectionParams);
 
         assert(collectionFactory.isCollection(newCollection));
@@ -92,17 +92,17 @@ contract CollectionFactoryTest is BaseTest {
     function test__RemoveAllowlist() external {
         /* add to allowlist */
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_2;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         CollectionFactory(collectionFactory).addAllowlist(allowlist);
 
         /* remove edition from allowlist */
         vm.prank(users.deployer);
-        CollectionFactory(collectionFactory).removeAllowlist(users.edition_2);
+        CollectionFactory(collectionFactory).removeAllowlist(users.creator_2);
 
         /* attempt to create new edition */
-        vm.prank(users.edition_2);
+        vm.prank(users.creator_2);
         vm.expectRevert(ICollectionFactory.OnlyAllowlist.selector);
         collectionFactory.create(collectionParams);
     }
