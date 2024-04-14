@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
@@ -18,16 +19,16 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
 
         vm.prank(users.user_0);
-        factory.create();
+        factory.create("");
     }
 
     function test__RevertWhen_OnlyOwner_AddAllowlist() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_1;
+        allowlist[0] = users.creator_1;
 
-        vm.prank(users.edition_0);
+        vm.prank(users.creator_0);
         RouxEditionFactory(factory).addAllowlist(allowlist);
     }
 
@@ -60,47 +61,117 @@ contract RouxEditionFactoryTest is BaseTest {
 
         /* allow anyone to create */
         vm.prank(users.user_0);
-        address newCreator = factory.create();
+        address newEdition = factory.create("");
 
-        assert(factory.isCreator(newCreator));
+        assert(factory.isEdition(newEdition));
     }
 
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
-        factory.transferOwnership(users.edition_0);
+        factory.transferOwnership(users.creator_0);
 
-        assertEq(factory.owner(), address(users.edition_0));
+        assertEq(factory.owner(), address(users.creator_0));
     }
 
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_2;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        vm.prank(users.edition_2);
-        address newCreator = factory.create();
+        vm.prank(users.creator_2);
+        address newEdition = factory.create("");
 
-        assert(factory.isCreator(newCreator));
+        assert(factory.isEdition(newEdition));
     }
 
     function test__RemoveAllowlist() external {
         /* add to allowlist */
         address[] memory allowlist = new address[](1);
-        allowlist[0] = users.edition_2;
+        allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
         /* remove edition from allowlist */
         vm.prank(users.deployer);
-        RouxEditionFactory(factory).removeAllowlist(users.edition_2);
+        RouxEditionFactory(factory).removeAllowlist(users.creator_2);
 
         /* attempt to create new edition */
-        vm.prank(users.edition_2);
+        vm.prank(users.creator_2);
         vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
-        factory.create();
+        factory.create("");
+    }
+
+    function test__Create() external {
+        vm.prank(users.creator_0);
+        address newEdition = factory.create("");
+
+        assert(factory.isEdition(newEdition));
+    }
+
+    function test__Create_WithParams() external {
+        bytes memory params =
+            abi.encode(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+
+        vm.prank(users.creator_0);
+        address newEdition = factory.create(params);
+
+        assert(factory.isEdition(newEdition));
+
+        // verify token was added
+        assertEq(edition.currentToken(), 1);
+
+        // mint new token
+        vm.prank(users.user_0);
+        edition.mint{ value: TEST_TOKEN_PRICE }(users.user_0, 1, 1);
+
+        // verify token was minted
+        assertEq(edition.balanceOf(users.user_0, 1), 1);
+        assertEq(edition.totalSupply(1), 1);
+    }
+
+    function test__IsEdition_True() external {
+        vm.prank(users.creator_0);
+        address newEdition = factory.create("");
+
+        assert(factory.isEdition(newEdition));
+    }
+
+    function test__IsEdtion_False() external {
+        assert(!factory.isEdition(address(users.creator_0)));
+    }
+
+    function test__getEditions() external {
+        /* add to allowlist */
+        address[] memory allowlist = new address[](2);
+        allowlist[0] = users.creator_1;
+        allowlist[1] = users.creator_2;
+
+        vm.prank(users.deployer);
+        RouxEditionFactory(factory).addAllowlist(allowlist);
+
+        /* create editions */
+        address[] memory editions = new address[](3);
+
+        vm.prank(users.creator_0);
+        editions[0] = factory.create("");
+
+        vm.prank(users.creator_1);
+        editions[1] = factory.create("");
+
+        vm.prank(users.creator_2);
+        editions[2] = factory.create("");
+
+        /* get editions */
+        address[] memory result = factory.getEditions();
+
+        assertEq(result.length, 4);
+        assertEq(result[0], address(edition));
+        assertEq(result[1], editions[0]);
+        assertEq(result[2], editions[1]);
+        assertEq(result[3], editions[2]);
     }
 
     function test__UpgradeFactory() external {

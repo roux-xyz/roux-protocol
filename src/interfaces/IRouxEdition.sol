@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.25;
+
+import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 
 interface IRouxEdition {
     /* -------------------------------------------- */
@@ -64,6 +66,31 @@ interface IRouxEdition {
     event TokenAdded(uint256 indexed id, address indexed parentEdition, uint256 indexed parentTokenId);
 
     /* -------------------------------------------- */
+    /* structures                                   */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice sale data
+     */
+    struct TokenSaleData {
+        uint128 price;
+        uint40 mintStart;
+        uint40 mintEnd;
+        uint32 maxSupply;
+        uint16 maxMintable;
+    }
+
+    /**
+     * @notice token data
+     */
+    struct TokenData {
+        address creator;
+        uint32 totalSupply;
+        string uri;
+        TokenSaleData saleData;
+    }
+
+    /* -------------------------------------------- */
     /* view functions                               */
     /* -------------------------------------------- */
 
@@ -72,7 +99,7 @@ interface IRouxEdition {
      *
      * @dev creator is set by factory at initialization
      */
-    function creator() external view returns (address);
+    function creator(uint256 id) external view returns (address);
 
     /**
      * @notice get current token id
@@ -134,18 +161,26 @@ interface IRouxEdition {
     /* -------------------------------------------- */
 
     /**
+     * @notice add a token
+     * @param s token sale data
+     * @param a administration data for token
+     * @param tokenUri token uri
+     * @param creator_ creator
+     */
+    function add(
+        TokenSaleData memory s,
+        IRouxAdministrator.AdministrationData memory a,
+        string memory tokenUri,
+        address creator_
+    )
+        external
+        returns (uint256);
+
+    /**
      * @notice mint a token
      * @param to token receiver
      * @param id token id
      * @param quantity number of tokens to mint
      */
-    function mint(address to, uint256 id, uint64 quantity) external payable;
-
-    /**
-     * @notice set creator
-     * @param edition edition
-     *
-     * @dev called by factory contract
-     */
-    function setCreator(address edition) external;
+    function mint(address to, uint256 id, uint256 quantity) external payable;
 }
