@@ -17,11 +17,11 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
 
     /**
      * @notice RouxAdministrator storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxAdministrator.rouxAdministrationStorage")) - 1)) &
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxAdministrator.rouxAdministratorStorage")) - 1)) &
      *      ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_ADMINISTRATOR_STORAGE_SLOT =
-        0x54aeba14fcc33b5cf6350741e30cfdd5249ab55bc8e60ba8d3af833d27edab00;
+        0x53d9edbcb2a983fdaf9f05a1e8ed20d948db5abe448fd915c1126096da8b9e00;
 
     /**
      * @notice basis point scale
@@ -48,14 +48,14 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxAdministrator.rouxAdministratorStorage
      */
-    struct RouxAdministrationStorage {
-        bool _initialized;
-        bool _enableMintFee;
-        uint192 _mintFeeBalance;
-        uint48 _gap;
-        mapping(address edition => mapping(uint256 tokenId => AdministrationData)) _administrationData;
-        mapping(address edition => mapping(uint256 tokenId => uint256 balance)) _balance;
-        mapping(address edition => mapping(uint256 tokenId => uint256 amount)) _pending;
+    struct RouxAdministratorStorage {
+        bool initialized;
+        bool adminFeeEnabled;
+        uint192 adminFeeBalance;
+        uint48 gap;
+        mapping(address edition => mapping(uint256 tokenId => AdministratorData)) administratorData;
+        mapping(address edition => mapping(uint256 tokenId => uint256 balance)) balance;
+        mapping(address edition => mapping(uint256 tokenId => uint256 amount)) pending;
     }
 
     /* -------------------------------------------- */
@@ -64,7 +64,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
 
     constructor() {
         // disable initialization of implementation contract
-        _storage()._initialized = true;
+        _storage().initialized = true;
 
         // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
@@ -77,8 +77,8 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
 
     function initialize() external {
         // initialize
-        require(!_storage()._initialized, "Already initialized");
-        _storage()._initialized = true;
+        require(!_storage().initialized, "Already initialized");
+        _storage().initialized = true;
 
         // set owner of the proxy
         _initializeOwner(msg.sender);
@@ -92,7 +92,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @notice get RouxAdministrator storage location
      * @return $ RouxAdministrator storage location
      */
-    function _storage() internal pure returns (RouxAdministrationStorage storage $) {
+    function _storage() internal pure returns (RouxAdministratorStorage storage $) {
         assembly {
             $.slot := ROUX_ADMINISTRATOR_STORAGE_SLOT
         }
@@ -106,7 +106,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @inheritdoc IRouxAdministrator
      */
     function balance(address edition, uint256 tokenId) external view returns (uint256) {
-        return _storage()._balance[edition][tokenId];
+        return _storage().balance[edition][tokenId];
     }
 
     /**
@@ -115,7 +115,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     function balanceBatch(address edition, uint256[] calldata tokenIds) external view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            total += _storage()._balance[edition][tokenIds[i]];
+            total += _storage().balance[edition][tokenIds[i]];
         }
         return total;
     }
@@ -124,17 +124,31 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @inheritdoc IRouxAdministrator
      */
     function pending(address edition, uint256 tokenId) external view returns (uint256) {
-        return _storage()._pending[edition][tokenId];
+        return _storage().pending[edition][tokenId];
+    }
+
+    /**
+     * @inheritdoc IRouxAdministrator
+     */
+    function adminFeeBalance() external view returns (uint256) {
+        return _storage().adminFeeBalance;
+    }
+
+    /**
+     * @inheritdoc IRouxAdministrator
+     */
+    function profitShare(address edition, uint256 tokenId) external view returns (uint256) {
+        return _storage().administratorData[edition][tokenId].profitShare;
     }
 
     /**
      * @inheritdoc IRouxAdministrator
      */
     function attribution(address edition, uint256 tokenId) external view returns (address, uint256) {
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
-        address parentEdition = $._administrationData[edition][tokenId].parentEdition;
-        uint256 parentTokenId = $._administrationData[edition][tokenId].parentTokenId;
+        address parentEdition = $.administratorData[edition][tokenId].parentEdition;
+        uint256 parentTokenId = $.administratorData[edition][tokenId].parentTokenId;
 
         return (parentEdition, parentTokenId);
     }
@@ -143,6 +157,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @inheritdoc IRouxAdministrator
      */
     function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256) {
+        // pass 0 as starting depth
         return _root(edition, tokenId, 0);
     }
 
@@ -153,32 +168,32 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     /**
      * @inheritdoc IRouxAdministrator
      */
-    function setAdministrationData(uint256 tokenId, AdministrationData calldata a) external {
+    function setAdministratorData(uint256 tokenId, AdministratorData calldata a) external {
         // get current depth of parent edition and tokenId
         (,, uint256 depth) = _root(a.parentEdition, a.parentTokenId, 0);
-
-        // revert if funds recipient is zero address
-        if (a.fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
         // revert if addition exceeds max depth
         if (depth + 1 > MAX_DEPTH) revert MaxDepthExceeded();
 
+        // revert if funds recipient is zero address
+        if (a.fundsRecipient == address(0)) revert InvalidFundsRecipient();
+
         // revert if profit share exceeds basis point scale
         if (a.profitShare > BASIS_POINT_SCALE) revert InvalidProfitShare();
 
-        // set attribution for edition + token id
-        _storage()._administrationData[msg.sender][tokenId] = a;
+        // set administrator data for edition + token id
+        _storage().administratorData[msg.sender][tokenId] = a;
     }
 
     /**
      * @inheritdoc IRouxAdministrator
      */
-    function disburseMint(uint256 tokenId) external payable {
+    function disburse(uint256 tokenId) external payable {
         // handle mint fee
         uint192 fee;
-        if (_storage()._enableMintFee) {
+        if (_storage().adminFeeEnabled) {
             fee = ((msg.value * MINT_FEE) / BASIS_POINT_SCALE).toUint192();
-            _storage()._mintFeeBalance += fee;
+            _storage().adminFeeBalance += fee;
         }
 
         // disburse
@@ -190,26 +205,26 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      */
     function withdraw(address edition, uint256 tokenId) external returns (uint256) {
         // get storage
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
         // cache edition's funds recipient
-        address fundsRecipient = $._administrationData[edition][tokenId].fundsRecipient;
+        address fundsRecipient = $.administratorData[edition][tokenId].fundsRecipient;
 
         // disburse pending balance
-        uint256 pendingBalance = $._pending[edition][tokenId];
+        uint256 pendingBalance = $.pending[edition][tokenId];
         _disburse(edition, tokenId, pendingBalance);
 
         // cache balance
-        uint256 amount = $._balance[edition][tokenId];
+        uint256 amount = $.balance[edition][tokenId];
 
         // decrement balance
-        $._balance[edition][tokenId] -= amount;
+        $.balance[edition][tokenId] -= amount;
 
         // transfer to funding recipient
         (bool success,) = fundsRecipient.call{ value: amount }("");
         if (!success) revert TransferFailed();
 
-        emit Withdrawn(edition, tokenId, amount);
+        emit Withdrawn(edition, tokenId, fundsRecipient, amount);
 
         return amount;
     }
@@ -219,38 +234,38 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      */
     function withdrawBatch(address edition, uint256[] calldata tokenIds) external returns (uint256) {
         // get storage
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
         // cache funding recipient
-        address fundsRecipient = $._administrationData[edition][tokenIds[0]].fundsRecipient;
+        address fundsRecipient = $.administratorData[edition][tokenIds[0]].fundsRecipient;
 
         // validate funding recipient
         if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
         // disburse pending balances
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            _disburse(edition, tokenIds[i], $._pending[edition][tokenIds[i]]);
+            _disburse(edition, tokenIds[i], $.pending[edition][tokenIds[i]]);
         }
 
         // compute balance
         uint256 amount;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             // validate funding recipient
-            if ($._administrationData[edition][tokenIds[i]].fundsRecipient != fundsRecipient) {
+            if ($.administratorData[edition][tokenIds[i]].fundsRecipient != fundsRecipient) {
                 revert InvalidFundsRecipient();
             }
 
             // decrement balance
-            uint256 tokenAmount = $._balance[edition][tokenIds[i]];
+            uint256 tokenAmount = $.balance[edition][tokenIds[i]];
             amount += tokenAmount;
-            $._balance[edition][tokenIds[i]] -= tokenAmount;
+            $.balance[edition][tokenIds[i]] -= tokenAmount;
         }
 
         // transfer to funding recipient
         (bool success,) = fundsRecipient.call{ value: amount }("");
         if (!success) revert TransferFailed();
 
-        emit WithdrawnBatch(edition, tokenIds, amount);
+        emit WithdrawnBatch(edition, tokenIds, fundsRecipient, amount);
 
         return amount;
     }
@@ -263,23 +278,25 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @notice enable mint fee
      * @param enable enable mint fee boolean
      */
-    function enableMintFee(bool enable) external onlyOwner {
-        _storage()._enableMintFee = enable;
+    function adminFeeEnabled(bool enable) external onlyOwner {
+        _storage().adminFeeEnabled = enable;
+
+        emit AdminFeeUpdated(enable);
     }
 
     /**
      * @notice withdraw mint fee
      * @param to recipient
      */
-    function withdrawMintFee(address to) external onlyOwner returns (uint256) {
+    function withdrawAdminFee(address to) external onlyOwner returns (uint256) {
         // get storage
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
         // cache mint fee balance
-        uint256 amount = $._mintFeeBalance;
+        uint256 amount = $.adminFeeBalance;
 
         // reset mint fee balance
-        $._mintFeeBalance = 0;
+        $.adminFeeBalance = 0;
 
         // transfer to owner
         (bool success,) = to.call{ value: amount }("");
@@ -327,16 +344,16 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      */
     function _root(address edition, uint256 tokenId, uint256 depth) internal view returns (address, uint256, uint256) {
         // get storage
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
         // if root, return edition and tokenId
-        if ($._administrationData[edition][tokenId].parentEdition == address(0)) {
+        if ($.administratorData[edition][tokenId].parentEdition == address(0)) {
             return (edition, tokenId, depth);
         } else {
             // if not root, recursively call this function with parent data, incrementing depth
             return _root(
-                $._administrationData[edition][tokenId].parentEdition,
-                $._administrationData[edition][tokenId].parentTokenId,
+                $.administratorData[edition][tokenId].parentEdition,
+                $.administratorData[edition][tokenId].parentTokenId,
                 ++depth
             );
         }
@@ -354,55 +371,33 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      */
     function _disburse(address edition, uint256 tokenId, uint256 amount) internal {
         // get storage
-        RouxAdministrationStorage storage $ = _storage();
+        RouxAdministratorStorage storage $ = _storage();
 
         // cache parent data
-        address parentEdition = $._administrationData[edition][tokenId].parentEdition;
-        uint256 parentTokenId = $._administrationData[edition][tokenId].parentTokenId;
+        address parentEdition = $.administratorData[edition][tokenId].parentEdition;
+        uint256 parentTokenId = $.administratorData[edition][tokenId].parentTokenId;
 
-        // if root, increment balance and return same edition and token id
+        // if root, increment current edition balance
         if (parentEdition == address(0)) {
-            $._balance[edition][tokenId] += amount;
+            $.balance[edition][tokenId] += amount;
             emit Disbursement(edition, tokenId, amount);
         } else {
-            // if not root, compute split, disburse to current edition and increment pending for parent
-            // compute disbursement amounts
-            (uint256 currentEditionShare, uint256 parentShare) = _computeSplit(edition, tokenId, amount);
+            // if not root, compute split, increment balance for current edition and increment pending for parent
+            // get profit share from parent
+            uint256 parentProfitShareBps = $.administratorData[parentEdition][parentTokenId].profitShare;
+
+            // calculate share of proceeds
+            uint256 currentEditionShare = (amount * parentProfitShareBps) / BASIS_POINT_SCALE;
+            uint256 parentShare = amount - currentEditionShare;
 
             // increment currentEdition balance by its share
-            $._balance[edition][tokenId] += currentEditionShare;
+            $.balance[edition][tokenId] += currentEditionShare;
 
             // increment the parent's pending balance - will be disbursed when parent withdraws
-            $._pending[parentEdition][parentTokenId] += parentShare;
+            $.pending[parentEdition][parentTokenId] += parentShare;
 
             emit Disbursement(edition, tokenId, currentEditionShare);
             emit PendingUpdated(edition, tokenId, parentEdition, parentTokenId, parentShare);
         }
-    }
-
-    /**
-     * @notice helper function to compute split for a token
-     * @param edition edition
-     * @param tokenId token id
-     * @param amount proceeds
-     * @return edition share
-     * @return parent edition share
-     */
-    function _computeSplit(address edition, uint256 tokenId, uint256 amount) internal view returns (uint256, uint256) {
-        // get storage
-        RouxAdministrationStorage storage $ = _storage();
-
-        // cache parent data
-        address parentEdition = $._administrationData[edition][tokenId].parentEdition;
-        uint256 parentTokenId = $._administrationData[edition][tokenId].parentTokenId;
-
-        // get profit share from parent
-        uint256 parentProfitShareBps = $._administrationData[parentEdition][parentTokenId].profitShare;
-
-        // calculate share of proceeds
-        uint256 currentEditionShare = (amount * parentProfitShareBps) / BASIS_POINT_SCALE;
-        uint256 parentShare = amount - currentEditionShare;
-
-        return (currentEditionShare, parentShare);
     }
 }

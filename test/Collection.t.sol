@@ -9,8 +9,6 @@ import { Collection } from "src/Collection.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-import "./Constants.t.sol";
-
 contract CollectionTest is BaseTest {
     address account;
 
@@ -46,7 +44,7 @@ contract CollectionTest is BaseTest {
     function test__RevertWhen_InvalidItems_InvalidTokenId() external {
         /* create new item */
         vm.startPrank(users.creator_0);
-        edition.add(defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministratorData, "https://new-token-2.com", users.creator_0);
 
         address[] memory collectionItemTargets = new address[](2);
         collectionItemTargets[0] = address(edition);
@@ -156,12 +154,12 @@ contract CollectionTest is BaseTest {
     function test__AddItems() external {
         /* create new item */
         vm.startPrank(users.creator_0);
-        edition.add(defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministratorData, "https://new-token-2.com", users.creator_0);
 
         /* create new contract and item */
         address newCreatorContract = factory.create("");
         RouxEdition(newCreatorContract).add(
-            defaultTokenSaleData, defaultAdministrationData, "https://new-token-2.com", users.creator_0
+            defaultTokenSaleData, defaultAdministratorData, "https://new-token-2.com", users.creator_0
         );
 
         /* add new item to collection */

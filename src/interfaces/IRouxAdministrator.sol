@@ -61,7 +61,7 @@ interface IRouxAdministrator {
      * @param tokenId token id
      * @param amount amount withdrawn
      */
-    event Withdrawn(address indexed edition, uint256 indexed tokenId, uint256 amount);
+    event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
 
     /**
      * @notice batch withdrawal
@@ -69,7 +69,13 @@ interface IRouxAdministrator {
      * @param tokenIds token ids
      * @param amount amount withdrawn
      */
-    event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, uint256 amount);
+    event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
+
+    /**
+     * @notice admin fee enabled
+     * @param enabled admin fee enabled
+     */
+    event AdminFeeUpdated(bool enabled);
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -78,7 +84,7 @@ interface IRouxAdministrator {
     /**
      * @notice attribution data
      */
-    struct AdministrationData {
+    struct AdministratorData {
         address parentEdition;
         uint256 parentTokenId;
         address fundsRecipient;
@@ -113,6 +119,18 @@ interface IRouxAdministrator {
     function pending(address edition, uint256 tokenId) external view returns (uint256);
 
     /**
+     * @notice get admin fee balance
+     */
+    function adminFeeBalance() external view returns (uint256);
+
+    /**
+     * @notice get profit share for a given edition and tokenId
+     * @param edition edition
+     * @param tokenId tokenId
+     */
+    function profitShare(address edition, uint256 tokenId) external view returns (uint256);
+
+    /**
      * @notice get attribution data
      * @param edition edition
      * @param tokenId token id
@@ -139,13 +157,13 @@ interface IRouxAdministrator {
      * @dev this should be called by the edition contract, as the attribution mapping
      *       is keyed by the edition contract address and token id
      */
-    function setAdministrationData(uint256 tokenId, AdministrationData calldata a) external;
+    function setAdministratorData(uint256 tokenId, AdministratorData calldata a) external;
 
     /**
      * @notice disburse mint funds to edition and pending balance
      * @param tokenId token id
      */
-    function disburseMint(uint256 tokenId) external payable;
+    function disburse(uint256 tokenId) external payable;
 
     /**
      * @notice withdraw balance from edition for given token id

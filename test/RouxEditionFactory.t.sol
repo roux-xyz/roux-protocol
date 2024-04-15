@@ -8,8 +8,6 @@ import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import "./Constants.t.sol";
-
 contract RouxEditionFactoryTest is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
@@ -113,7 +111,7 @@ contract RouxEditionFactoryTest is BaseTest {
 
     function test__Create_WithParams() external {
         bytes memory params =
-            abi.encode(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+            abi.encode(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
 
         vm.prank(users.creator_0);
         address newEdition = factory.create(params);

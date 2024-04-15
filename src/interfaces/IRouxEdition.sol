@@ -163,13 +163,13 @@ interface IRouxEdition {
     /**
      * @notice add a token
      * @param s token sale data
-     * @param a administration data for token
+     * @param a administrator data for token
      * @param tokenUri token uri
      * @param creator_ creator
      */
     function add(
         TokenSaleData memory s,
-        IRouxAdministrator.AdministrationData memory a,
+        IRouxAdministrator.AdministratorData memory a,
         string memory tokenUri,
         address creator_
     )

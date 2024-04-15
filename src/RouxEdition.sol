@@ -89,10 +89,10 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         if (params.length > 0) {
             (
                 TokenSaleData memory s,
-                IRouxAdministrator.AdministrationData memory a,
+                IRouxAdministrator.AdministratorData memory a,
                 string memory tokenUri,
                 address creator_
-            ) = abi.decode(params, (TokenSaleData, IRouxAdministrator.AdministrationData, string, address));
+            ) = abi.decode(params, (TokenSaleData, IRouxAdministrator.AdministratorData, string, address));
 
             // add token
             _add(s, a, tokenUri, creator_);
@@ -219,7 +219,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         _mint(to, id, quantity, "");
 
         // distribute funds via administrator
-        _administrator.disburseMint{ value: msg.value }(id);
+        _administrator.disburse{ value: msg.value }(id);
     }
 
     /* -------------------------------------------- */
@@ -231,7 +231,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      */
     function add(
         TokenSaleData calldata tokenSaleData,
-        IRouxAdministrator.AdministrationData calldata administrationData,
+        IRouxAdministrator.AdministratorData calldata administratorData,
         string memory tokenUri,
         address creator_
     )
@@ -239,7 +239,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         onlyOwner
         returns (uint256)
     {
-        return _add(tokenSaleData, administrationData, tokenUri, creator_);
+        return _add(tokenSaleData, administratorData, tokenUri, creator_);
     }
 
     /**
@@ -259,7 +259,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
 
     function _add(
         TokenSaleData memory s,
-        IRouxAdministrator.AdministrationData memory a,
+        IRouxAdministrator.AdministratorData memory a,
         string memory tokenUri,
         address creator_
     )
@@ -286,8 +286,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         d.uri = tokenUri;
         d.creator = creator_;
 
-        // set administration data via administrator
-        _setAdministrationData(id, a);
+        // set administrator data via administrator
+        _setAdministratorData(id, a);
 
         emit TokenAdded(id, a.parentEdition, a.parentTokenId);
 
@@ -295,13 +295,13 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     }
 
     /**
-     * @notice set administration data
+     * @notice set administrator data
      * @param tokenId token id
-     * @param a administration data
+     * @param a administrator data
      *
-     * @dev sets administration data on the administrator
+     * @dev sets administrator data on the administrator
      */
-    function _setAdministrationData(uint256 tokenId, IRouxAdministrator.AdministrationData memory a) internal {
+    function _setAdministratorData(uint256 tokenId, IRouxAdministrator.AdministratorData memory a) internal {
         // check if parent edition has been provided
         if (a.parentEdition != address(0)) {
             // revert if parent is the same contract, not an edition, or not a valid token
@@ -313,7 +313,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
             }
         }
 
-        // set administration data via administrator
-        _administrator.setAdministrationData(tokenId, a);
+        // set administrator data via administrator
+        _administrator.setAdministratorData(tokenId, a);
     }
 }

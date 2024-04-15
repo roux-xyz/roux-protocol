@@ -8,10 +8,6 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import "./Constants.t.sol";
-
-import "forge-std/console.sol";
-
 contract EditionTest is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
@@ -30,7 +26,7 @@ contract EditionTest is BaseTest {
     function test__RevertWhen_OnlyOwner_AddToken() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
-        edition.add(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
     }
 
     function test__RevertWhen_OnlyOwner_UpdateUri() external {
@@ -50,7 +46,7 @@ contract EditionTest is BaseTest {
         t.maxSupply = 1;
 
         vm.prank(users.creator_0);
-        uint256 tokenId = edition.add(t, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        uint256 tokenId = edition.add(t, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
 
         vm.prank(users.user_0);
         edition.mint{ value: TEST_TOKEN_PRICE }(users.user_0, tokenId, 1);
@@ -66,7 +62,7 @@ contract EditionTest is BaseTest {
         t.mintStart = uint40(block.timestamp + 7 days);
 
         vm.prank(users.creator_0);
-        uint256 tokenId = edition.add(t, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        uint256 tokenId = edition.add(t, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
 
         vm.prank(users.user_0);
         vm.expectRevert(IRouxEdition.MintNotStarted.selector);
@@ -75,7 +71,7 @@ contract EditionTest is BaseTest {
 
     function test__RevertsWhen__MintEnded() external {
         vm.prank(users.creator_0);
-        uint256 tokenId = edition.add(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        uint256 tokenId = edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
 
         vm.warp(block.timestamp + TEST_TOKEN_MINT_DURATION + 1 seconds);
 
@@ -85,20 +81,19 @@ contract EditionTest is BaseTest {
     }
 
     function test__RevertsWhen_ForkPriceLowerThanParent() external {
+        // modify default administrator data
+        defaultAdministratorData.parentEdition = address(edition);
+        defaultAdministratorData.parentTokenId = 1;
+
         // modify default token sale data
         IRouxEdition.TokenSaleData memory t = defaultTokenSaleData;
         t.price = TEST_TOKEN_PRICE - 1;
-
-        // modify default administration data
-        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
-        a.parentEdition = address(edition);
-        a.parentTokenId = 1;
 
         vm.startPrank(users.creator_1);
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         vm.expectRevert(IRouxEdition.InvalidPrice.selector);
-        edition1.add(t, a, TEST_TOKEN_URI, users.creator_1);
+        edition1.add(t, defaultAdministratorData, TEST_TOKEN_URI, users.creator_1);
     }
 
     function test__TokenId() external {
@@ -107,7 +102,7 @@ contract EditionTest is BaseTest {
 
     function test__TokenId_AfterAddToken() external {
         vm.prank(users.creator_0);
-        edition.add(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
         assertEq(edition.currentToken(), 2);
     }
 
@@ -154,7 +149,7 @@ contract EditionTest is BaseTest {
 
     function test__AddToken() external {
         vm.prank(users.creator_0);
-        edition.add(defaultTokenSaleData, defaultAdministrationData, TEST_TOKEN_URI, users.creator_0);
+        edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
 
         vm.prank(users.user_0);
         edition.mint{ value: TEST_TOKEN_PRICE }(users.user_0, 1, 1);
@@ -162,10 +157,9 @@ contract EditionTest is BaseTest {
     }
 
     function test__AddToken_WithAttribution() external {
-        // modify default administration data
-        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
-        a.parentEdition = address(edition);
-        a.parentTokenId = 1;
+        // modify default administrator data
+        defaultAdministratorData.parentEdition = address(edition);
+        defaultAdministratorData.parentTokenId = 1;
 
         vm.startPrank(users.creator_1);
 
@@ -173,7 +167,7 @@ contract EditionTest is BaseTest {
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         /* create forked token with attribution */
-        edition1.add(defaultTokenSaleData, a, TEST_TOKEN_URI, users.creator_1);
+        edition1.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_1);
         vm.stopPrank();
 
         (address attribution, uint256 parentId) = edition1.attribution(1);
@@ -187,10 +181,9 @@ contract EditionTest is BaseTest {
     }
 
     function test__Mint_TokenWithAttribution() external {
-        // modify default administration data
-        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
-        a.parentEdition = address(edition);
-        a.parentTokenId = 1;
+        // modify default administrator data
+        defaultAdministratorData.parentEdition = address(edition);
+        defaultAdministratorData.parentTokenId = 1;
 
         vm.startPrank(users.creator_1);
 
@@ -198,7 +191,7 @@ contract EditionTest is BaseTest {
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         /* create forked token with attribution */
-        edition1.add(defaultTokenSaleData, a, TEST_TOKEN_URI, users.creator_1);
+        edition1.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_1);
         vm.stopPrank();
 
         vm.prank(users.user_0);
@@ -241,8 +234,8 @@ contract EditionTest is BaseTest {
     }
 
     function test__Withdraw_TokenWithAttribution() external {
-        // modify default administration data
-        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
+        // modify default administrator data
+        IRouxAdministrator.AdministratorData memory a = defaultAdministratorData;
         a.parentEdition = address(edition);
         a.parentTokenId = 1;
         a.fundsRecipient = users.creator_1;
@@ -277,8 +270,8 @@ contract EditionTest is BaseTest {
     }
 
     function test__AddToken_WithAttribution_DepthOf3() external {
-        // modify default administration data
-        IRouxAdministrator.AdministrationData memory a = defaultAdministrationData;
+        // modify default administrator data
+        IRouxAdministrator.AdministratorData memory a = defaultAdministratorData;
         a.parentEdition = address(edition);
         a.parentTokenId = 1;
         a.fundsRecipient = users.creator_1;
@@ -297,8 +290,8 @@ contract EditionTest is BaseTest {
         assertEq(attribution, address(edition));
         assertEq(parentId, 1);
 
-        // modify default administration data again
-        IRouxAdministrator.AdministrationData memory a2 = defaultAdministrationData;
+        // modify default administrator data again
+        IRouxAdministrator.AdministratorData memory a2 = defaultAdministratorData;
         a2.parentEdition = address(edition1);
         a2.parentTokenId = 1;
 

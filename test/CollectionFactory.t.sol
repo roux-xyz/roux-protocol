@@ -6,8 +6,6 @@ import { CollectionFactory } from "src/CollectionFactory.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import "./Constants.t.sol";
-
 contract CollectionFactoryTest is BaseTest {
     address[] collectionItemTargets;
     uint256[] collectionItemIds;
