@@ -12,7 +12,7 @@ interface IRouxEditionFactory {
     /* events                                       */
     /* -------------------------------------------- */
 
-    event NewCreator(address indexed instance);
+    event NewEdition(address indexed instance);
 
     /* -------------------------------------------- */
     /* view functions                               */

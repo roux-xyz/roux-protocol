@@ -133,7 +133,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
 
         $.tokens.add(editionInstance);
 
-        emit NewCreator(editionInstance);
+        emit NewEdition(editionInstance);
 
         return editionInstance;
     }
