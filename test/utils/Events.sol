@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: Unlicense
+pragma solidity ^0.8.25;
+
+abstract contract Events {
+    /* -------------------------------------------- */
+    /* Administrator                                */
+    /* -------------------------------------------- */
+
+    event Disbursement(address indexed edition, uint256 indexed tokenId, uint256 amount);
+    event PendingUpdated(
+        address edition, uint256 indexed tokenId, address parent, uint256 indexed parentTokenId, uint256 amount
+    );
+    event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
+    event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
+    event AdminFeeUpdated(bool enabled);
+
+    /* -------------------------------------------- */
+    /* Edition                                      */
+    /* -------------------------------------------- */
+    event TokenAdded(uint256 indexed id, address indexed parentEdition, uint256 indexed parentTokenId);
+
+    /* -------------------------------------------- */
+    /* EditionFactory                               */
+    /* -------------------------------------------- */
+    event NewEdition(address indexed instance);
+
+    /* -------------------------------------------- */
+    /* ERC-1155                                     */
+    /* -------------------------------------------- */
+
+    event TransferSingle(
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
+    );
+    event TransferBatch(
+        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] amounts
+    );
+    event ApprovalForAll(address indexed owner, address indexed operator, bool isApproved);
+    event URI(string value, uint256 indexed id);
+}
