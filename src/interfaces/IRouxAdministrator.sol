@@ -85,10 +85,10 @@ interface IRouxAdministrator {
      * @notice attribution data
      */
     struct AdministratorData {
-        address parentEdition;
-        uint256 parentTokenId;
         address fundsRecipient;
         uint16 profitShare;
+        address parentEdition;
+        uint256 parentTokenId;
     }
 
     /* -------------------------------------------- */
@@ -153,17 +153,30 @@ interface IRouxAdministrator {
 
     /**
      * @notice set attribution for an edition and tokenId
+     * @param tokenId token id
+     * @param fundsRecipient funding recipient
+     * @param profitShare profit share
+     * @param parentEdition parent contract
+     * @param parentTokenId parent token id
      *
      * @dev this should be called by the edition contract, as the attribution mapping
      *       is keyed by the edition contract address and token id
      */
-    function setAdministratorData(uint256 tokenId, AdministratorData calldata a) external;
+    function setAdministratorData(
+        uint256 tokenId,
+        address fundsRecipient,
+        uint16 profitShare,
+        address parentEdition,
+        uint256 parentTokenId
+    )
+        external;
 
     /**
      * @notice disburse mint funds to edition and pending balance
+     * @param edition edition
      * @param tokenId token id
      */
-    function disburse(uint256 tokenId) external payable;
+    function disburse(address edition, uint256 tokenId) external payable;
 
     /**
      * @notice withdraw balance from edition for given token id

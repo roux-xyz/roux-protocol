@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
@@ -110,24 +111,33 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__Create_WithParams() external {
-        bytes memory params =
-            abi.encode(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, users.creator_0);
+        bytes memory params_ = abi.encode(
+            TEST_TOKEN_URI,
+            users.creator_0,
+            TEST_TOKEN_MAX_SUPPLY,
+            users.creator_0,
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalSaleData
+        );
 
         vm.prank(users.creator_0);
-        address newEdition = factory.create(params);
+        RouxEdition newEdition = RouxEdition(factory.create(params_));
 
-        assert(factory.isEdition(newEdition));
+        assert(factory.isEdition(address(newEdition)));
 
         // verify token was added
-        assertEq(edition.currentToken(), 1);
+        assertEq(newEdition.currentToken(), 1);
 
         // mint new token
         vm.prank(users.user_0);
-        edition.mint{ value: TEST_TOKEN_PRICE }(users.user_0, 1, 1);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(newEdition), 1, 1, "");
 
         // verify token was minted
-        assertEq(edition.balanceOf(users.user_0, 1), 1);
-        assertEq(edition.totalSupply(1), 1);
+        assertEq(newEdition.balanceOf(users.user_0, 1), 1);
+        assertEq(newEdition.totalSupply(1), 1);
     }
 
     function test__IsEdition_True() external {

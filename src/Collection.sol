@@ -8,6 +8,10 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 
+/**
+ * @title Collection
+ * @author Roux
+ */
 contract Collection is ICollection, ERC721, OwnableRoles {
     /* -------------------------------------------- */
     /* constants                                    */
@@ -150,10 +154,10 @@ contract Collection is ICollection, ERC721, OwnableRoles {
     function collectionPrice() external view returns (uint256) {
         CollectionStorage storage $ = _storage();
 
-        uint256 price;
-        for (uint256 i = 0; i < $._itemTargets.length; i++) {
-            price += IRouxEdition($._itemTargets[i]).price($._itemIds[i]);
-        }
+        uint256 price = 0;
+        // for (uint256 i = 0; i < $._itemTargets.length; i++) {
+        //     price += IRouxEdition($._itemTargets[i]).price($._itemIds[i]);
+        // }
         return price;
     }
 
@@ -189,8 +193,8 @@ contract Collection is ICollection, ERC721, OwnableRoles {
 
         /* mint to collection nft token bound account */
         for (uint256 i = 0; i < $._itemTargets.length; i++) {
-            uint256 price = IRouxEdition($._itemTargets[i]).price($._itemIds[i]);
-            IRouxEdition($._itemTargets[i]).mint{ value: price }(account, $._itemIds[i], 1);
+            uint256 price = 0;
+            // IRouxEdition($._itemTargets[i]).mint{ value: price }(account, $._itemIds[i], 1, "");
         }
 
         return collectionTokenId;

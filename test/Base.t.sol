@@ -12,6 +12,9 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 
+import { EditionMinter } from "src/minters/EditionMinter.sol";
+import { DefaultEditionMinter } from "src/minters/DefaultEditionMinter.sol";
+
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
 
@@ -53,11 +56,14 @@ abstract contract BaseTest is Test, Events, Constants {
     /* state                                        */
     /* -------------------------------------------- */
 
-    IRouxEdition.TokenSaleData internal defaultTokenSaleData;
+    bytes optionalSaleData;
     IRouxAdministrator.AdministratorData internal defaultAdministratorData;
 
     RouxAdministrator internal administratorImpl;
     RouxAdministrator internal administrator;
+
+    EditionMinter internal editionMinter;
+    DefaultEditionMinter internal defaultMinter;
 
     RouxEdition internal editionImpl;
     RouxEdition internal edition;
@@ -94,26 +100,12 @@ abstract contract BaseTest is Test, Events, Constants {
             admin: _createUser("admin")
         });
 
-        // set default token sale data
-        defaultTokenSaleData = IRouxEdition.TokenSaleData({
-            price: TEST_TOKEN_PRICE,
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp) + TEST_TOKEN_MINT_DURATION,
-            maxSupply: TEST_TOKEN_MAX_SUPPLY,
-            maxMintable: type(uint16).max
-        });
-
-        // set default administrator data
-        defaultAdministratorData = IRouxAdministrator.AdministratorData({
-            parentEdition: address(0),
-            parentTokenId: 0,
-            fundsRecipient: users.creator_0,
-            profitShare: TEST_PROFIT_SHARE
-        });
-
         _deployAdministrator();
         _deployEdition();
         _deployEditionFactory();
+        _deployEditionMinter();
+        _deployDefaultMinter();
+        _setOptionalSaleData();
         _deployTokenBoundContracts();
         _deployCollection();
         _deployCollectionFactory();
@@ -169,6 +161,28 @@ abstract contract BaseTest is Test, Events, Constants {
         // Deploy proxy
         factory = RouxEditionFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
         vm.label({ account: address(factory), newLabel: "RouxCreatorFactory" });
+
+        vm.stopPrank();
+    }
+
+    function _deployEditionMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter deployment
+        editionMinter = new EditionMinter(address(administrator));
+        vm.label({ account: address(editionMinter), newLabel: "EditionMinter" });
+
+        vm.stopPrank();
+    }
+
+    function _deployDefaultMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter deployment
+        defaultMinter = new DefaultEditionMinter(address(administrator));
+        vm.label({ account: address(defaultMinter), newLabel: "DefaultMinter" });
 
         vm.stopPrank();
     }
@@ -237,14 +251,24 @@ abstract contract BaseTest is Test, Events, Constants {
     }
 
     function _addToken() internal {
-        // edition
+        // user
         vm.startPrank(users.creator_0);
 
         // create edition instance
         edition = RouxEdition(factory.create(""));
 
         /* add token */
-        edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, address(users.creator_0));
+        edition.add(
+            TEST_TOKEN_URI,
+            address(users.creator_0),
+            TEST_TOKEN_MAX_SUPPLY,
+            address(users.creator_0),
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalSaleData
+        );
 
         vm.stopPrank();
     }
@@ -271,9 +295,31 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
+    function _setOptionalSaleData() internal {
+        optionalSaleData = _encodeMintParams(
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            uint40(block.timestamp) + TEST_TOKEN_MINT_DURATION,
+            type(uint16).max
+        );
+    }
+
     /* -------------------------------------------- */
     /* utility functions                            */
     /* -------------------------------------------- */
+
+    function _encodeMintParams(
+        uint128 price,
+        uint40 mintStart,
+        uint40 mintEnd,
+        uint16 maxMintable
+    )
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(price, mintStart, mintEnd, maxMintable);
+    }
 
     function _createUser(string memory name) internal returns (address payable addr) {
         addr = payable(makeAddr(name));
@@ -306,16 +352,19 @@ abstract contract BaseTest is Test, Events, Constants {
             RouxEdition instance = RouxEdition(factory.create(""));
             editions[i] = instance;
 
-            // create administrator struct
-            IRouxAdministrator.AdministratorData memory administratorData = IRouxAdministrator.AdministratorData({
-                parentEdition: address(editions[i - 1]),
-                parentTokenId: 1,
-                fundsRecipient: user,
-                profitShare: TEST_PROFIT_SHARE
-            });
-
             /* create forked token with attribution */
-            instance.add(defaultTokenSaleData, administratorData, TEST_TOKEN_URI, user);
+            instance.add(
+                TEST_TOKEN_URI,
+                user,
+                TEST_TOKEN_MAX_SUPPLY,
+                user,
+                TEST_PROFIT_SHARE,
+                address(editions[i - 1]),
+                1,
+                address(editionMinter),
+                optionalSaleData
+            );
+
             vm.stopPrank();
         }
 

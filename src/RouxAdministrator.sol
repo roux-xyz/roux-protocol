@@ -8,6 +8,10 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 
+/**
+ * @title Roux Administrator
+ * @author Roux
+ */
 contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     using SafeCast for uint256;
 
@@ -168,27 +172,40 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     /**
      * @inheritdoc IRouxAdministrator
      */
-    function setAdministratorData(uint256 tokenId, AdministratorData calldata a) external {
+    function setAdministratorData(
+        uint256 tokenId,
+        address fundsRecipient,
+        uint16 profitShare_,
+        address parentEdition,
+        uint256 parentTokenId
+    )
+        external
+    {
         // get current depth of parent edition and tokenId
-        (,, uint256 depth) = _root(a.parentEdition, a.parentTokenId, 0);
+        (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 
         // revert if addition exceeds max depth
         if (depth + 1 > MAX_DEPTH) revert MaxDepthExceeded();
 
         // revert if funds recipient is zero address
-        if (a.fundsRecipient == address(0)) revert InvalidFundsRecipient();
+        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
         // revert if profit share exceeds basis point scale
-        if (a.profitShare > BASIS_POINT_SCALE) revert InvalidProfitShare();
+        if (profitShare_ > BASIS_POINT_SCALE) revert InvalidProfitShare();
 
         // set administrator data for edition + token id
-        _storage().administratorData[msg.sender][tokenId] = a;
+        AdministratorData storage d = _storage().administratorData[msg.sender][tokenId];
+
+        d.fundsRecipient = fundsRecipient;
+        d.profitShare = profitShare_;
+        d.parentEdition = parentEdition;
+        d.parentTokenId = parentTokenId;
     }
 
     /**
      * @inheritdoc IRouxAdministrator
      */
-    function disburse(uint256 tokenId) external payable {
+    function disburse(address edition, uint256 tokenId) external payable {
         // handle mint fee
         uint192 fee;
         if (_storage().adminFeeEnabled) {
@@ -197,7 +214,7 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
         }
 
         // disburse
-        _disburse(msg.sender, tokenId, msg.value - fee);
+        _disburse(edition, tokenId, msg.value - fee);
     }
 
     /**
@@ -306,12 +323,14 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
     }
 
     /* -------------------------------------------- */
-    /* proxy                                        */
+    /* proxy | danger zone                          */
     /* -------------------------------------------- */
 
     /**
      * @notice get proxy implementation
      * @return implementation address
+     *
+     * @dev do not remove this function
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
@@ -321,6 +340,8 @@ contract RouxAdministrator is IRouxAdministrator, OwnableRoles {
      * @notice upgrade proxy
      * @param newImplementation new implementation contract
      * @param data optional calldata
+     *
+     * @dev do not remove this function
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);

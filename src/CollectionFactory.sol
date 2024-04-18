@@ -10,6 +10,10 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { ICollectionFactory } from "./interfaces/ICollectionFactory.sol";
 import { Collection } from "src/Collection.sol";
 
+/**
+ * @title Collection Factory
+ * @author Roux
+ */
 contract CollectionFactory is ICollectionFactory, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
