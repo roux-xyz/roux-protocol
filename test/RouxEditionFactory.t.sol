@@ -18,7 +18,10 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
 
         vm.prank(users.user_0);
-        factory.create("");
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        factory.create(params);
     }
 
     function test__RevertWhen_OnlyOwner_AddAllowlist() external {
@@ -28,21 +31,21 @@ contract RouxEditionFactoryTest is BaseTest {
         allowlist[0] = users.creator_1;
 
         vm.prank(users.creator_0);
-        RouxEditionFactory(factory).addAllowlist(allowlist);
+        factory.addAllowlist(allowlist);
     }
 
     function test__RevertWhen_AlreadyInitialized() external {
-        /* verify current implementation */
+        // verify current implementation
         assertEq(factory.getImplementation(), address(factoryImpl));
 
-        /* deploy new factory */
+        // deploy new factory
         vm.startPrank(users.deployer);
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
-        /* init data */
+        // init data
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
 
-        /* upgrade */
+        // upgrade
         vm.expectRevert("Already initialized");
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
 
@@ -54,13 +57,14 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__DisableAllowlist() external {
-        /* disable allowlist */
+        // disable allowlist
         vm.prank(users.deployer);
         factory.setAllowlist(false);
 
-        /* allow anyone to create */
+        // allow anyone to create
         vm.prank(users.user_0);
-        address newEdition = factory.create("");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        address newEdition = factory.create(params);
 
         assert(factory.isEdition(newEdition));
     }
@@ -80,38 +84,43 @@ contract RouxEditionFactoryTest is BaseTest {
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
         vm.prank(users.creator_2);
-        address newEdition = factory.create("");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        address newEdition = factory.create(params);
 
         assert(factory.isEdition(newEdition));
     }
 
     function test__RemoveAllowlist() external {
-        /* add to allowlist */
+        // add to allowlist
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_2;
 
         vm.prank(users.deployer);
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        /* remove edition from allowlist */
+        // remove edition from allowlist
         vm.prank(users.deployer);
         RouxEditionFactory(factory).removeAllowlist(users.creator_2);
 
-        /* attempt to create new edition */
+        // attempt to create new edition
         vm.prank(users.creator_2);
         vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
-        factory.create("");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        factory.create(params);
     }
 
     function test__Create() external {
         vm.prank(users.creator_0);
-        address newEdition = factory.create("");
+
+        // create instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        address newEdition = factory.create(params);
 
         assert(factory.isEdition(newEdition));
     }
 
     function test__Create_WithParams() external {
-        bytes memory params_ = abi.encode(
+        bytes memory init = abi.encode(
             TEST_TOKEN_URI,
             users.creator_0,
             TEST_TOKEN_MAX_SUPPLY,
@@ -124,6 +133,7 @@ contract RouxEditionFactoryTest is BaseTest {
         );
 
         vm.prank(users.creator_0);
+        bytes memory params_ = abi.encode(TEST_CONTRACT_URI, init);
         RouxEdition newEdition = RouxEdition(factory.create(params_));
 
         assert(factory.isEdition(address(newEdition)));
@@ -144,7 +154,8 @@ contract RouxEditionFactoryTest is BaseTest {
 
     function test__IsEdition_True() external {
         vm.prank(users.creator_0);
-        address newEdition = factory.create("");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        address newEdition = factory.create(params);
 
         assert(factory.isEdition(newEdition));
     }
@@ -154,7 +165,7 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__getEditions() external {
-        /* add to allowlist */
+        // add to allowlist
         address[] memory allowlist = new address[](2);
         allowlist[0] = users.creator_1;
         allowlist[1] = users.creator_2;
@@ -162,19 +173,22 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.deployer);
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        /* create editions */
+        // create editions
         address[] memory editions = new address[](3);
 
+        // set params
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+
         vm.prank(users.creator_0);
-        editions[0] = factory.create("");
+        editions[0] = factory.create(params);
 
         vm.prank(users.creator_1);
-        editions[1] = factory.create("");
+        editions[1] = factory.create(params);
 
         vm.prank(users.creator_2);
-        editions[2] = factory.create("");
+        editions[2] = factory.create(params);
 
-        /* get editions */
+        // get editions
         address[] memory result = factory.getEditions();
 
         assertEq(result.length, 4);
@@ -185,19 +199,19 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__UpgradeFactory() external {
-        /* verify current implementation */
+        // verify current implementation
         assertEq(factory.getImplementation(), address(factoryImpl));
 
-        /* deploy new factory */
+        // deploy new factory
         vm.startPrank(users.deployer);
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
-        /* upgrade */
+        // upgrade
         factory.upgradeToAndCall(address(newFactoryImpl), "");
 
         vm.stopPrank();
 
-        /* verify */
+        // verify
         assertEq(factory.getImplementation(), address(newFactoryImpl));
     }
 }

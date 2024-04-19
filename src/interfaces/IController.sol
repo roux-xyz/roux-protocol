@@ -65,7 +65,7 @@ interface IController {
      * @notice admin fee enabled
      * @param enabled admin fee enabled
      */
-    event AdminFeeUpdated(bool enabled);
+    event PlatformFeeUpdated(bool enabled);
 
     /* -------------------------------------------- */
     /* structures                                   */

@@ -242,7 +242,8 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.startPrank(users.creator_0);
 
         // create edition instance
-        edition = RouxEdition(factory.create(""));
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        edition = RouxEdition(factory.create(params));
 
         /* add token */
         edition.add(
@@ -314,7 +315,9 @@ abstract contract BaseTest is Test, Events, Constants {
             vm.startPrank(user);
 
             /* create edition instance */
-            RouxEdition instance = RouxEdition(factory.create(""));
+            // create edition instance
+            bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+            RouxEdition instance = RouxEdition(factory.create(params));
             editions[i] = instance;
 
             /* create forked token with attribution */

@@ -51,7 +51,7 @@ contract Controller is IController, OwnableRoles {
 
     /**
      * @notice RouxEdition storage
-     * @custom:storage-location erc7201:rouxAdministrator.rouxAdministratorStorage
+     * @custom:storage-location erc7201:rouxController.rouxControllerStorage
      */
     struct ControllerStorage {
         bool initialized;
@@ -269,7 +269,7 @@ contract Controller is IController, OwnableRoles {
     function platformFeeEnabled(bool enable) external onlyOwner {
         _storage().platformFeeEnabled = enable;
 
-        emit AdminFeeUpdated(enable);
+        emit PlatformFeeUpdated(enable);
     }
 
     /**

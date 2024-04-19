@@ -113,6 +113,11 @@ interface IRouxEdition {
     function uri(uint256 id) external view returns (string memory);
 
     /**
+     * @notice contract uri
+     */
+    function contractURI() external view returns (string memory);
+
+    /**
      * @notice get attribution for a given token id
      * @param id token id
      * @return parent edition
