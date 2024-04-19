@@ -1,13 +1,20 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IController } from "src/interfaces/IController.sol";
+import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
+
+/**
+ * @title Roux Edition
+ * @author Roux
+ */
 contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     using SafeCast for uint256;
 
@@ -19,7 +26,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @notice RouxEdition storage slot
      * @dev keccak256(abi.encode(uint256(keccak256("rouxEdition.rouxEditionStorage")) - 1)) & ~bytes32(uint256(0xff));
      */
-    bytes32 internal constant ROUX_CREATOR_STORAGE_SLOT =
+    bytes32 internal constant ROUX_EDITION_STORAGE_SLOT =
         0xef2f5668c8b56b992983464f11901aec8635a37d61a520221ade259ca1a88200;
 
     /**
@@ -28,14 +35,19 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     string public constant IMPLEMENTATION_VERSION = "1.0";
 
     /**
-     * @notice basis point scale
+     * @notice minter role
      */
-    uint256 internal constant BASIS_POINT_SCALE = 10_000;
+    uint256 public constant MINTER_ROLE = _ROLE_1;
 
     /**
-     * @notice attribution manager
+     * @notice registry
      */
-    IRouxAdministrator internal immutable _administrator;
+    IRegistry internal immutable _registry;
+
+    /**
+     * @notice controller
+     */
+    IController internal immutable _controller;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -60,19 +72,37 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address administrator) {
+    /**
+     * @notice constructor
+     * @param controller controller
+     * @param registry registry
+     */
+    constructor(address controller, address registry) {
         // disable initialization of implementation contract
         _storage().initialized = true;
 
-        // set attribution manager
-        _administrator = IRouxAdministrator(administrator);
+        // set controller
+        _controller = IController(controller);
+
+        // set registry
+        _registry = IRegistry(registry);
     }
 
     /* -------------------------------------------- */
     /* initializer                                  */
     /* -------------------------------------------- */
 
-    function initialize(bytes calldata params) external {
+    /**
+     * @notice initialize RouxEdition
+     * @param init initial token data
+     *
+     * @dev initToken encoded as follows:
+     *      (string tokenUri, address creator, uint32 maxSupply, address fundsRecipient, uint16 profitShare, address
+     *      parentEdition, uint256 parentTokenId, address minter, bytes options)
+     *
+     *      options params encoded as required by minter
+     */
+    function initialize(bytes calldata init) external {
         RouxEditionStorage storage $ = _storage();
 
         // initialize
@@ -85,17 +115,33 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         // factory transfers ownership to caller after initialization
         _initializeOwner(msg.sender);
 
-        // if params are provided, parse and set
-        if (params.length > 0) {
+        // add initial token if provided
+        if (init.length > 0) {
+            // decode token data
             (
-                TokenSaleData memory s,
-                IRouxAdministrator.AdministratorData memory a,
                 string memory tokenUri,
-                address creator_
-            ) = abi.decode(params, (TokenSaleData, IRouxAdministrator.AdministratorData, string, address));
+                address creator_,
+                uint32 maxSupply,
+                address fundsRecipient,
+                uint16 profitShare,
+                address parentEdition,
+                uint256 parentTokenId,
+                address minter,
+                bytes memory options
+            ) = abi.decode(init, (string, address, uint32, address, uint16, address, uint256, address, bytes));
 
             // add token
-            _add(s, a, tokenUri, creator_);
+            _add(
+                tokenUri,
+                creator_,
+                maxSupply,
+                fundsRecipient,
+                profitShare,
+                parentEdition,
+                parentTokenId,
+                minter,
+                options
+            );
         }
     }
 
@@ -109,7 +155,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      */
     function _storage() internal pure returns (RouxEditionStorage storage $) {
         assembly {
-            $.slot := ROUX_CREATOR_STORAGE_SLOT
+            $.slot := ROUX_EDITION_STORAGE_SLOT
         }
     }
 
@@ -134,29 +180,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /**
      * @inheritdoc IRouxEdition
      */
-    function implementationVersion() external pure returns (string memory) {
-        return IMPLEMENTATION_VERSION;
-    }
-
-    /**
-     * @inheritdoc IRouxEdition
-     */
     function totalSupply(uint256 id) external view override returns (uint256) {
         return _storage().tokens[id].totalSupply;
-    }
-
-    /**
-     * @inheritdoc IRouxEdition
-     */
-    function price(uint256 id) external view returns (uint256) {
-        return _storage().tokens[id].saleData.price;
-    }
-
-    /**
-     * @inheritdoc IRouxEdition
-     */
-    function maxSupply(uint256 id) external view returns (uint256) {
-        return _storage().tokens[id].saleData.maxSupply;
     }
 
     /**
@@ -170,7 +195,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @inheritdoc IRouxEdition
      */
     function attribution(uint256 id) external view returns (address, uint256) {
-        (address parentEdition, uint256 parentTokenId) = _administrator.attribution(address(this), id);
+        (address parentEdition, uint256 parentTokenId) = _registry.attribution(address(this), id);
 
         return (parentEdition, parentTokenId);
     }
@@ -179,7 +204,14 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @inheritdoc IRouxEdition
      */
     function exists(uint256 id) external view returns (bool) {
-        return id != 0 && id <= _storage().tokenId;
+        return _exists(id);
+    }
+
+    /**
+     * @inheritdoc IRouxEdition
+     */
+    function isMinter(uint256 id, address minter) external view returns (bool) {
+        return _storage().tokens[id].minters[minter];
     }
 
     /* -------------------------------------------- */
@@ -189,37 +221,20 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /**
      * @inheritdoc IRouxEdition
      */
-    function mint(address to, uint256 id, uint256 quantity) external payable {
-        // safe cast to uint32
-        uint32 quantity_ = quantity.toUint32();
-
-        // get storage
+    function mint(address to, uint256 id, uint256 quantity, bytes calldata /*  data */ ) external {
         RouxEditionStorage storage $ = _storage();
 
-        // verify token id
-        if (id == 0 || id > $.tokenId) revert InvalidTokenId();
+        // validate caller
+        if (!$.tokens[id].minters[msg.sender]) revert InvalidCaller();
 
-        // verify mint is active
-        if (block.timestamp < $.tokens[id].saleData.mintStart) revert MintNotStarted();
-        if (block.timestamp > $.tokens[id].saleData.mintEnd) revert MintEnded();
+        // verify token exists
+        if (!_exists(id)) revert InvalidTokenId();
 
-        // verify quantity does not exceed max supply
-        if (quantity_ + $.tokens[id].totalSupply > $.tokens[id].saleData.maxSupply) revert MaxSupplyExceeded();
-
-        // verify quantity does not exceed max mintable by single address
-        if (balanceOf(to, id) + quantity_ > $.tokens[id].saleData.maxMintable) revert MaxMintableExceeded();
-
-        // verify sufficient funds
-        if (msg.value < $.tokens[id].saleData.price * quantity) revert InsufficientFunds();
-
-        // update total quantity
-        $.tokens[id].totalSupply += quantity_;
+        // validate max supply
+        if (quantity + $.tokens[id].totalSupply > $.tokens[id].maxSupply) revert MaxSupplyExceeded();
 
         // mint
         _mint(to, id, quantity, "");
-
-        // distribute funds via administrator
-        _administrator.disburse{ value: msg.value }(id);
     }
 
     /* -------------------------------------------- */
@@ -230,16 +245,23 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @inheritdoc IRouxEdition
      */
     function add(
-        TokenSaleData calldata tokenSaleData,
-        IRouxAdministrator.AdministratorData calldata administratorData,
         string memory tokenUri,
-        address creator_
+        address creator_,
+        uint256 maxSupply,
+        address fundsRecipient,
+        uint256 profitShare,
+        address parentEdition,
+        uint256 parentTokenId,
+        address minter,
+        bytes memory options
     )
         external
         onlyOwner
         returns (uint256)
     {
-        return _add(tokenSaleData, administratorData, tokenUri, creator_);
+        return _add(
+            tokenUri, creator_, maxSupply, fundsRecipient, profitShare, parentEdition, parentTokenId, minter, options
+        );
     }
 
     /**
@@ -253,25 +275,73 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         emit URI(newUri, id);
     }
 
+    /**
+     * @notice add minter
+     * @param minter minter address
+     */
+    function addMinter(uint256 id, address minter) external onlyOwner {
+        // add minter
+        _storage().tokens[id].minters[minter] = true;
+
+        // emit event
+        emit MinterAdded(minter);
+    }
+
+    /**
+     * @notice remove minter
+     * @param minter minter address
+     */
+    function removeMinter(uint256 id, address minter) external onlyOwner {
+        // remove minter
+        _storage().tokens[id].minters[minter] = false;
+
+        // emit event
+        emit MinterRemoved(minter);
+    }
+
+    /**
+     * @notice update mint params
+     */
+    function updateMintParams(uint256 id, address minter, bytes calldata params) external onlyOwner {
+        // set sales params via minter
+        _setMintParams(id, minter, params);
+    }
+
     /* -------------------------------------------- */
     /* internal                                     */
     /* -------------------------------------------- */
 
+    /**
+     * @notice internal function to add token
+     * @param tokenUri token uri
+     * @param creator_ creator
+     * @param maxSupply max supply
+     * @param fundsRecipient funds recipient
+     * @param profitShare profit share
+     * @param parentEdition parent edition - zero if original
+     * @param parentTokenId parent token id - zero if original
+     * @param minter minter - must be provided to add token
+     * @param options additional options - mint params
+     *
+     * @dev makes external calls to set controller and set registry (if attribution included)
+     *      sets optional mint params, if provided
+     *      mints token to creator
+     */
     function _add(
-        TokenSaleData memory s,
-        IRouxAdministrator.AdministratorData memory a,
         string memory tokenUri,
-        address creator_
+        address creator_,
+        uint256 maxSupply,
+        address fundsRecipient,
+        uint256 profitShare,
+        address parentEdition,
+        uint256 parentTokenId,
+        address minter,
+        bytes memory options
     )
         internal
         returns (uint256)
     {
         RouxEditionStorage storage $ = _storage();
-
-        // if fork, price must be at least equal to that of parent
-        if (a.parentEdition != address(0) && s.price < RouxEdition(a.parentEdition).price(a.parentTokenId)) {
-            revert InvalidPrice();
-        }
 
         // increment token id
         uint256 id = ++$.tokenId;
@@ -279,41 +349,84 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         // get storage pointer
         TokenData storage d = $.tokens[id];
 
-        // set token sale data
-        d.saleData = s;
-
         // set token data
         d.uri = tokenUri;
         d.creator = creator_;
+        d.maxSupply = maxSupply.toUint128();
+        d.minters[minter] = true;
 
-        // set administrator data via administrator
-        _setAdministratorData(id, a);
+        // set controller data
+        _setControllerData(id, fundsRecipient, profitShare.toUint16());
 
-        emit TokenAdded(id, a.parentEdition, a.parentTokenId);
+        // optionally set registry data
+        if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
+
+        // set optional params in minter if provided - not all minters will require this
+        if (options.length > 0) _setMintParams(id, minter, options);
+
+        // mint token to creator
+        _mint(creator_, id, 1, "");
+
+        emit TokenAdded(id, minter);
 
         return id;
     }
 
     /**
      * @notice set administrator data
-     * @param tokenId token id
-     * @param a administrator data
+     * @param id token id
+     * @param fundsRecipient funds recipient
+     * @param profitShare profit share
+     */
+    function _setControllerData(uint256 id, address fundsRecipient, uint16 profitShare) internal {
+        // set controller data via controller
+        _controller.setControllerData(id, fundsRecipient, profitShare);
+    }
+
+    /**
+     * @notice set administrator data
+     * @param id token id
+     * @param parentEdition parent edition
+     * @param parentTokenId parent token id
      *
      * @dev sets administrator data on the administrator
      */
-    function _setAdministratorData(uint256 tokenId, IRouxAdministrator.AdministratorData memory a) internal {
-        // check if parent edition has been provided
-        if (a.parentEdition != address(0)) {
-            // revert if parent is the same contract, not an edition, or not a valid token
-            if (
-                !_storage().factory.isEdition(a.parentEdition) || !IRouxEdition(a.parentEdition).exists(a.parentTokenId)
-                    || a.parentEdition == address(this)
-            ) {
-                revert InvalidAttribution();
-            }
+    function _setRegistryData(uint256 id, address parentEdition, uint256 parentTokenId) internal {
+        // revert if parent is the same contract, not an edition, or not a valid token
+        if (
+            !_storage().factory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
+                || parentEdition == address(this)
+        ) {
+            revert InvalidAttribution();
         }
 
-        // set administrator data via administrator
-        _administrator.setAdministratorData(tokenId, a);
+        // set registry data
+        _registry.setRegistryData(id, parentEdition, parentTokenId);
+    }
+
+    /**
+     * @notice set mint params
+     * @param id token id
+     * @param options minter options
+     */
+    function _setMintParams(uint256 id, address minter, bytes memory options) internal {
+        // set sales params via minter
+        IEditionMinter(minter).setMintParams(id, options);
+    }
+
+    /**
+     * @notice verify token exists
+     * @param id token id
+     */
+    function _exists(uint256 id) internal view returns (bool) {
+        return id != 0 && id <= _storage().tokenId;
+    }
+
+    function _mint(address to, uint256 id, uint256 quantity, bytes memory data) internal override {
+        // update total quantity
+        _storage().tokens[id].totalSupply += quantity.toUint128();
+
+        // mint
+        super._mint(to, id, quantity, data);
     }
 }

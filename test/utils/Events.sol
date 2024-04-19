@@ -3,7 +3,7 @@ pragma solidity ^0.8.25;
 
 abstract contract Events {
     /* -------------------------------------------- */
-    /* Administrator                                */
+    /* Controller                                   */
     /* -------------------------------------------- */
 
     event Disbursement(address indexed edition, uint256 indexed tokenId, uint256 amount);
@@ -15,9 +15,18 @@ abstract contract Events {
     event AdminFeeUpdated(bool enabled);
 
     /* -------------------------------------------- */
+    /* Registry                                     */
+    /* -------------------------------------------- */
+    event RegistryUpdated(
+        address indexed edition, uint256 indexed tokenId, address indexed parentEdition, uint256 parentTokenId
+    );
+
+    /* -------------------------------------------- */
     /* Edition                                      */
     /* -------------------------------------------- */
-    event TokenAdded(uint256 indexed id, address indexed parentEdition, uint256 indexed parentTokenId);
+    event TokenAdded(uint256 indexed tokenId, address indexed minter);
+    event MinterAdded(address indexed minter);
+    event MinterRemoved(address indexed minter);
 
     /* -------------------------------------------- */
     /* EditionFactory                               */

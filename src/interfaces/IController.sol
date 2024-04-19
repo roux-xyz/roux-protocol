@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-interface IRouxAdministrator {
+interface IController {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -15,16 +15,6 @@ interface IRouxAdministrator {
      * @notice invalid funds recipient
      */
     error InvalidFundsRecipient();
-
-    /**
-     * @notice max depth exceeded
-     */
-    error MaxDepthExceeded();
-
-    /**
-     * @notice invalid attribution edition
-     */
-    error InvalidAttribution();
 
     /**
      * @notice invalid profit share value
@@ -84,9 +74,7 @@ interface IRouxAdministrator {
     /**
      * @notice attribution data
      */
-    struct AdministratorData {
-        address parentEdition;
-        uint256 parentTokenId;
+    struct ControllerData {
         address fundsRecipient;
         uint16 profitShare;
     }
@@ -121,7 +109,7 @@ interface IRouxAdministrator {
     /**
      * @notice get admin fee balance
      */
-    function adminFeeBalance() external view returns (uint256);
+    function platformFeeBalance() external view returns (uint256);
 
     /**
      * @notice get profit share for a given edition and tokenId
@@ -130,40 +118,27 @@ interface IRouxAdministrator {
      */
     function profitShare(address edition, uint256 tokenId) external view returns (uint256);
 
-    /**
-     * @notice get attribution data
-     * @param edition edition
-     * @param tokenId token id
-     */
-    function attribution(address edition, uint256 tokenId) external view returns (address, uint256);
-
-    /**
-     * @notice get root edition for a given edition
-     * @param edition edition
-     * @param tokenId token id
-     * @return root edition
-     * @return root tokenId
-     * @return depth of edition
-     */
-    function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256);
-
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
     /**
      * @notice set attribution for an edition and tokenId
+     * @param tokenId token id
+     * @param fundsRecipient funding recipient
+     * @param profitShare profit share
      *
      * @dev this should be called by the edition contract, as the attribution mapping
      *       is keyed by the edition contract address and token id
      */
-    function setAdministratorData(uint256 tokenId, AdministratorData calldata a) external;
+    function setControllerData(uint256 tokenId, address fundsRecipient, uint16 profitShare) external;
 
     /**
      * @notice disburse mint funds to edition and pending balance
+     * @param edition edition
      * @param tokenId token id
      */
-    function disburse(uint256 tokenId) external payable;
+    function disburse(address edition, uint256 tokenId) external payable;
 
     /**
      * @notice withdraw balance from edition for given token id

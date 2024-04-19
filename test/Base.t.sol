@@ -6,18 +6,19 @@ import "forge-std/Test.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import { RouxAdministrator } from "src/RouxAdministrator.sol";
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { Controller } from "src/Controller.sol";
+import { IController } from "src/interfaces/IController.sol";
+import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { Registry } from "src/Registry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 
+import { EditionMinter } from "src/minters/EditionMinter.sol";
+import { DefaultEditionMinter } from "src/minters/DefaultEditionMinter.sol";
+
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
-
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { Collection } from "src/Collection.sol";
-import { CollectionFactory } from "src/CollectionFactory.sol";
 
 import { Events } from "./utils/Events.sol";
 import { Constants } from "./utils/Constants.sol";
@@ -53,27 +54,37 @@ abstract contract BaseTest is Test, Events, Constants {
     /* state                                        */
     /* -------------------------------------------- */
 
-    IRouxEdition.TokenSaleData internal defaultTokenSaleData;
-    IRouxAdministrator.AdministratorData internal defaultAdministratorData;
+    // optional mint params
+    bytes optionalMintParams;
 
-    RouxAdministrator internal administratorImpl;
-    RouxAdministrator internal administrator;
+    // registry
+    IRegistry.RegistryData internal registryData;
+    Registry internal registryImpl;
+    Registry internal registry;
 
+    // controller
+    IController.ControllerData internal defaultControllerData;
+    Controller internal controllerImpl;
+    Controller internal controller;
+
+    // minters
+    EditionMinter internal editionMinter;
+    DefaultEditionMinter internal defaultMinter;
+
+    // edition
     RouxEdition internal editionImpl;
     RouxEdition internal edition;
     RouxEditionFactory internal factoryImpl;
     RouxEditionFactory internal factory;
 
+    // erc6551
     ERC6551Registry internal erc6551Registry;
     ERC6551Account internal accountImpl;
-    Collection internal collectionImpl;
-    Collection internal collection;
-    CollectionFactory internal collectionFactoryImpl;
-    CollectionFactory internal collectionFactory;
 
+    // proxy
     UpgradeableBeacon internal editionBeacon;
-    UpgradeableBeacon internal collectionBeacon;
 
+    // users
     Users internal users;
 
     /* -------------------------------------------- */
@@ -94,48 +105,50 @@ abstract contract BaseTest is Test, Events, Constants {
             admin: _createUser("admin")
         });
 
-        // set default token sale data
-        defaultTokenSaleData = IRouxEdition.TokenSaleData({
-            price: TEST_TOKEN_PRICE,
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp) + TEST_TOKEN_MINT_DURATION,
-            maxSupply: TEST_TOKEN_MAX_SUPPLY,
-            maxMintable: type(uint16).max
-        });
-
-        // set default administrator data
-        defaultAdministratorData = IRouxAdministrator.AdministratorData({
-            parentEdition: address(0),
-            parentTokenId: 0,
-            fundsRecipient: users.creator_0,
-            profitShare: TEST_PROFIT_SHARE
-        });
-
-        _deployAdministrator();
+        _deployRegistry();
+        _deployController();
         _deployEdition();
         _deployEditionFactory();
+        _deployEditionMinter();
+        _deployDefaultMinter();
+        _setOptionalSaleData();
         _deployTokenBoundContracts();
-        _deployCollection();
-        _deployCollectionFactory();
         _allowlistUsers();
         _addToken();
-        _addCollection();
     }
 
-    function _deployAdministrator() internal {
+    function _deployRegistry() internal {
         // deployer
         vm.startPrank(users.deployer);
 
-        // administrator deployment
-        administratorImpl = new RouxAdministrator();
-        vm.label({ account: address(administratorImpl), newLabel: "RouxAdministratorImplementation" });
+        // registry deployment
+        registryImpl = new Registry();
+        vm.label({ account: address(registryImpl), newLabel: "RegistryImplementation" });
+
+        // encode params
+        bytes memory initData = abi.encodeWithSelector(registryImpl.initialize.selector);
+
+        // deploy proxy
+        registry = Registry(address(new ERC1967Proxy(address(registryImpl), initData)));
+        vm.label({ account: address(registry), newLabel: "RegistryProxy" });
+
+        vm.stopPrank();
+    }
+
+    function _deployController() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // controller deployment
+        controllerImpl = new Controller(address(registry));
+        vm.label({ account: address(controllerImpl), newLabel: "ControllerImplementation" });
 
         // encode params
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
 
         // deploy proxy
-        administrator = RouxAdministrator(address(new ERC1967Proxy(address(administratorImpl), initData)));
-        vm.label({ account: address(administrator), newLabel: "RouxAdministratorProxy" });
+        controller = Controller(address(new ERC1967Proxy(address(controllerImpl), initData)));
+        vm.label({ account: address(controller), newLabel: "ControllerProxy" });
 
         vm.stopPrank();
     }
@@ -145,7 +158,7 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.startPrank(users.deployer);
 
         // edition deployment
-        editionImpl = new RouxEdition(address(administrator));
+        editionImpl = new RouxEdition(address(controller), address(registry));
         vm.label({ account: address(editionImpl), newLabel: "Edition" });
 
         // beacon deployment
@@ -173,6 +186,28 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
+    function _deployEditionMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter deployment
+        editionMinter = new EditionMinter(address(controller));
+        vm.label({ account: address(editionMinter), newLabel: "EditionMinter" });
+
+        vm.stopPrank();
+    }
+
+    function _deployDefaultMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter deployment
+        defaultMinter = new DefaultEditionMinter(address(controller));
+        vm.label({ account: address(defaultMinter), newLabel: "DefaultMinter" });
+
+        vm.stopPrank();
+    }
+
     function _deployTokenBoundContracts() internal {
         // deployer
         vm.startPrank(users.deployer);
@@ -180,39 +215,6 @@ abstract contract BaseTest is Test, Events, Constants {
         // tokenbound deployments
         erc6551Registry = new ERC6551Registry();
         accountImpl = new ERC6551Account(address(erc6551Registry));
-
-        vm.stopPrank();
-    }
-
-    function _deployCollection() internal {
-        // deployer
-        vm.startPrank(users.deployer);
-
-        // collection implementation deployment
-        collectionImpl = new Collection(address(erc6551Registry), address(accountImpl), address(factory));
-        vm.label({ account: address(collectionImpl), newLabel: "CollectionImplementation" });
-
-        // collection beacon deployment
-        collectionBeacon = new UpgradeableBeacon(address(collectionImpl), users.deployer);
-        vm.label({ account: address(editionBeacon), newLabel: "CollectionBeacon" });
-
-        vm.stopPrank();
-    }
-
-    function _deployCollectionFactory() internal {
-        // deployer
-        vm.startPrank(users.deployer);
-
-        // collection factory impl
-        collectionFactoryImpl = new CollectionFactory(address(collectionBeacon));
-        vm.label({ account: address(collectionFactoryImpl), newLabel: "CollectionFactoryImplementation" });
-
-        // encode params
-        bytes memory initData = abi.encodeWithSelector(collectionFactory.initialize.selector);
-
-        // deploy proxy
-        collectionFactory = CollectionFactory(address(new ERC1967Proxy(address(collectionFactoryImpl), initData)));
-        vm.label({ account: address(factory), newLabel: "RouxCollectionFactory" });
 
         vm.stopPrank();
     }
@@ -231,49 +233,58 @@ abstract contract BaseTest is Test, Events, Constants {
         curatorAllowlist[0] = address(users.creator_0);
         curatorAllowlist[1] = address(users.creator_1);
         curatorAllowlist[2] = address(users.curator_0);
-        collectionFactory.addAllowlist(curatorAllowlist);
 
         vm.stopPrank();
     }
 
     function _addToken() internal {
-        // edition
+        // user
         vm.startPrank(users.creator_0);
 
         // create edition instance
         edition = RouxEdition(factory.create(""));
 
         /* add token */
-        edition.add(defaultTokenSaleData, defaultAdministratorData, TEST_TOKEN_URI, address(users.creator_0));
+        edition.add(
+            TEST_TOKEN_URI,
+            address(users.creator_0),
+            TEST_TOKEN_MAX_SUPPLY,
+            address(users.creator_0),
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalMintParams
+        );
 
         vm.stopPrank();
     }
 
-    function _addCollection() internal {
-        vm.startPrank(users.creator_0);
-
-        /* create target array for collection */
-        address[] memory collectionItemTargets = new address[](1);
-        collectionItemTargets[0] = address(edition);
-
-        /* create token id array for collection */
-        uint256[] memory collectionItemIds = new uint256[](1);
-        collectionItemIds[0] = 1;
-
-        /* encode collection params */
-        bytes memory collectionParams = abi.encode(
-            TEST_COLLECTION_NAME, TEST_COLLECTION_SYMBOL, TEST_TOKEN_URI, collectionItemTargets, collectionItemIds
+    function _setOptionalSaleData() internal {
+        optionalMintParams = _encodeMintParams(
+            TEST_TOKEN_PRICE,
+            uint40(block.timestamp),
+            uint40(block.timestamp) + TEST_TOKEN_MINT_DURATION,
+            type(uint16).max
         );
-
-        /* create collection instance */
-        collection = Collection(collectionFactory.create(collectionParams));
-
-        vm.stopPrank();
     }
 
     /* -------------------------------------------- */
     /* utility functions                            */
     /* -------------------------------------------- */
+
+    function _encodeMintParams(
+        uint128 price,
+        uint40 mintStart,
+        uint40 mintEnd,
+        uint16 maxMintable
+    )
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(price, mintStart, mintEnd, maxMintable);
+    }
 
     function _createUser(string memory name) internal returns (address payable addr) {
         addr = payable(makeAddr(name));
@@ -306,16 +317,19 @@ abstract contract BaseTest is Test, Events, Constants {
             RouxEdition instance = RouxEdition(factory.create(""));
             editions[i] = instance;
 
-            // create administrator struct
-            IRouxAdministrator.AdministratorData memory administratorData = IRouxAdministrator.AdministratorData({
-                parentEdition: address(editions[i - 1]),
-                parentTokenId: 1,
-                fundsRecipient: user,
-                profitShare: TEST_PROFIT_SHARE
-            });
-
             /* create forked token with attribution */
-            instance.add(defaultTokenSaleData, administratorData, TEST_TOKEN_URI, user);
+            instance.add(
+                TEST_TOKEN_URI,
+                user,
+                TEST_TOKEN_MAX_SUPPLY,
+                user,
+                TEST_PROFIT_SHARE,
+                address(editions[i - 1]),
+                1,
+                address(editionMinter),
+                optionalMintParams
+            );
+
             vm.stopPrank();
         }
 

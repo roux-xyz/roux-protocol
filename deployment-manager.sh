@@ -44,8 +44,6 @@ usage() {
     echo "  deploy-edition-impl"
     echo "  deploy-edition-factory <beacon>"
     echo "  deploy-erc6551-account <erc6551Registry>"
-    echo "  deploy-collection-impl <erc6551Registry> <erc6551AccountImpl> <RouxEditionFactory>"
-    echo "  deploy-collection-factory <collectionBeacon>"
     echo ""
     echo "Options:"
     echo "  NETWORK: Set this environment variable to either 'local', 'sepolia', or 'mainnet'"
@@ -108,24 +106,5 @@ case $1 in
         echo "Deploying ERC6551Account Implementation"
         run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployERC6551Account.s.sol:DeployERC6551Account" "--sig run(address) $2"
         ;;
-    
-    "deploy-collection-impl")
-        if [ "$#" -ne 4 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551Registry> <erc6551AccountImpl> <RouxEditionFactory>"
-            exit 1
-        fi
 
-        echo "Deploying Collection Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCollectionImpl.s.sol:DeployCollectionImpl" "--sig run(address,address,address) $2 $3 $4"
-        ;;
-
-    "deploy-collection-factory")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <collectionBeacon>"
-            exit 1
-        fi
-
-        echo "Deploying Collection Factory"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployCollectionFactory.s.sol:DeployCollectionFactory" "--sig run(address) $2"
-        ;;
 esac
