@@ -88,7 +88,8 @@ contract EditionMinterTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         /* create edition instance */
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
         edition1.add(

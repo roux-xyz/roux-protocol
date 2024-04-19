@@ -130,15 +130,20 @@ contract EditionTest is BaseTest {
         assertEq(edition.totalSupply(1), 2);
     }
 
-    function test__URI() external {
+    function test__Uri() external {
         assertEq(edition.uri(1), TEST_TOKEN_URI);
+    }
+
+    function test__ContractUri() external {
+        assertEq(edition.contractURI(), TEST_CONTRACT_URI);
     }
 
     function test__Attribution() external {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // create forked token with attribution
         edition1.add(
@@ -229,7 +234,8 @@ contract EditionTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // create forked token with attribution
         edition1.add(
@@ -259,7 +265,8 @@ contract EditionTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create new edition instance
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // create forked token with attribution
         uint256 tokenId = edition1.add(

@@ -64,7 +64,10 @@ contract ControllerTest is BaseTest {
     function test__AddToken() external {
         // create edition instance
         vm.startPrank(users.creator_1);
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // expect the relevant event to be emitted
         vm.expectEmit({ emitter: address(edition1) });
@@ -110,7 +113,10 @@ contract ControllerTest is BaseTest {
     function test__AddToken_WithAttribution() external {
         // create edition instance
         vm.startPrank(users.creator_1);
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // expect the relevant event to be emitted
         vm.expectEmit({ emitter: address(edition1) });
@@ -143,7 +149,10 @@ contract ControllerTest is BaseTest {
     function test__Mint_WithAttribution_DepthOf1_BalancesUpdated() external {
         // create edition instance
         vm.startPrank(users.creator_1);
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
         edition1.add(
@@ -214,9 +223,12 @@ contract ControllerTest is BaseTest {
         uint256 creator0StartingBalance = address(users.creator_0).balance;
         uint256 creator1StartingBalance = address(users.creator_1).balance;
 
-        // create edition instance
+        // prank
         vm.startPrank(users.creator_1);
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
         edition1.add(
@@ -320,9 +332,12 @@ contract ControllerTest is BaseTest {
         // cache starting balances
         uint256 creator1StartingBalance = address(users.creator_1).balance;
 
-        // create edition instance
+        // prank
         vm.startPrank(users.creator_1);
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
 
@@ -392,10 +407,12 @@ contract ControllerTest is BaseTest {
     }
 
     function test__Withdraw_WithAttribution_DepthOf3() external {
+        // prank
         vm.startPrank(users.creator_1);
 
-        /* create new edition instance */
-        RouxEdition edition1 = RouxEdition(factory.create(""));
+        // create edition instance
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
         uint256 tokenId = edition1.add(
@@ -469,7 +486,7 @@ contract ControllerTest is BaseTest {
     function test__AdminFee_RecordedOnMint() external {
         // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
-        emit AdminFeeUpdated({ enabled: true });
+        emit PlatformFeeUpdated({ enabled: true });
 
         vm.prank(users.deployer);
         controller.platformFeeEnabled(true);
@@ -495,7 +512,7 @@ contract ControllerTest is BaseTest {
 
         // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
-        emit AdminFeeUpdated({ enabled: false });
+        emit PlatformFeeUpdated({ enabled: false });
 
         // disable
         vm.prank(users.deployer);

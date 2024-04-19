@@ -12,7 +12,7 @@ abstract contract Events {
     );
     event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
     event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
-    event AdminFeeUpdated(bool enabled);
+    event PlatformFeeUpdated(bool enabled);
 
     /* -------------------------------------------- */
     /* Registry                                     */

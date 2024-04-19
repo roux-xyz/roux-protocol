@@ -58,13 +58,16 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @custom:storage-location erc7201:rouxEdition.rouxEditionStorage
      *
      * @param initialized whether the contract has been initialized
+     * @param factory roux edition factory
      * @param tokenId current token id
+     * @param contractURI contract uri
      * @param tokens mapping of token id to token data
      */
     struct RouxEditionStorage {
         bool initialized;
         IRouxEditionFactory factory;
         uint256 tokenId;
+        string contractURI;
         mapping(uint256 tokenId => TokenData tokenData) tokens;
     }
 
@@ -94,6 +97,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
 
     /**
      * @notice initialize RouxEdition
+     * @param contractURI_ contract uri
      * @param init initial token data
      *
      * @dev initToken encoded as follows:
@@ -102,7 +106,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      *
      *      options params encoded as required by minter
      */
-    function initialize(bytes calldata init) external {
+    function initialize(string memory contractURI_, bytes calldata init) external {
         RouxEditionStorage storage $ = _storage();
 
         // initialize
@@ -111,6 +115,9 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
 
         // set factory
         $.factory = IRouxEditionFactory(msg.sender);
+
+        // set contract uri
+        $.contractURI = contractURI_;
 
         // factory transfers ownership to caller after initialization
         _initializeOwner(msg.sender);
@@ -189,6 +196,13 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      */
     function uri(uint256 id) public view override(IRouxEdition, ERC1155) returns (string memory) {
         return _storage().tokens[id].uri;
+    }
+
+    /**
+     * @inheritdoc IRouxEdition
+     */
+    function contractURI() external view override returns (string memory) {
+        return _storage().contractURI;
     }
 
     /**
