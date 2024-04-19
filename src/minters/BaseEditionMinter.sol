@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 
 /**
@@ -17,7 +17,7 @@ abstract contract BaseEditionMinter is IEditionMinter {
     /**
      * @notice roux administrator
      */
-    IRouxAdministrator internal immutable _administrator;
+    IController internal immutable _controller;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -25,11 +25,11 @@ abstract contract BaseEditionMinter is IEditionMinter {
 
     /**
      * @notice constructor
-     * @param administrator roux administrator
+     * @param controller roux controller
      */
-    constructor(address administrator) {
+    constructor(address controller) {
         // set attribution manager
-        _administrator = IRouxAdministrator(administrator);
+        _controller = IController(controller);
     }
 
     /* -------------------------------------------- */
@@ -57,7 +57,7 @@ abstract contract BaseEditionMinter is IEditionMinter {
         IRouxEdition(edition).mint(to, id, quantity, data);
 
         // disburse funds
-        _administrator.disburse{ value: msg.value }(edition, id);
+        _controller.disburse{ value: msg.value }(edition, id);
     }
 
     /**

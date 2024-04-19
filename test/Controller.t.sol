@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-contract AdministratorTest is BaseTest {
+contract ControllerTest is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
     }
@@ -16,32 +16,12 @@ contract AdministratorTest is BaseTest {
     /* reverts                                      */
     /* -------------------------------------------- */
 
-    function test_RevertsWhen_Root_MaxDepthExceeded() external {
-        // create forks up to max depth
-        RouxEdition[] memory editions = _createForks(MAX_FORK_DEPTH);
-
-        // attempt to add another fork
-        vm.prank(users.creator_0);
-        vm.expectRevert(IRouxAdministrator.MaxDepthExceeded.selector);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(editions[MAX_FORK_DEPTH]),
-            1,
-            address(editionMinter),
-            optionalSaleData
-        );
-    }
-
     function test__RevertsWhen_SetAdministration_FundsRecipientIsZero() external {
-        // modify default administrator data
-        defaultAdministratorData.fundsRecipient = address(0);
+        // modify default controller data
+        defaultControllerData.fundsRecipient = address(0);
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxAdministrator.InvalidFundsRecipient.selector);
+        vm.expectRevert(IController.InvalidFundsRecipient.selector);
         edition.add(
             TEST_TOKEN_URI,
             users.creator_0,
@@ -51,7 +31,7 @@ contract AdministratorTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
     }
 
@@ -59,90 +39,22 @@ contract AdministratorTest is BaseTest {
         // attempt to enable minting
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        administrator.adminFeeEnabled(true);
+        controller.adminFeeEnabled(true);
     }
 
     function test__RevertsWhen_UpgradeToAndCall_OnlyOwner() external {
         // attempt to upgrade to and call
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        administrator.upgradeToAndCall(address(edition), "");
+        controller.upgradeToAndCall(address(edition), "");
     }
 
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
 
-    function test__Root_Depth1() external {
-        // create edition instance
-        vm.startPrank(users.creator_1);
-        bytes memory params = abi.encode("");
-        RouxEdition edition1 = RouxEdition(factory.create(""));
-
-        /* create forked token with attribution */
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalSaleData
-        );
-        vm.stopPrank();
-
-        /* get root */
-        (address root, uint256 tokenId, uint256 depth) = administrator.root(address(edition1), 1);
-
-        assertEq(root, address(edition));
-        assertEq(tokenId, 1);
-        assertEq(depth, 1);
-    }
-
-    function test__Root_Depth2() external {
-        RouxEdition[] memory editions = _createForks(2);
-
-        /* get root */
-        (address root, uint256 tokenId, uint256 depth) = administrator.root(address(editions[2]), 1);
-
-        assertEq(root, address(edition));
-        assertEq(tokenId, 1);
-        assertEq(depth, 2);
-    }
-
-    function test__Root_Depth_MaxDepth() external {
-        RouxEdition[] memory editions = _createForks(MAX_FORK_DEPTH);
-
-        /* get root */
-        (address root, uint256 tokenId, uint256 depth) = administrator.root(address(editions[MAX_FORK_DEPTH]), 1);
-
-        assertEq(root, address(edition));
-        assertEq(tokenId, 1);
-        assertEq(depth, MAX_FORK_DEPTH);
-    }
-
-    function test__Root_DepthOfN(uint256 num) external {
-        uint256 n = bound(num, 1, MAX_FORK_DEPTH);
-        RouxEdition[] memory editions = _createForks(n);
-
-        /* get root */
-        (address root, uint256 tokenId, uint256 depth) = administrator.root(address(editions[n]), 1);
-
-        assertEq(root, address(edition));
-        assertEq(tokenId, 1);
-        assertEq(depth, n);
-
-        /* sanity checks */
-        assertEq(editions.length, n + 1); // original + n forks
-        for (uint256 i = 0; i < n + 1; i++) {
-            assertEq(factory.isEdition(address(editions[i])), true);
-        }
-    }
-
     function test__Owner() external {
-        assertEq(administrator.owner(), address(users.deployer));
+        assertEq(controller.owner(), address(users.deployer));
     }
 
     /* -------------------------------------------- */
@@ -152,12 +64,11 @@ contract AdministratorTest is BaseTest {
     function test__AddToken() external {
         // create edition instance
         vm.startPrank(users.creator_1);
-        bytes memory params = abi.encode("");
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         // expect the relevant event to be emitted
         vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1, parentEdition: address(0), parentTokenId: 0 });
+        emit TokenAdded({ tokenId: 1, minter: address(editionMinter) });
 
         edition1.add(
             TEST_TOKEN_URI,
@@ -168,7 +79,7 @@ contract AdministratorTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -185,7 +96,7 @@ contract AdministratorTest is BaseTest {
 
     function test__Mint_BalanceUpdated() external {
         // expect disbursement to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit Disbursement({ edition: address(edition), tokenId: 1, amount: TEST_TOKEN_PRICE });
 
         // mint
@@ -193,7 +104,7 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
     }
 
     function test__AddToken_WithAttribution() external {
@@ -203,7 +114,7 @@ contract AdministratorTest is BaseTest {
 
         // expect the relevant event to be emitted
         vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1, parentEdition: address(edition), parentTokenId: 1 });
+        emit TokenAdded({ tokenId: 1, minter: address(editionMinter) });
 
         edition1.add(
             TEST_TOKEN_URI,
@@ -214,7 +125,7 @@ contract AdministratorTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -244,21 +155,21 @@ contract AdministratorTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
         // compute split
-        uint256 profitShare = administrator.profitShare(address(edition), 1);
+        uint256 profitShare = controller.profitShare(address(edition), 1);
         uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
         uint256 childShare = TEST_TOKEN_PRICE - parentShare;
 
         // expect disbursement to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit Disbursement({ edition: address(edition1), tokenId: 1, amount: childShare });
 
         // expect pending to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit PendingUpdated({
             edition: address(edition1),
             tokenId: 1,
@@ -272,8 +183,8 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition1), 1), childShare);
-        assertEq(administrator.pending(address(edition), 1), parentShare);
+        assertEq(controller.balance(address(edition1), 1), childShare);
+        assertEq(controller.pending(address(edition), 1), parentShare);
     }
 
     function test__Withdraw() external {
@@ -285,14 +196,14 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
 
         // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit Withdrawn({ edition: address(edition), tokenId: 1, to: users.creator_0, amount: TEST_TOKEN_PRICE });
 
         // withdraw
-        administrator.withdraw(address(edition), 1);
+        controller.withdraw(address(edition), 1);
 
         // check balance
         assertEq(address(users.creator_0).balance, creator0StartingBalance + TEST_TOKEN_PRICE);
@@ -305,7 +216,6 @@ contract AdministratorTest is BaseTest {
 
         // create edition instance
         vm.startPrank(users.creator_1);
-        bytes memory params = abi.encode("");
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         /* create forked token with attribution */
@@ -318,12 +228,12 @@ contract AdministratorTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
         // compute split
-        uint256 profitShare = administrator.profitShare(address(edition), 1);
+        uint256 profitShare = controller.profitShare(address(edition), 1);
         uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
         uint256 childShare = TEST_TOKEN_PRICE - parentShare;
 
@@ -332,25 +242,25 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition1), 1), childShare);
-        assertEq(administrator.pending(address(edition), 1), parentShare);
+        assertEq(controller.balance(address(edition1), 1), childShare);
+        assertEq(controller.pending(address(edition), 1), parentShare);
 
         // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit Withdrawn({ edition: address(edition1), tokenId: 1, to: users.creator_1, amount: childShare });
 
         // withdraw
-        administrator.withdraw(address(edition1), 1);
+        controller.withdraw(address(edition1), 1);
 
         // check balances
         assertEq(address(users.creator_1).balance, creator1StartingBalance + childShare);
 
         // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit Withdrawn({ edition: address(edition), tokenId: 1, to: users.creator_0, amount: parentShare });
 
         // withdraw
-        administrator.withdraw(address(edition), 1);
+        controller.withdraw(address(edition), 1);
 
         // check balances
         assertEq(address(users.creator_0).balance, creator0StartingBalance + parentShare);
@@ -371,7 +281,7 @@ contract AdministratorTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         // mint
@@ -383,15 +293,15 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 2, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition), 1), TEST_TOKEN_PRICE);
-        assertEq(administrator.balance(address(edition), 2), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(address(edition), 2), TEST_TOKEN_PRICE);
 
         // expect withdrawal to be emitted
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = 1;
         tokenIds[1] = 2;
 
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit WithdrawnBatch({
             edition: address(edition),
             tokenIds: tokenIds,
@@ -400,7 +310,7 @@ contract AdministratorTest is BaseTest {
         });
 
         // withdraw
-        administrator.withdrawBatch(address(edition), tokenIds);
+        controller.withdrawBatch(address(edition), tokenIds);
 
         // check balances
         assertEq(address(users.creator_0).balance, creator0StartingBalance + TEST_TOKEN_PRICE * 2);
@@ -411,11 +321,11 @@ contract AdministratorTest is BaseTest {
         uint256 creator1StartingBalance = address(users.creator_1).balance;
 
         // create edition instance
-        vm.prank(users.creator_1);
+        vm.startPrank(users.creator_1);
         RouxEdition edition1 = RouxEdition(factory.create(""));
 
         /* create forked token with attribution */
-        vm.prank(users.creator_1);
+
         edition1.add(
             TEST_TOKEN_URI,
             users.creator_1,
@@ -425,11 +335,13 @@ contract AdministratorTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
+        vm.stopPrank();
+
         // compute split
-        uint256 profitShare = administrator.profitShare(address(edition), 1);
+        uint256 profitShare = controller.profitShare(address(edition), 1);
         uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
         uint256 childShare = TEST_TOKEN_PRICE - parentShare;
 
@@ -438,8 +350,8 @@ contract AdministratorTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
 
         // check balance
-        assertEq(administrator.balance(address(edition1), 1), childShare);
-        assertEq(administrator.pending(address(edition), 1), parentShare);
+        assertEq(controller.balance(address(edition1), 1), childShare);
+        assertEq(controller.pending(address(edition), 1), parentShare);
 
         // create a 2nd token
         vm.prank(users.creator_1);
@@ -452,7 +364,7 @@ contract AdministratorTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         // mint 2nd token
@@ -464,7 +376,7 @@ contract AdministratorTest is BaseTest {
         tokenIds[0] = 1;
         tokenIds[1] = 2;
 
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit WithdrawnBatch({
             edition: address(edition1),
             tokenIds: tokenIds,
@@ -473,7 +385,7 @@ contract AdministratorTest is BaseTest {
         });
 
         // withdraw
-        administrator.withdrawBatch(address(edition1), tokenIds);
+        controller.withdrawBatch(address(edition1), tokenIds);
 
         // check balances
         assertEq(address(users.creator_1).balance, creator1StartingBalance + childShare + TEST_TOKEN_PRICE);
@@ -495,7 +407,7 @@ contract AdministratorTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -516,7 +428,7 @@ contract AdministratorTest is BaseTest {
             address(edition1),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         /* cache starting balances */
@@ -536,17 +448,17 @@ contract AdministratorTest is BaseTest {
 
         /* withdraw from fork2, tokenId2 */
         vm.prank(users.creator_0);
-        uint256 withdrawalAmount = administrator.withdraw(address(edition), tokenId2);
+        uint256 withdrawalAmount = controller.withdraw(address(edition), tokenId2);
         assertEq(withdrawalAmount, fork2CreatorSplit);
 
         /* withdraw from fork1 */
         vm.prank(users.creator_1);
-        uint256 withdrawalAmount2 = administrator.withdraw(address(edition1), tokenId);
+        uint256 withdrawalAmount2 = controller.withdraw(address(edition1), tokenId);
         assertEq(withdrawalAmount2, fork1CreatorSplit);
 
         /* withdraw from root */
         vm.prank(users.creator_0);
-        uint256 withdrawalAmount3 = administrator.withdraw(address(edition), 1);
+        uint256 withdrawalAmount3 = controller.withdraw(address(edition), 1);
         assertEq(withdrawalAmount3, fork1ParentSplit);
 
         /* verify balances */
@@ -556,38 +468,38 @@ contract AdministratorTest is BaseTest {
 
     function test__AdminFee_RecordedOnMint() external {
         // Expect the relevant event to be emitted.
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit AdminFeeUpdated({ enabled: true });
 
         vm.prank(users.deployer);
-        administrator.adminFeeEnabled(true);
+        controller.adminFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(administrator.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
     }
 
     function test__DisableAdminFee() external {
         vm.prank(users.deployer);
-        administrator.adminFeeEnabled(true);
+        controller.adminFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(administrator.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
 
         // Expect the relevant event to be emitted.
-        vm.expectEmit({ emitter: address(administrator) });
+        vm.expectEmit({ emitter: address(controller) });
         emit AdminFeeUpdated({ enabled: false });
 
         // disable
         vm.prank(users.deployer);
-        administrator.adminFeeEnabled(false);
+        controller.adminFeeEnabled(false);
     }
 
     function test__WithdrawAdminFee() external {
@@ -595,7 +507,7 @@ contract AdministratorTest is BaseTest {
         uint256 startingBalance = address(users.deployer).balance;
 
         vm.prank(users.deployer);
-        administrator.adminFeeEnabled(true);
+        controller.adminFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
@@ -605,14 +517,14 @@ contract AdministratorTest is BaseTest {
         uint256 expectedAdminFee = (TEST_TOKEN_PRICE * 1_000) / 10_000;
 
         // check balance
-        assertEq(administrator.adminFeeBalance(), expectedAdminFee);
+        assertEq(controller.adminFeeBalance(), expectedAdminFee);
 
         // withdraw
         vm.prank(users.deployer);
-        administrator.withdrawAdminFee(users.deployer);
+        controller.withdrawAdminFee(users.deployer);
 
         // check balance
-        assertEq(administrator.adminFeeBalance(), 0);
+        assertEq(controller.adminFeeBalance(), 0);
 
         // check deployer balance
         assertEq(address(users.deployer).balance, startingBalance + expectedAdminFee);

@@ -17,7 +17,7 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         /* deploy new edition implementation */
-        IRouxEdition newCreatorImpl = new RouxEdition(address(administrator));
+        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
 
         /* set new implementation in beacon */
         vm.prank(users.deployer);

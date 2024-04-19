@@ -38,14 +38,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
      *
      * @param initialized whether the contract has been initialized
-     * @param tokens set of edition tokens
+     * @param editions set of editions
      * @param owner owner of the contract
      * @param enableAllowlist whether to enable allowlist
      * @param allowlist allowlist of editions
      */
     struct RouxEditionFactoryStorage {
         bool initialized;
-        EnumerableSet.AddressSet tokens;
+        EnumerableSet.AddressSet editions;
         address owner;
         bool enableAllowlist;
         mapping(address => bool) allowlist;
@@ -114,11 +114,11 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     /* -------------------------------------------- */
 
     function isEdition(address token) external view returns (bool) {
-        return _storage().tokens.contains(token);
+        return _storage().editions.contains(token);
     }
 
     function getEditions() external view returns (address[] memory) {
-        return _storage().tokens.values();
+        return _storage().editions.values();
     }
 
     /* -------------------------------------------- */
@@ -128,14 +128,18 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     function create(bytes calldata params) external returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
+        // verify allowlist
         if ($.enableAllowlist && !$.allowlist[msg.sender]) revert OnlyAllowlist();
 
+        // create edition instance
         address editionInstance =
             address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
+        // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);
 
-        $.tokens.add(editionInstance);
+        // add to editions set
+        $.editions.add(editionInstance);
 
         emit NewEdition(editionInstance);
 
@@ -163,12 +167,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     }
 
     /* -------------------------------------------- */
-    /* proxy                                        */
+    /* proxy | danger zone                          */
     /* -------------------------------------------- */
 
     /**
      * @notice get proxy implementation
      * @return implementation address
+     *
+     * @dev do not remove this function
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
@@ -178,6 +184,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
      * @notice upgrade proxy
      * @param newImplementation new implementation contract
      * @param data optional calldata
+     *
+     * @dev do not remove this function
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);

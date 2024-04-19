@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
-import { RouxAdministrator } from "src/RouxAdministrator.sol";
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { Controller } from "src/Controller.sol";
+import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
 
@@ -42,7 +42,7 @@ contract EditionTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
     }
 
@@ -55,7 +55,7 @@ contract EditionTest is BaseTest {
     function test__RevertWhen_OnlyOwner_AddMinter() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
-        RouxEdition(address(edition)).addMinter(users.user_0);
+        RouxEdition(address(edition)).addMinter(1, users.user_0);
     }
 
     function test__RevertWhen_OnlyOwner_UpdateMintParams() external {
@@ -64,9 +64,9 @@ contract EditionTest is BaseTest {
         RouxEdition(address(edition)).updateMintParams(1, users.user_0, "");
     }
 
-    function test__RevertWhen_OnlyMinter() external {
+    function test__RevertWhen_InvalidCaller() external {
         vm.prank(users.user_1);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(IRouxEdition.InvalidCaller.selector);
         edition.mint(users.user_0, 1, 1, "");
     }
 
@@ -81,11 +81,8 @@ contract EditionTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
-
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
 
         vm.prank(users.user_1);
         vm.expectRevert(IRouxEdition.MaxSupplyExceeded.selector);
@@ -120,7 +117,7 @@ contract EditionTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         assertEq(edition.currentToken(), 2);
@@ -129,7 +126,8 @@ contract EditionTest is BaseTest {
     function test__TotalSupply() external {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
-        assertEq(edition.totalSupply(1), 1);
+        // creator minted token on add
+        assertEq(edition.totalSupply(1), 2);
     }
 
     function test__URI() external {
@@ -152,7 +150,7 @@ contract EditionTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -189,10 +187,20 @@ contract EditionTest is BaseTest {
         assertEq(edition.balanceOf(users.user_0, 1), 1);
 
         // check total supply
-        assertEq(edition.totalSupply(1), 1);
+        assertEq(edition.totalSupply(1), 2);
     }
 
     function test__AddToken() external {
+        // expect transfer to be emitted for token minted to creator
+        vm.expectEmit({ emitter: address(edition) });
+        emit TransferSingle({
+            operator: address(users.creator_0),
+            from: address(0),
+            to: users.creator_0,
+            id: 2,
+            amount: 1
+        });
+
         vm.prank(users.creator_0);
         edition.add(
             TEST_TOKEN_URI,
@@ -203,13 +211,18 @@ contract EditionTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
+
+        // verify token minted to creator
+        assertEq(edition.balanceOf(users.creator_0, 2), 1);
+        assertEq(edition.totalSupply(2), 1);
 
         // verify that token can be minted
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
         assertEq(edition.balanceOf(users.user_0, 1), 1);
+        assertEq(edition.totalSupply(1), 2);
     }
 
     function test__AddToken_WithAttribution() external {
@@ -228,7 +241,7 @@ contract EditionTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -258,7 +271,7 @@ contract EditionTest is BaseTest {
             address(edition),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
         vm.stopPrank();
 
@@ -279,7 +292,7 @@ contract EditionTest is BaseTest {
             address(edition1),
             1,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         // verify attribution
@@ -296,8 +309,8 @@ contract EditionTest is BaseTest {
 
     function test__AddMinter() external {
         vm.prank(users.creator_0);
-        RouxEdition(address(edition)).addMinter(address(defaultMinter));
-        assert(edition.hasAnyRole(address(defaultMinter), edition.MINTER_ROLE()));
+        RouxEdition(address(edition)).addMinter(1, address(defaultMinter));
+        assert(edition.isMinter(1, address(defaultMinter)));
     }
 
     function test__UpdateMintParams() external {

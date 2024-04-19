@@ -120,7 +120,7 @@ contract RouxEditionFactoryTest is BaseTest {
             address(0),
             0,
             address(editionMinter),
-            optionalSaleData
+            optionalMintParams
         );
 
         vm.prank(users.creator_0);
@@ -137,7 +137,9 @@ contract RouxEditionFactoryTest is BaseTest {
 
         // verify token was minted
         assertEq(newEdition.balanceOf(users.user_0, 1), 1);
-        assertEq(newEdition.totalSupply(1), 1);
+
+        // verify total supply - creator minted token on add
+        assertEq(newEdition.totalSupply(1), 2);
     }
 
     function test__IsEdition_True() external {

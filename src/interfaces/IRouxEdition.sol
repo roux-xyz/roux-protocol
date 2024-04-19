@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { IController } from "src/interfaces/IController.sol";
 
 interface IRouxEdition {
     /* -------------------------------------------- */
@@ -23,14 +23,14 @@ interface IRouxEdition {
     error CreatorAlreadySet();
 
     /**
-     * @notice invalid param
+     * @notice invalid attribution
      */
-    error InvalidPrice();
+    error InvalidAttribution();
 
     /**
      * @notice invalid attribution
      */
-    error InvalidAttribution();
+    error InvalidCaller();
 
     /**
      * @notice max supply exceeded
@@ -44,16 +44,21 @@ interface IRouxEdition {
     /**
      * @notice emitted when a token is added
      * @param tokenId token id
-     * @param parentEdition parent edition
-     * @param parentTokenId parent token id
+     * @param minter minter
      */
-    event TokenAdded(uint256 indexed tokenId, address indexed parentEdition, uint256 indexed parentTokenId);
+    event TokenAdded(uint256 indexed tokenId, address indexed minter);
 
     /**
      * @notice emitted when a minter is added
      * @param minter minter
      */
     event MinterAdded(address indexed minter);
+
+    /**
+     * @notice emitted when a minter is removed
+     * @param minter minter
+     */
+    event MinterRemoved(address indexed minter);
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -66,6 +71,7 @@ interface IRouxEdition {
         address creator;
         uint128 totalSupply;
         uint128 maxSupply;
+        mapping(address minter => bool valid) minters;
         string uri;
     }
 
@@ -121,6 +127,13 @@ interface IRouxEdition {
      */
     function exists(uint256 id) external view returns (bool);
 
+    /**
+     * @notice check if minter is valid
+     * @param id token id
+     * @param minter minter
+     */
+    function isMinter(uint256 id, address minter) external view returns (bool);
+
     /* -------------------------------------------- */
     /* write functions                              */
     /* -------------------------------------------- */
@@ -132,9 +145,9 @@ interface IRouxEdition {
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param profitShare profit share
-     * @param parentEdition parent edition
-     * @param parentTokenId parent token id
-     * @param minter minter
+     * @param parentEdition parent edition - address(0) if root
+     * @param parentTokenId parent token id - 0 if root
+     * @param minter minter - must be previously set to add token
      * @param options additional options
      * @return token id
      */

@@ -37,7 +37,6 @@ run `anvil` in a different terminal window
 **Set up Contract Address env vars**
 
 1. `export $CONTRACT_FACTORY=0x...`
-2. `export $COL_FACTORY=0x...`
 
 **Create RouxEdition from RouxEditionFactory**
 
@@ -55,14 +54,3 @@ _Note --value flag i.e. how much eth is being sent with transaction_
 
 1. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value <value>  $CREATOR "mint(address,uint256,uint256)" <to> <tokenId> <quantity>`
 2. e.g. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value 0.05ether  $CREATOR "mint(address,uint256,uint256)" 0xCCd88E7DFA55EA54667A52e9B54664fB21075bE5 1 1`
-
-**Create Collection**
-
-1. ABI-encode `params`: `cast abi-encode "f(string,stringstring,address[],uint256[])" <name> <symbol> <baseURI> "[<editionAddr1>, <editionAddr2>, ..., <editionAddrN>]" "[<tokenId1>, <tokenId2>, ..., <tokenIdN>]"`
-2. e.g. `cast abi-encode "f(address,address[],uint256[])" "Test Token" TST http://example.com "[0xa8f6658ecfae3e1531470efa5b00d78082c0050e]" "[1]"`
-3. `cast send --private-key $PK_CREATOR --rpc-url $SEPOLIA_RPC_URL $COL_FACTORY "create(bytes)" <params>`
-
-**Mint Collection**
-
-1. export contract instance created above to env var $COLLECTION
-2. `cast send --private-key $PK_USER --rpc-url $SEPOLIA_RPC_URL --value 0.05ether $COLLECTION "mint()"`

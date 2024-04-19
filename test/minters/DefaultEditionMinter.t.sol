@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
-import { RouxAdministrator } from "src/RouxAdministrator.sol";
-import { IRouxAdministrator } from "src/interfaces/IRouxAdministrator.sol";
+import { Controller } from "src/Controller.sol";
+import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
 
@@ -80,15 +80,15 @@ contract DefaultEditionMinterTest is BaseTest {
         assertEq(edition.balanceOf(users.user_0, defaultMinterTokenId), 1);
 
         // total supply by id
-        assertEq(edition.totalSupply(defaultMinterTokenId), 1);
+        assertEq(edition.totalSupply(defaultMinterTokenId), 2);
     }
 
-    function test__Mint_Batch() external {
+    function test__Mint_Multiple() external {
         defaultMinter.mint{ value: 0.0025 ether }(users.user_0, address(edition), defaultMinterTokenId, 5, "");
         assertEq(edition.balanceOf(users.user_0, defaultMinterTokenId), 5, "balanceOf");
 
         // total supply by id
-        assertEq(edition.totalSupply(defaultMinterTokenId), 5, "totalSupply of token");
+        assertEq(edition.totalSupply(defaultMinterTokenId), 6, "totalSupply of token");
     }
 
     function test__Mint_TokenWithAttribution() external {
