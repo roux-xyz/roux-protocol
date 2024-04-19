@@ -10,7 +10,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
 /**
- * @title Roux Administrator
+ * @title Controller
  * @author Roux
  */
 contract Controller is IController, OwnableRoles {
@@ -34,11 +34,11 @@ contract Controller is IController, OwnableRoles {
     uint256 internal constant BASIS_POINT_SCALE = 10_000;
 
     /**
-     * @notice mint fee
+     * @notice platform fee
      *
      * @dev 1000 basis points / 10%
      */
-    uint256 internal constant MINT_FEE = 1_000;
+    uint256 internal constant PLATFORM_FEE = 1_000;
 
     /**
      * @notice registry
@@ -55,8 +55,8 @@ contract Controller is IController, OwnableRoles {
      */
     struct ControllerStorage {
         bool initialized;
-        bool adminFeeEnabled;
-        uint192 adminFeeBalance;
+        bool platformFeeEnabled;
+        uint192 platformFeeBalance;
         uint48 gap;
         mapping(address edition => mapping(uint256 tokenId => ControllerData)) controllerData;
         mapping(address edition => mapping(uint256 tokenId => uint256 balance)) balance;
@@ -83,6 +83,9 @@ contract Controller is IController, OwnableRoles {
     /* initializer                                  */
     /* -------------------------------------------- */
 
+    /**
+     * @notice initialize
+     */
     function initialize() external {
         // initialize
         require(!_storage().initialized, "Already initialized");
@@ -138,8 +141,8 @@ contract Controller is IController, OwnableRoles {
     /**
      * @inheritdoc IController
      */
-    function adminFeeBalance() external view returns (uint256) {
-        return _storage().adminFeeBalance;
+    function platformFeeBalance() external view returns (uint256) {
+        return _storage().platformFeeBalance;
     }
 
     /**
@@ -163,7 +166,7 @@ contract Controller is IController, OwnableRoles {
         // revert if profit share exceeds basis point scale
         if (profitShare_ > BASIS_POINT_SCALE) revert InvalidProfitShare();
 
-        // set administrator data for edition + token id
+        // set controller data for edition + token id
         ControllerData storage d = _storage().controllerData[msg.sender][tokenId];
 
         d.fundsRecipient = fundsRecipient;
@@ -176,9 +179,9 @@ contract Controller is IController, OwnableRoles {
     function disburse(address edition, uint256 tokenId) external payable {
         // handle mint fee
         uint192 fee;
-        if (_storage().adminFeeEnabled) {
-            fee = ((msg.value * MINT_FEE) / BASIS_POINT_SCALE).toUint192();
-            _storage().adminFeeBalance += fee;
+        if (_storage().platformFeeEnabled) {
+            fee = ((msg.value * PLATFORM_FEE) / BASIS_POINT_SCALE).toUint192();
+            _storage().platformFeeBalance += fee;
         }
 
         // disburse
@@ -263,8 +266,8 @@ contract Controller is IController, OwnableRoles {
      * @notice enable mint fee
      * @param enable enable mint fee boolean
      */
-    function adminFeeEnabled(bool enable) external onlyOwner {
-        _storage().adminFeeEnabled = enable;
+    function platformFeeEnabled(bool enable) external onlyOwner {
+        _storage().platformFeeEnabled = enable;
 
         emit AdminFeeUpdated(enable);
     }
@@ -273,15 +276,15 @@ contract Controller is IController, OwnableRoles {
      * @notice withdraw mint fee
      * @param to recipient
      */
-    function withdrawAdminFee(address to) external onlyOwner returns (uint256) {
+    function withdrawPlatformFee(address to) external onlyOwner returns (uint256) {
         // get storage
         ControllerStorage storage $ = _storage();
 
         // cache mint fee balance
-        uint256 amount = $.adminFeeBalance;
+        uint256 amount = $.platformFeeBalance;
 
         // reset mint fee balance
-        $.adminFeeBalance = 0;
+        $.platformFeeBalance = 0;
 
         // transfer to owner
         (bool success,) = to.call{ value: amount }("");

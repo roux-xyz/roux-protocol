@@ -72,6 +72,11 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /* constructor                                  */
     /* -------------------------------------------- */
 
+    /**
+     * @notice constructor
+     * @param controller controller
+     * @param registry registry
+     */
     constructor(address controller, address registry) {
         // disable initialization of implementation contract
         _storage().initialized = true;
@@ -282,6 +287,10 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         emit MinterAdded(minter);
     }
 
+    /**
+     * @notice remove minter
+     * @param minter minter address
+     */
     function removeMinter(uint256 id, address minter) external onlyOwner {
         // remove minter
         _storage().tokens[id].minters[minter] = false;
@@ -313,6 +322,10 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @param parentTokenId parent token id - zero if original
      * @param minter minter - must be provided to add token
      * @param options additional options - mint params
+     *
+     * @dev makes external calls to set controller and set registry (if attribution included)
+     *      sets optional mint params, if provided
+     *      mints token to creator
      */
     function _add(
         string memory tokenUri,

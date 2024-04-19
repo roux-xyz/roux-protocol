@@ -313,6 +313,17 @@ contract EditionTest is BaseTest {
         assert(edition.isMinter(1, address(defaultMinter)));
     }
 
+    function test__RemoveMinter() external {
+        vm.prank(users.creator_0);
+        RouxEdition(address(edition)).removeMinter(1, address(editionMinter));
+        assert(!edition.isMinter(1, address(editionMinter)));
+
+        // verify that token cannot be minted
+        vm.prank(users.user_0);
+        vm.expectRevert(IRouxEdition.InvalidCaller.selector);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+    }
+
     function test__UpdateMintParams() external {
         uint128 newPrice = 0.088 ether;
         uint40 newMintStart = uint40(block.timestamp + 7 days);

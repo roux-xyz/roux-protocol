@@ -39,7 +39,7 @@ contract ControllerTest is BaseTest {
         // attempt to enable minting
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        controller.adminFeeEnabled(true);
+        controller.platformFeeEnabled(true);
     }
 
     function test__RevertsWhen_UpgradeToAndCall_OnlyOwner() external {
@@ -472,26 +472,26 @@ contract ControllerTest is BaseTest {
         emit AdminFeeUpdated({ enabled: true });
 
         vm.prank(users.deployer);
-        controller.adminFeeEnabled(true);
+        controller.platformFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(controller.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
     }
 
     function test__DisableAdminFee() external {
         vm.prank(users.deployer);
-        controller.adminFeeEnabled(true);
+        controller.platformFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
 
         // check balance
-        assertEq(controller.adminFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
 
         // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
@@ -499,7 +499,7 @@ contract ControllerTest is BaseTest {
 
         // disable
         vm.prank(users.deployer);
-        controller.adminFeeEnabled(false);
+        controller.platformFeeEnabled(false);
     }
 
     function test__WithdrawAdminFee() external {
@@ -507,7 +507,7 @@ contract ControllerTest is BaseTest {
         uint256 startingBalance = address(users.deployer).balance;
 
         vm.prank(users.deployer);
-        controller.adminFeeEnabled(true);
+        controller.platformFeeEnabled(true);
 
         // mint
         vm.prank(users.user_0);
@@ -517,14 +517,14 @@ contract ControllerTest is BaseTest {
         uint256 expectedAdminFee = (TEST_TOKEN_PRICE * 1_000) / 10_000;
 
         // check balance
-        assertEq(controller.adminFeeBalance(), expectedAdminFee);
+        assertEq(controller.platformFeeBalance(), expectedAdminFee);
 
         // withdraw
         vm.prank(users.deployer);
-        controller.withdrawAdminFee(users.deployer);
+        controller.withdrawPlatformFee(users.deployer);
 
         // check balance
-        assertEq(controller.adminFeeBalance(), 0);
+        assertEq(controller.platformFeeBalance(), 0);
 
         // check deployer balance
         assertEq(address(users.deployer).balance, startingBalance + expectedAdminFee);

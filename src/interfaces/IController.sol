@@ -109,7 +109,7 @@ interface IController {
     /**
      * @notice get admin fee balance
      */
-    function adminFeeBalance() external view returns (uint256);
+    function platformFeeBalance() external view returns (uint256);
 
     /**
      * @notice get profit share for a given edition and tokenId
