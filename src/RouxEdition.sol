@@ -32,12 +32,11 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /**
      * @notice implementation version
      */
-    string public constant IMPLEMENTATION_VERSION = "1.0";
+    string public constant IMPLEMENTATION_VERSION = "0.1";
 
-    /**
-     * @notice minter role
-     */
-    uint256 public constant MINTER_ROLE = _ROLE_1;
+    /* -------------------------------------------- */
+    /* immutable state                              */
+    /* -------------------------------------------- */
 
     /**
      * @notice registry
@@ -48,6 +47,15 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @notice controller
      */
     IController internal immutable _controller;
+
+    /**
+     * @notice minters (max 5)
+     */
+    address internal immutable _minter1;
+    address internal immutable _minter2;
+    address internal immutable _minter3;
+    address internal immutable _minter4;
+    address internal immutable _minter5;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -79,16 +87,30 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @notice constructor
      * @param controller controller
      * @param registry registry
+     * @param minters minters
      */
-    constructor(address controller, address registry) {
+    constructor(address controller, address registry, address[] memory minters) {
         // disable initialization of implementation contract
         _storage().initialized = true;
+
+        // set owner
+        _initializeOwner(msg.sender);
 
         // set controller
         _controller = IController(controller);
 
         // set registry
         _registry = IRegistry(registry);
+
+        // allowlist available minters
+        _minter1 = (minters.length > 0) ? minters[0] : address(0);
+        _minter2 = (minters.length > 1) ? minters[1] : address(0);
+        _minter3 = (minters.length > 2) ? minters[2] : address(0);
+        _minter4 = (minters.length > 3) ? minters[3] : address(0);
+        _minter5 = (minters.length > 4) ? minters[4] : address(0);
+
+        // renounce ownership of implementation contract
+        renounceOwnership();
     }
 
     /* -------------------------------------------- */
@@ -100,7 +122,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @param contractURI_ contract uri
      * @param init initial token data
      *
-     * @dev initToken encoded as follows:
+     * @dev init encoded as follows:
      *      (string tokenUri, address creator, uint32 maxSupply, address fundsRecipient, uint16 profitShare, address
      *      parentEdition, uint256 parentTokenId, address minter, bytes options)
      *
@@ -113,14 +135,14 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         require(!$.initialized, "Already initialized");
         $.initialized = true;
 
+        // factory transfers ownership to caller after initialization
+        _initializeOwner(msg.sender);
+
         // set factory
         $.factory = IRouxEditionFactory(msg.sender);
 
         // set contract uri
         $.contractURI = contractURI_;
-
-        // factory transfers ownership to caller after initialization
-        _initializeOwner(msg.sender);
 
         // add initial token if provided
         if (init.length > 0) {
@@ -208,15 +230,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     /**
      * @inheritdoc IRouxEdition
      */
-    function attribution(uint256 id) external view returns (address, uint256) {
-        (address parentEdition, uint256 parentTokenId) = _registry.attribution(address(this), id);
-
-        return (parentEdition, parentTokenId);
-    }
-
-    /**
-     * @inheritdoc IRouxEdition
-     */
     function exists(uint256 id) external view returns (bool) {
         return _exists(id);
     }
@@ -294,11 +307,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      * @param minter minter address
      */
     function addMinter(uint256 id, address minter) external onlyOwner {
-        // add minter
-        _storage().tokens[id].minters[minter] = true;
-
-        // emit event
-        emit MinterAdded(minter);
+        _addMinter(id, minter);
     }
 
     /**
@@ -367,7 +376,9 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         d.uri = tokenUri;
         d.creator = creator_;
         d.maxSupply = maxSupply.toUint128();
-        d.minters[minter] = true;
+
+        // add minter
+        _addMinter(id, minter);
 
         // set controller data
         _setControllerData(id, fundsRecipient, profitShare.toUint16());
@@ -436,11 +447,43 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         return id != 0 && id <= _storage().tokenId;
     }
 
+    /**
+     * @notice internal function to mint
+     * @param to token receiver
+     * @param id token id
+     * @param quantity number of tokens to mint
+     * @param data additional data
+     *
+     * @dev updates total supply
+     */
     function _mint(address to, uint256 id, uint256 quantity, bytes memory data) internal override {
         // update total quantity
         _storage().tokens[id].totalSupply += quantity.toUint128();
 
         // mint
         super._mint(to, id, quantity, data);
+    }
+
+    /**
+     * @notice internal function to add minter
+     * @param id token id
+     * @param minter minter
+     */
+    function _addMinter(uint256 id, address minter) internal {
+        if (
+            minter == address(0)
+                || (
+                    minter != _minter1 && minter != _minter2 && minter != _minter3 && minter != _minter4
+                        && minter != _minter5
+                )
+        ) {
+            revert InvalidMinter();
+        }
+
+        // set minter
+        _storage().tokens[id].minters[minter] = true;
+
+        // emit event
+        emit MinterAdded(minter);
     }
 }

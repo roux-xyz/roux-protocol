@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
 import { RouxEdition } from "src/RouxEdition.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
@@ -33,7 +32,7 @@ contract Registry is IRegistry, OwnableRoles {
     /* -------------------------------------------- */
 
     /**
-     * @notice RouxEdition storage
+     * @notice roux registry storage
      * @custom:storage-location erc7201:rouxRegistry.rouxRegistryStorage
      */
     struct RouxRegistryStorage {

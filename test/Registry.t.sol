@@ -36,7 +36,7 @@ contract RegistryTest is BaseTest {
         );
     }
 
-    function test__RevertsWhen_UpgradeToAndCall_OnlyOwner() external {
+    function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
         // attempt to upgrade to and call
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -154,7 +154,7 @@ contract RegistryTest is BaseTest {
         assertEq(edition1.currentToken(), 1);
 
         // get attribution from edition
-        (address parentEdition, uint256 parentTokenId) = edition1.attribution(1);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
         // verify attribution
         assertEq(parentEdition, address(0));
@@ -205,7 +205,7 @@ contract RegistryTest is BaseTest {
         assertEq(edition1.currentToken(), 1);
 
         // get attribution
-        (address parentEdition, uint256 parentTokenId) = edition1.attribution(1);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
         // verify attribution
         assertEq(parentEdition, address(edition));

@@ -16,7 +16,7 @@ contract ControllerTest is BaseTest {
     /* reverts                                      */
     /* -------------------------------------------- */
 
-    function test__RevertsWhen_SetAdministration_FundsRecipientIsZero() external {
+    function test__RevertWhen_SetAdministration_FundsRecipientIsZero() external {
         // modify default controller data
         defaultControllerData.fundsRecipient = address(0);
 
@@ -35,14 +35,14 @@ contract ControllerTest is BaseTest {
         );
     }
 
-    function test__RevertsWhen_EnableMintFor_OnlyOwner() external {
+    function test__RevertWhen_EnableMintFor_OnlyOwner() external {
         // attempt to enable minting
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.platformFeeEnabled(true);
     }
 
-    function test__RevertsWhen_UpgradeToAndCall_OnlyOwner() external {
+    function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
         // attempt to upgrade to and call
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -90,7 +90,7 @@ contract ControllerTest is BaseTest {
         assertEq(edition1.currentToken(), 1);
 
         // get attribution
-        (address parentEdition, uint256 parentTokenId) = edition1.attribution(1);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
         // verify attribution
         assertEq(parentEdition, address(0));
@@ -139,7 +139,7 @@ contract ControllerTest is BaseTest {
         assertEq(edition1.currentToken(), 1);
 
         // get attribution
-        (address parentEdition, uint256 parentTokenId) = edition1.attribution(1);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
         // verify attribution
         assertEq(parentEdition, address(edition));
@@ -428,10 +428,10 @@ contract ControllerTest is BaseTest {
         );
         vm.stopPrank();
 
-        (address attribution, uint256 parentId) = edition1.attribution(tokenId);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
-        assertEq(attribution, address(edition));
-        assertEq(parentId, 1);
+        assertEq(parentEdition, address(edition));
+        assertEq(parentTokenId, 1);
 
         /* create forked token from the fork with attribution */
         vm.prank(users.creator_0);

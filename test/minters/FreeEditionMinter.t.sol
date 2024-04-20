@@ -7,12 +7,12 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
 
 import { RouxEdition } from "src/RouxEdition.sol";
-import { DefaultEditionMinter } from "src/minters/DefaultEditionMinter.sol";
+import { FreeEditionMinter } from "src/minters/FreeEditionMinter.sol";
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-contract DefaultEditionMinterTest is BaseTest {
-    uint256 defaultMinterTokenId;
+contract FreeMinterTest is BaseTest {
+    uint256 freeMinterTokendId;
 
     function setUp() public virtual override {
         BaseTest.setUp();
@@ -21,7 +21,7 @@ contract DefaultEditionMinterTest is BaseTest {
         vm.startPrank(users.creator_0);
 
         /* add token to current edition */
-        defaultMinterTokenId = edition.add(
+        freeMinterTokendId = edition.add(
             TEST_TOKEN_URI,
             address(users.creator_0),
             TEST_TOKEN_MAX_SUPPLY,
@@ -29,16 +29,11 @@ contract DefaultEditionMinterTest is BaseTest {
             TEST_PROFIT_SHARE,
             address(0),
             0,
-            address(defaultMinter),
+            address(freeMinter),
             abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION))
         );
 
         vm.stopPrank();
-    }
-
-    function test__RevertWhen_InsufficientFunds_Default() external {
-        vm.expectRevert(IEditionMinter.InsufficientFunds.selector);
-        defaultMinter.mint{ value: 0.0004 ether }(users.user_0, address(edition), defaultMinterTokenId, 1, "");
     }
 
     function test__RevertWhen__MintNotStarted() external {
@@ -55,40 +50,58 @@ contract DefaultEditionMinterTest is BaseTest {
             TEST_PROFIT_SHARE,
             address(0),
             0,
-            address(defaultMinter),
+            address(freeMinter),
             saleData
         );
 
         vm.prank(users.user_0);
-        vm.expectRevert(DefaultEditionMinter.MintNotStarted.selector);
-        defaultMinter.mint{ value: 0.005 ether }(users.user_0, address(edition), tokenId, 1, "");
+        vm.expectRevert(FreeEditionMinter.MintNotStarted.selector);
+        freeMinter.mint(users.user_0, address(edition), tokenId, 1, "");
     }
 
     function test__RevertWhen__MintEnded() external {
         vm.warp(block.timestamp + TEST_TOKEN_MINT_DURATION + 1 seconds);
         vm.prank(users.user_0);
-        vm.expectRevert(DefaultEditionMinter.MintEnded.selector);
-        defaultMinter.mint{ value: 0.005 ether }(users.user_0, address(edition), defaultMinterTokenId, 1, "");
+        vm.expectRevert(FreeEditionMinter.MintEnded.selector);
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
+    }
+
+    function test__RevertWhen_AlreadyMinted() external {
+        vm.startPrank(users.user_0);
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
+
+        vm.expectRevert(FreeEditionMinter.AlreadyMinted.selector);
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
     }
 
     function test__Price() external {
-        assertEq(defaultMinter.price(address(edition), defaultMinterTokenId), 0.0005 ether);
+        assertEq(freeMinter.price(address(edition), freeMinterTokendId), 0);
     }
 
     function test__Mint() external {
-        defaultMinter.mint{ value: 0.005 ether }(users.user_0, address(edition), defaultMinterTokenId, 1, "");
-        assertEq(edition.balanceOf(users.user_0, defaultMinterTokenId), 1);
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
+        assertEq(edition.balanceOf(users.user_0, freeMinterTokendId), 1);
 
         // total supply by id
-        assertEq(edition.totalSupply(defaultMinterTokenId), 2);
+        assertEq(edition.totalSupply(freeMinterTokendId), 2);
+    }
+
+    function test__Mint_MultipleAccounts() external {
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
+        freeMinter.mint(users.user_1, address(edition), freeMinterTokendId, 1, "");
+        assertEq(edition.balanceOf(users.user_0, freeMinterTokendId), 1);
+        assertEq(edition.balanceOf(users.user_1, freeMinterTokendId), 1);
+
+        // total supply by id
+        assertEq(edition.totalSupply(freeMinterTokendId), 3);
     }
 
     function test__Mint_Multiple() external {
-        defaultMinter.mint{ value: 0.0025 ether }(users.user_0, address(edition), defaultMinterTokenId, 5, "");
-        assertEq(edition.balanceOf(users.user_0, defaultMinterTokenId), 5, "balanceOf");
+        freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 5, "");
+        assertEq(edition.balanceOf(users.user_0, freeMinterTokendId), 5, "balanceOf");
 
         // total supply by id
-        assertEq(edition.totalSupply(defaultMinterTokenId), 6, "totalSupply of token");
+        assertEq(edition.totalSupply(freeMinterTokendId), 6, "totalSupply of token");
     }
 
     function test__Mint_TokenWithAttribution() external {
@@ -107,13 +120,13 @@ contract DefaultEditionMinterTest is BaseTest {
             TEST_PROFIT_SHARE,
             address(edition),
             1,
-            address(defaultMinter),
+            address(freeMinter),
             abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION))
         );
         vm.stopPrank();
 
         vm.prank(users.user_0);
-        defaultMinter.mint{ value: 0.005 ether }(users.user_0, address(edition1), tokenId, 1, "");
+        freeMinter.mint(users.user_0, address(edition1), tokenId, 1, "");
         assertEq(edition1.balanceOf(users.user_0, tokenId), 1);
     }
 }

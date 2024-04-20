@@ -33,6 +33,11 @@ interface IRouxEdition {
     error InvalidCaller();
 
     /**
+     * @notice invalid minter
+     */
+    error InvalidMinter();
+
+    /**
      * @notice max supply exceeded
      */
     error MaxSupplyExceeded();
@@ -116,14 +121,6 @@ interface IRouxEdition {
      * @notice contract uri
      */
     function contractURI() external view returns (string memory);
-
-    /**
-     * @notice get attribution for a given token id
-     * @param id token id
-     * @return parent edition
-     * @return parent token id
-     */
-    function attribution(uint256 id) external view returns (address, uint256);
 
     /**
      * @notice check if token exists

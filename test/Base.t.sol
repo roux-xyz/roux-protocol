@@ -16,6 +16,7 @@ import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 
 import { EditionMinter } from "src/minters/EditionMinter.sol";
 import { DefaultEditionMinter } from "src/minters/DefaultEditionMinter.sol";
+import { FreeEditionMinter } from "src/minters/FreeEditionMinter.sol";
 
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
@@ -68,8 +69,12 @@ abstract contract BaseTest is Test, Events, Constants {
     Controller internal controller;
 
     // minters
+    EditionMinter internal editionMinterImpl;
     EditionMinter internal editionMinter;
+    DefaultEditionMinter internal defaultMinterImpl;
     DefaultEditionMinter internal defaultMinter;
+    FreeEditionMinter internal freeMinterImpl;
+    FreeEditionMinter internal freeMinter;
 
     // edition
     RouxEdition internal editionImpl;
@@ -107,10 +112,11 @@ abstract contract BaseTest is Test, Events, Constants {
 
         _deployRegistry();
         _deployController();
-        _deployEdition();
-        _deployEditionFactory();
         _deployEditionMinter();
         _deployDefaultMinter();
+        _deployFreeMinter();
+        _deployEdition();
+        _deployEditionFactory();
         _setOptionalSaleData();
         _deployTokenBoundContracts();
         _allowlistUsers();
@@ -144,7 +150,7 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.label({ account: address(controllerImpl), newLabel: "ControllerImplementation" });
 
         // encode params
-        bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
+        bytes memory initData = abi.encodeWithSelector(controllerImpl.initialize.selector);
 
         // deploy proxy
         controller = Controller(address(new ERC1967Proxy(address(controllerImpl), initData)));
@@ -153,12 +159,72 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
+    function _deployEditionMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter implementation deployment
+        editionMinterImpl = new EditionMinter(address(controller));
+        vm.label({ account: address(editionMinterImpl), newLabel: "EditionMinterImplementation" });
+
+        // encode params
+        bytes memory initData = abi.encodeWithSelector(editionMinterImpl.initialize.selector);
+
+        // deploy proxy
+        editionMinter = EditionMinter(address(new ERC1967Proxy(address(editionMinterImpl), initData)));
+        vm.label({ account: address(editionMinter), newLabel: "EditionMinterProxy" });
+
+        vm.stopPrank();
+    }
+
+    function _deployDefaultMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // default minter implementation deployment
+        defaultMinterImpl = new DefaultEditionMinter(address(controller));
+        vm.label({ account: address(defaultMinterImpl), newLabel: "DefaultMinterImplementation" });
+
+        // encode params
+        bytes memory initData = abi.encodeWithSelector(defaultMinterImpl.initialize.selector);
+
+        // deploy proxy
+        defaultMinter = DefaultEditionMinter(address(new ERC1967Proxy(address(defaultMinterImpl), initData)));
+        vm.label({ account: address(defaultMinter), newLabel: "DefaultMinterProxy" });
+
+        vm.stopPrank();
+    }
+
+    function _deployFreeMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // default minter implementation deployment
+        freeMinterImpl = new FreeEditionMinter(address(controller));
+        vm.label({ account: address(freeMinterImpl), newLabel: "FreeMinterImplementation" });
+
+        // encode params
+        bytes memory initData = abi.encodeWithSelector(freeMinterImpl.initialize.selector);
+
+        // deploy proxy
+        freeMinter = FreeEditionMinter(address(new ERC1967Proxy(address(freeMinterImpl), initData)));
+        vm.label({ account: address(freeMinter), newLabel: "FreeMinterProxy" });
+
+        vm.stopPrank();
+    }
+
     function _deployEdition() internal {
         // deployer
         vm.startPrank(users.deployer);
 
+        // set minters
+        address[] memory minters = new address[](3);
+        minters[0] = address(editionMinter);
+        minters[1] = address(defaultMinter);
+        minters[2] = address(freeMinter);
+
         // edition deployment
-        editionImpl = new RouxEdition(address(controller), address(registry));
+        editionImpl = new RouxEdition(address(controller), address(registry), minters);
         vm.label({ account: address(editionImpl), newLabel: "Edition" });
 
         // beacon deployment
@@ -182,28 +248,6 @@ abstract contract BaseTest is Test, Events, Constants {
         // Deploy proxy
         factory = RouxEditionFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
         vm.label({ account: address(factory), newLabel: "RouxCreatorFactory" });
-
-        vm.stopPrank();
-    }
-
-    function _deployEditionMinter() internal {
-        // deployer
-        vm.startPrank(users.deployer);
-
-        // edition minter deployment
-        editionMinter = new EditionMinter(address(controller));
-        vm.label({ account: address(editionMinter), newLabel: "EditionMinter" });
-
-        vm.stopPrank();
-    }
-
-    function _deployDefaultMinter() internal {
-        // deployer
-        vm.startPrank(users.deployer);
-
-        // edition minter deployment
-        defaultMinter = new DefaultEditionMinter(address(controller));
-        vm.label({ account: address(defaultMinter), newLabel: "DefaultMinter" });
 
         vm.stopPrank();
     }
