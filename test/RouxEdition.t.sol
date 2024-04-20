@@ -89,6 +89,18 @@ contract EditionTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
     }
 
+    function test__RevertWhen_AddInvalidMinter() external {
+        vm.prank(users.creator_0);
+        vm.expectRevert(IRouxEdition.InvalidMinter.selector);
+        RouxEdition(address(edition)).addMinter(1, address(users.user_1));
+    }
+
+    function test__RevertWhen_AddInvalidMinter_ZeroAddress() external {
+        vm.prank(users.creator_0);
+        vm.expectRevert(IRouxEdition.InvalidMinter.selector);
+        RouxEdition(address(edition)).addMinter(1, address(0));
+    }
+
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
@@ -138,35 +150,12 @@ contract EditionTest is BaseTest {
         assertEq(edition.contractURI(), TEST_CONTRACT_URI);
     }
 
-    function test__Attribution() external {
-        vm.startPrank(users.creator_1);
-
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // create forked token with attribution
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
-
-        (address attribution, uint256 parentId) = edition1.attribution(1);
-
-        assertEq(attribution, address(edition));
-        assertEq(parentId, 1);
+    function test__Exists() external {
+        assertEq(edition.exists(1), true);
     }
 
-    function test__Exists() external {
-        assert(edition.exists(1));
+    function test__Implementation() external {
+        assertEq(edition.IMPLEMENTATION_VERSION(), "0.1");
     }
 
     /* -------------------------------------------- */
@@ -251,10 +240,10 @@ contract EditionTest is BaseTest {
         );
         vm.stopPrank();
 
-        (address attribution, uint256 parentId) = edition1.attribution(1);
+        (address parentToken, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
-        assertEq(attribution, address(edition));
-        assertEq(parentId, 1);
+        assertEq(parentToken, address(edition));
+        assertEq(parentTokenId, 1);
 
         vm.prank(users.user_0);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
@@ -282,10 +271,10 @@ contract EditionTest is BaseTest {
         );
         vm.stopPrank();
 
-        (address attribution, uint256 parentId) = edition1.attribution(tokenId);
+        (address parentToken, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
 
-        assertEq(attribution, address(edition));
-        assertEq(parentId, 1);
+        assertEq(parentToken, address(edition));
+        assertEq(parentTokenId, 1);
 
         // create forked token from the fork with attribution
         vm.prank(users.creator_0);
@@ -303,9 +292,9 @@ contract EditionTest is BaseTest {
         );
 
         // verify attribution
-        (address attribution2, uint256 parentId2) = edition.attribution(tokenId2);
-        assertEq(attribution2, address(edition1));
-        assertEq(parentId2, 1);
+        (address parentToken2, uint256 parentTokenId2) = registry.attribution(address(edition), tokenId2);
+        assertEq(parentToken2, address(edition1));
+        assertEq(parentTokenId2, 1);
     }
 
     function test__UpdateUri() external {
@@ -317,13 +306,13 @@ contract EditionTest is BaseTest {
     function test__AddMinter() external {
         vm.prank(users.creator_0);
         RouxEdition(address(edition)).addMinter(1, address(defaultMinter));
-        assert(edition.isMinter(1, address(defaultMinter)));
+        assertEq(edition.isMinter(1, address(defaultMinter)), true);
     }
 
     function test__RemoveMinter() external {
         vm.prank(users.creator_0);
         RouxEdition(address(edition)).removeMinter(1, address(editionMinter));
-        assert(!edition.isMinter(1, address(editionMinter)));
+        assertFalse(edition.isMinter(1, address(editionMinter)));
 
         // verify that token cannot be minted
         vm.prank(users.user_0);

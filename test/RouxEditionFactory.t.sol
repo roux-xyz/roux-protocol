@@ -66,7 +66,7 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
         address newEdition = factory.create(params);
 
-        assert(factory.isEdition(newEdition));
+        assertEq(factory.isEdition(newEdition), true);
     }
 
     function test__TransferOwnership() external {
@@ -87,7 +87,7 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
         address newEdition = factory.create(params);
 
-        assert(factory.isEdition(newEdition));
+        assertEq(factory.isEdition(newEdition), true);
     }
 
     function test__RemoveAllowlist() external {
@@ -116,7 +116,7 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
         address newEdition = factory.create(params);
 
-        assert(factory.isEdition(newEdition));
+        assertEq(factory.isEdition(newEdition), true);
     }
 
     function test__Create_WithParams() external {
@@ -136,7 +136,7 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes memory params_ = abi.encode(TEST_CONTRACT_URI, init);
         RouxEdition newEdition = RouxEdition(factory.create(params_));
 
-        assert(factory.isEdition(address(newEdition)));
+        assertEq(factory.isEdition(address(newEdition)), true);
 
         // verify token was added
         assertEq(newEdition.currentToken(), 1);
@@ -157,11 +157,11 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
         address newEdition = factory.create(params);
 
-        assert(factory.isEdition(newEdition));
+        assertEq(factory.isEdition(newEdition), true);
     }
 
     function test__IsEdtion_False() external {
-        assert(!factory.isEdition(address(users.creator_0)));
+        assertFalse(factory.isEdition(address(users.creator_0)));
     }
 
     function test__getEditions() external {

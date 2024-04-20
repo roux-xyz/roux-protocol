@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
+import { Ownable } from "solady/auth/Ownable.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
@@ -9,7 +12,7 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
  * @title Base Minter
  * @author Roux
  */
-abstract contract BaseEditionMinter is IEditionMinter {
+abstract contract BaseEditionMinter is IEditionMinter, Ownable {
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
@@ -50,14 +53,17 @@ abstract contract BaseEditionMinter is IEditionMinter {
         payable
         virtual
     {
-        // validate mint
-        _validateMint(to, edition, id, quantity, data);
+        // before token transfer
+        _beforeTokenTransfer(to, edition, id, quantity, data);
 
         // mint via edition contract
         IRouxEdition(edition).mint(to, id, quantity, data);
 
         // disburse funds
         _controller.disburse{ value: msg.value }(edition, id);
+
+        // after token transfer
+        _afterTokenTransfer(to, edition, id, quantity, data);
     }
 
     /**
@@ -70,13 +76,15 @@ abstract contract BaseEditionMinter is IEditionMinter {
     /* -------------------------------------------- */
 
     /**
-     * @notice internal function to validate mint
+     * @notice internal function to handle validation and state updates  before mint
      * @param to address receiving minted tokens
      * @param edition edition
      * @param id token id
      * @param quantity quantity
+     *
+     * @dev must be implemented by inheriting contracts
      */
-    function _validateMint(
+    function _beforeTokenTransfer(
         address to,
         address edition,
         uint256 id,
@@ -85,4 +93,49 @@ abstract contract BaseEditionMinter is IEditionMinter {
     )
         internal
         virtual;
+
+    /**
+     * @notice internal function to handle validation and state updates after mint
+     * @param to address receiving minted tokens
+     * @param edition edition
+     * @param id token id
+     * @param quantity quantity
+     *
+     * @dev can be overridden by inheriting contracts
+     */
+    function _afterTokenTransfer(
+        address to,
+        address edition,
+        uint256 id,
+        uint256 quantity,
+        bytes memory data
+    )
+        internal
+        virtual
+    { }
+
+    /* -------------------------------------------- */
+    /* proxy | danger zone                          */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice get proxy implementation
+     * @return implementation address
+     *
+     * @dev do not remove this function
+     */
+    function getImplementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
+    }
+
+    /**
+     * @notice upgrade proxy
+     * @param newImplementation new implementation contract
+     * @param data optional calldata
+     *
+     * @dev do not remove this function
+     */
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
+    }
 }

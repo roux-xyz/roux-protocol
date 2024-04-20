@@ -21,7 +21,7 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: 0.04 ether }(users.user_0, address(edition), 1, 1, "");
     }
 
-    function test__RevertsWhen__MintNotStarted() external {
+    function test__RevertWhen__MintNotStarted() external {
         // create optional sale data
         bytes memory saleData = _encodeMintParams(
             TEST_TOKEN_PRICE,
@@ -48,7 +48,7 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
     }
 
-    function test__RevertsWhen__MintEnded() external {
+    function test__RevertWhen__MintEnded() external {
         vm.warp(block.timestamp + TEST_TOKEN_MINT_DURATION + 1 seconds);
 
         vm.prank(users.user_0);
@@ -117,7 +117,7 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(editions[8]), 1, 1, "");
         assertEq(editions[8].balanceOf(users.user_0, 1), 1);
 
-        (address attribution, uint256 parentId) = editions[8].attribution(1);
+        (address attribution, uint256 parentId) = registry.attribution(address(editions[8]), 1);
         assertEq(attribution, address(editions[7]));
         assertEq(parentId, 1);
 
@@ -134,7 +134,7 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(editions[MAX_FORK_DEPTH]), 1, 1, "");
         assertEq(editions[MAX_FORK_DEPTH].balanceOf(users.user_0, 1), 1);
 
-        (address attribution, uint256 parentId) = editions[8].attribution(1);
+        (address attribution, uint256 parentId) = registry.attribution(address(editions[8]), 1);
         assertEq(attribution, address(editions[7]));
         assertEq(parentId, 1);
 

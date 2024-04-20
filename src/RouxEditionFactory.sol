@@ -26,7 +26,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
      * @dev keccak256(abi.encode(uint256(keccak256("rouxEditionFactory.rouxEditionFactoryStorage")) - 1)) &
      *      ~bytes32(uint256(0xff));
      */
-    bytes32 internal constant ROUX_EDITION_STORAGE_SLOT =
+    bytes32 internal constant ROUX_EDITION_FACTORY_STORAGE_SLOT =
         0x13ea773dc95198298e0d9b6bbd2aef489fb654cd1810ac18d17a86ab80293a00;
 
     /* -------------------------------------------- */
@@ -105,7 +105,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
      */
     function _storage() internal pure returns (RouxEditionFactoryStorage storage $) {
         assembly {
-            $.slot := ROUX_EDITION_STORAGE_SLOT
+            $.slot := ROUX_EDITION_FACTORY_STORAGE_SLOT
         }
     }
 
