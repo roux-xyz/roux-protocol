@@ -101,6 +101,14 @@ contract EditionTest is BaseTest {
         RouxEdition(address(edition)).addMinter(1, address(0));
     }
 
+    function test__RevertWhen_AlreadyInitialized() external {
+        // assert current implementation
+        vm.prank(users.user_0);
+        vm.expectRevert("Already initialized");
+        bytes memory params = abi.encode("");
+        edition.initialize("https://new-contract-uri.com", params);
+    }
+
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */

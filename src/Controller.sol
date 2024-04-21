@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -266,7 +266,7 @@ contract Controller is IController, OwnableRoles {
      * @notice enable mint fee
      * @param enable enable mint fee boolean
      */
-    function platformFeeEnabled(bool enable) external onlyOwner {
+    function enablePlatformFee(bool enable) external onlyOwner {
         _storage().platformFeeEnabled = enable;
 
         emit PlatformFeeUpdated(enable);

@@ -381,7 +381,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         _addMinter(id, minter);
 
         // set controller data
-        _setControllerData(id, fundsRecipient, profitShare.toUint16());
+        _controller.setControllerData(id, fundsRecipient, profitShare.toUint16());
 
         // optionally set registry data
         if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
@@ -395,17 +395,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
         emit TokenAdded(id, minter);
 
         return id;
-    }
-
-    /**
-     * @notice set administrator data
-     * @param id token id
-     * @param fundsRecipient funds recipient
-     * @param profitShare profit share
-     */
-    function _setControllerData(uint256 id, address fundsRecipient, uint16 profitShare) internal {
-        // set controller data via controller
-        _controller.setControllerData(id, fundsRecipient, profitShare);
     }
 
     /**
