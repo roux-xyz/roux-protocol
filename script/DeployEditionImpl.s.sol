@@ -8,13 +8,16 @@ import { BaseScript } from "./Base.s.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract DeployEditionImpl is BaseScript {
-    function run(address administrator, address registry, address[] memory minters) public broadcast {
-        /* deploy implementation */
-        RouxEdition editionImpl = new RouxEdition(administrator, registry, minters);
-        console.log("Creator Implementation: ", address(editionImpl));
+    function run(address controller, address registry, address[] memory minters) public broadcast {
+        console.log("Deploying Edition implementation...\n");
 
-        /* deploy beacon */
+        // deploy implementation
+        RouxEdition editionImpl = new RouxEdition(controller, registry, minters);
+        console.log("Edition Implementation: %s\n", address(editionImpl));
+        console.log("Deploying Edition beacon...\n");
+
+        // deploy beacon
         UpgradeableBeacon editionBeacon = new UpgradeableBeacon(address(editionImpl), msg.sender);
-        console.log("Creator Beacon: ", address(editionBeacon));
+        console.log("Edition Beacon: %s\n", address(editionBeacon));
     }
 }
