@@ -3,6 +3,8 @@ pragma solidity 0.8.25;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+
 import { RouxEdition } from "src/RouxEdition.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
@@ -10,7 +12,7 @@ import { IRegistry } from "src/interfaces/IRegistry.sol";
  * @title Roux Registry
  * @author Roux
  */
-contract Registry is IRegistry, OwnableRoles {
+contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
@@ -57,7 +59,7 @@ contract Registry is IRegistry, OwnableRoles {
     /* initializer                                  */
     /* -------------------------------------------- */
 
-    function initialize() external {
+    function initialize() external nonReentrant {
         // initialize
         require(!_storage().initialized, "Already initialized");
         _storage().initialized = true;
@@ -111,7 +113,7 @@ contract Registry is IRegistry, OwnableRoles {
     /**
      * @inheritdoc IRegistry
      */
-    function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external {
+    function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external nonReentrant {
         // get current depth of parent edition and tokenId
         (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 

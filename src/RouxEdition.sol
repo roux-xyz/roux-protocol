@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
@@ -15,7 +16,7 @@ import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
  * @title Roux Edition
  * @author Roux
  */
-contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
+contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
 
     /* -------------------------------------------- */
@@ -128,7 +129,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
      *
      *      options params encoded as required by minter
      */
-    function initialize(string memory contractURI_, bytes calldata init) external {
+    function initialize(string memory contractURI_, bytes calldata init) external nonReentrant {
         RouxEditionStorage storage $ = _storage();
 
         // initialize
@@ -284,6 +285,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles {
     )
         external
         onlyOwner
+        nonReentrant
         returns (uint256)
     {
         return _add(

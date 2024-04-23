@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { RouxEdition } from "src/RouxEdition.sol";
 import { IController } from "src/interfaces/IController.sol";
@@ -13,7 +14,7 @@ import { IRegistry } from "src/interfaces/IRegistry.sol";
  * @title Controller
  * @author Roux
  */
-contract Controller is IController, OwnableRoles {
+contract Controller is IController, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
 
     /* -------------------------------------------- */
@@ -86,7 +87,7 @@ contract Controller is IController, OwnableRoles {
     /**
      * @notice initialize
      */
-    function initialize() external {
+    function initialize() external nonReentrant {
         // initialize
         require(!_storage().initialized, "Already initialized");
         _storage().initialized = true;
@@ -159,7 +160,7 @@ contract Controller is IController, OwnableRoles {
     /**
      * @inheritdoc IController
      */
-    function setControllerData(uint256 tokenId, address fundsRecipient, uint16 profitShare_) external {
+    function setControllerData(uint256 tokenId, address fundsRecipient, uint16 profitShare_) external nonReentrant {
         // revert if funds recipient is zero address
         if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
 
@@ -176,7 +177,7 @@ contract Controller is IController, OwnableRoles {
     /**
      * @inheritdoc IController
      */
-    function disburse(address edition, uint256 tokenId) external payable {
+    function disburse(address edition, uint256 tokenId) external payable nonReentrant {
         // handle mint fee
         uint192 fee;
         if (_storage().platformFeeEnabled) {
@@ -191,7 +192,7 @@ contract Controller is IController, OwnableRoles {
     /**
      * @inheritdoc IController
      */
-    function withdraw(address edition, uint256 tokenId) external returns (uint256) {
+    function withdraw(address edition, uint256 tokenId) external nonReentrant returns (uint256) {
         // get storage
         ControllerStorage storage $ = _storage();
 
@@ -220,7 +221,7 @@ contract Controller is IController, OwnableRoles {
     /**
      * @inheritdoc IController
      */
-    function withdrawBatch(address edition, uint256[] calldata tokenIds) external returns (uint256) {
+    function withdrawBatch(address edition, uint256[] calldata tokenIds) external nonReentrant returns (uint256) {
         // get storage
         ControllerStorage storage $ = _storage();
 
@@ -243,9 +244,11 @@ contract Controller is IController, OwnableRoles {
                 revert InvalidFundsRecipient();
             }
 
-            // decrement balance
+            // update amount
             uint256 tokenAmount = $.balance[edition][tokenIds[i]];
             amount += tokenAmount;
+
+            // decrement balance
             $.balance[edition][tokenIds[i]] -= tokenAmount;
         }
 
@@ -276,7 +279,7 @@ contract Controller is IController, OwnableRoles {
      * @notice withdraw mint fee
      * @param to recipient
      */
-    function withdrawPlatformFee(address to) external onlyOwner returns (uint256) {
+    function withdrawPlatformFee(address to) external onlyOwner nonReentrant returns (uint256) {
         // get storage
         ControllerStorage storage $ = _storage();
 
