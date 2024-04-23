@@ -62,14 +62,64 @@ fi
 
 case $1 in
 
-    "deploy-edition-impl")
+    "deploy-registry")
         if [ "$#" -ne 1 ]; then
             echo "Invalid param count; Usage: $0 <command>"
             exit 1
         fi
 
+        echo "Deploying Registry"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployRegistry.s.sol:DeployRegistry" "--sig run()"
+        ;;
+
+    "deploy-controller")
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 <command> <registry>"
+            exit 1
+        fi
+
+        echo "Deploying Controller"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployController.s.sol:DeployController" "--sig run(address) $2"
+        ;;
+
+    "deploy-edition-minter")
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller>"
+            exit 1
+        fi
+
+        echo "Deploying Edition Minter"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionMinter.s.sol:DeployEditionMinter" "--sig run(address) $2"
+        ;;
+
+    "deploy-default-edition-minter")
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller>"
+            exit 1
+        fi
+
+        echo "Deploying Default Edition Minter"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployDefaultEditionMinter.s.sol:DeployDefaultEditionMinter" "--sig run(address) $2"
+        ;;
+
+    "deploy-free-edition-minter")
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller>"
+            exit 1
+        fi
+
+        echo "Deploying Free Edition Minter"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployFreeEditionMinter.s.sol:DeployFreeEditionMinter" "--sig run(address) $2"
+        ;;
+
+    "deploy-edition-impl")
+        if [ "$#" -ne 4 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller> <registry> <minters>"
+            exit 1
+        fi
+
         echo "Deploying Edition Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run()"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address[]) $2 $3 $4"
         ;;
 
     "deploy-edition-factory")
@@ -80,31 +130,6 @@ case $1 in
 
         echo "Deploying EditionFactory"
         run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $2"
-        ;;
-
-    "deploy-erc6551-registry")
-        if [ "$NETWORK" != "local" ]; then
-            echo "Error: This command can only be run with NETWORK set to 'local'."
-            exit 1
-        fi
-
-        if [ "$#" -ne 1 ]; then
-            echo "Invalid param count; Usage: $0 <command>"
-            exit 1
-        fi
-
-        echo "Deploying ERC6551Account"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/local/DeployERC6551Registry.local.s.sol:DeployERC6551Registry" "--sig run()"
-        ;;
-
-    "deploy-erc6551-account-impl")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551Registry>"
-            exit 1
-        fi
-
-        echo "Deploying ERC6551Account Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployERC6551Account.s.sol:DeployERC6551Account" "--sig run(address) $2"
         ;;
 
 esac
