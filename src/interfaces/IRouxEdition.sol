@@ -48,10 +48,10 @@ interface IRouxEdition {
 
     /**
      * @notice emitted when a token is added
-     * @param tokenId token id
+     * @param id token id
      * @param minter minter
      */
-    event TokenAdded(uint256 indexed tokenId, address indexed minter);
+    event TokenAdded(uint256 indexed id, address indexed minter);
 
     /**
      * @notice emitted when a minter is added

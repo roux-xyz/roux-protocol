@@ -21,6 +21,6 @@ contract DeployEditionFactory is BaseScript {
         bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector);
         ERC1967Proxy rouxEditionFactoryProxy = new ERC1967Proxy(address(rouxEditionFactoryImpl), initData);
 
-        console.log("RouxEditionFactory proxy deployed at: %s\n", address(rouxEditionFactoryProxy));
+        console.log("RouxEditionFactory proxy: %s\n", address(rouxEditionFactoryProxy));
     }
 }

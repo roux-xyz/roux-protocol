@@ -1,0 +1,16 @@
+{
+  "RegistryImpl": "0xcd01C3f8636e4b6cc2454803A7A8c4Bc97C570E7",
+  "RegistryProxy": "0xff2457a0EDE0728Cd051fcC1212B121a374F6769",
+  "ControllerImpl": "0xbabfe1fe64EB9BB801e7b596f68e927276Fdb869",
+  "ControllerProxy": "0xC9FB42aF7b1c90D6AD881e20D99b70C2c3B23F6E",
+  "EditionMinterImpl": "0x1f6D6C124209a34B91A78bF7Fb9F3b1211d2b391",
+  "EditionMinterProxy": "0xCaC8Ae0068eAD605DD648EaaA2edB3588b07a9F0",
+  "DefaultEditionMinterImpl": "0xd188E81BC8ff27eD87Bc797aA4953C2828537337",
+  "DefaultEditionMinterProxy": "0xE5c8B790a310B76346e3914383245566E310a02f",
+  "FreeEditionMinterImpl": "0x2FD3180a49F0585833b72CA9e9800602901E49a7",
+  "FreeEditionMinterProxy": "0xE3d5108EEbA6b42Eb3C0dB7c2eaBa6ab66995e3B",
+  "RouxEditionImplementation": "0x08CE3AfbCEb5cF89CA1883f4076F1BDA7e74A0BB",
+  "RouxEditionBeacon": "0xCDc9d8BDda9fe4E2f895Fd040C77c43d6Fa931d4",
+  "RouxEditionFactoryImpl": "0xF1d03E14A48AC559c026d7487d27191aaDDDd5b0",
+  "RouxEditionFactoryProxy": "0x438E184e761Ba70379f20a0f49E130481716118B"
+}
