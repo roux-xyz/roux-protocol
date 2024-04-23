@@ -15,7 +15,7 @@ run() {
             forge script "$contract" --fork-url http://localhost:8545 --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d --broadcast -vvvv $args
             ;;
 
-        "sepolia"|"mainnet")
+        "sepolia"|"mainnet"|"base_sepolia")
             local rpc_url="${!rpc_url_var}"
             if [[ -z $rpc_url ]]; then
                 echo "$rpc_url_var is not set"
@@ -25,8 +25,8 @@ run() {
             if [ ! -z $LEDGER_DERIVATION_PATH ]; then
                 forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
             else
-                echo "Running with private key $PRIVATE_KEY"
-                forge script "$contract" --rpc-url "$rpc_url" --private-key $PRIVATE_KEY --broadcast -vvvv $args
+                echo "Running with account $ACCOUNT"
+                forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender 0xCeb05FfA7b24FA374112C431f9Fe07650C89996D --broadcast -vvvv $args
             fi
             ;;
 
@@ -41,9 +41,13 @@ usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  deploy-edition-impl"
+    echo "  deploy-registry"
+    echo "  deploy-controller <registry>"
+    echo "  deploy-edition-minter <controller>"
+    echo "  deploy-default-edition-minter <controller>"
+    echo "  deploy-free-edition-minter <controller>"
+    echo "  deploy-edition-impl <controller> <registry> <minters>"
     echo "  deploy-edition-factory <beacon>"
-    echo "  deploy-erc6551-account <erc6551Registry>"
     echo ""
     echo "Options:"
     echo "  NETWORK: Set this environment variable to either 'local', 'sepolia', or 'mainnet'"
@@ -54,7 +58,7 @@ usage() {
 DEPLOYMENTS_FILE="deployments/${NETWORK}.json"
 
 if [[ -z "$NETWORK" ]]; then
-    echo "Error: Set NETWORK to 'local', 'sepolia', or 'mainnet'."
+    echo "Error: Set NETWORK to 'local', 'sepolia', 'base_sepolia', or 'mainnet'."
     echo ""
     usage
     exit 1
@@ -130,6 +134,16 @@ case $1 in
 
         echo "Deploying EditionFactory"
         run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $2"
+        ;;
+
+    "upgrade-edition-impl")
+        if [ "$#" -ne 5 ]; then
+            echo "Invalid param count; Usage: $0 <command> <beacon> <controller> <registry> <minters>"
+            exit 1
+        fi
+
+        echo "Upgrading Edition Implementation"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeEditionImpl.s.sol:UpgradeEditionImpl" "--sig run(address,address,address,address[]) $2 $3 $4 $5"
         ;;
 
 esac
