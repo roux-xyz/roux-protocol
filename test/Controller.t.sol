@@ -49,6 +49,44 @@ contract ControllerTest is BaseTest {
         controller.upgradeToAndCall(address(edition), "");
     }
 
+    function test__RevertWhen_WithdrawBatch_DifferentFundsRecipients() external {
+        // add token with different funds recipient
+        vm.prank(users.creator_0);
+        edition.add(
+            TEST_TOKEN_URI,
+            users.creator_0,
+            TEST_TOKEN_MAX_SUPPLY,
+            users.creator_1, // different funds recipient
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalMintParams
+        );
+
+        // mint
+        vm.prank(users.user_0);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+
+        // mint 2nd token
+        vm.prank(users.user_0);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 2, 1, "");
+
+        // check balance
+        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(address(edition), 2), TEST_TOKEN_PRICE);
+
+        // set up token ids
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+
+        // withdraw
+        vm.prank(users.creator_0);
+        vm.expectRevert(IController.InvalidFundsRecipient.selector);
+        controller.withdrawBatch(address(edition), tokenIds);
+    }
+
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */

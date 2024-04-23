@@ -6,6 +6,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
@@ -14,7 +15,7 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
  * @title Roux Edition Factory
  * @author Roux
  */
-contract RouxEditionFactory is IRouxEditionFactory, Ownable {
+contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* -------------------------------------------- */
@@ -125,7 +126,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable {
     /* write                                        */
     /* -------------------------------------------- */
 
-    function create(bytes calldata params) external returns (address) {
+    function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
         // verify allowlist
