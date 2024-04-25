@@ -119,21 +119,14 @@ abstract contract BaseEditionMinter is IEditionMinter, Ownable {
     /* -------------------------------------------- */
 
     /**
-     * @notice get proxy implementation
-     * @return implementation address
-     *
-     * @dev do not remove this function
+     * @inheritdoc IEditionMinter
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
     }
 
     /**
-     * @notice upgrade proxy
-     * @param newImplementation new implementation contract
-     * @param data optional calldata
-     *
-     * @dev do not remove this function
+     * @inheritdoc IEditionMinter
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);

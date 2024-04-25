@@ -58,6 +58,8 @@ interface IController {
      * @param edition edition
      * @param tokenIds token ids
      * @param amount amount withdrawn
+     *
+     * @dev token ids must have same funds recipient
      */
     event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
 
@@ -66,6 +68,13 @@ interface IController {
      * @param enabled admin fee enabled
      */
     event PlatformFeeUpdated(bool enabled);
+
+    /**
+     * @notice get funds recipient for a given edition and tokenId
+     * @param edition edition
+     * @param tokenId token id
+     */
+    function fundsRecipient(address edition, uint256 tokenId) external view returns (address);
 
     /* -------------------------------------------- */
     /* structures                                   */

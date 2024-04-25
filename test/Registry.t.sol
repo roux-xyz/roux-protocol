@@ -135,7 +135,7 @@ contract RegistryTest is BaseTest {
 
         // expect the relevant event to be emitted
         vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ tokenId: 1, minter: address(editionMinter) });
+        emit TokenAdded({ id: 1 });
 
         edition1.add(
             TEST_TOKEN_URI,
@@ -186,7 +186,7 @@ contract RegistryTest is BaseTest {
         });
 
         vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ tokenId: 1, minter: address(editionMinter) });
+        emit TokenAdded({ id: 1 });
 
         edition1.add(
             TEST_TOKEN_URI,

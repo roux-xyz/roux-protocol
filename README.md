@@ -20,7 +20,7 @@ run `anvil` in a different terminal window
 
 `export ${CHAIN}_RPC_URL=<chain-url>`
 
-`export PRIVATE_KEY=<private-key>`
+**Run command:**
 
 `./deployment-manager.sh <command> <args>`
 
@@ -36,7 +36,7 @@ run `anvil` in a different terminal window
 
 **Set up Contract Address env vars**
 
-1. `export $CONTRACT_FACTORY=0x...`
+1. `export CONTRACT_FACTORY=0x...`
 
 **Create RouxEdition from RouxEditionFactory**
 

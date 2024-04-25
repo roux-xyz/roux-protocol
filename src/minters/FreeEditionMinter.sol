@@ -62,6 +62,7 @@ contract FreeEditionMinter is BaseEditionMinter {
      *
      * @param initialized whether the contract has been initialized
      * @param mintInfo mapping of edition -> id -> mint info
+     * @param hasMinted mapping of account -> edition -> id -> has minted
      */
     struct FreeEditionMinterStorage {
         bool initialized;
