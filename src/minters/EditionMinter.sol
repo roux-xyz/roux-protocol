@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.25;
 
-import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IEditionMinter } from "src/interfaces/IEditionMinter.sol";
 import { BaseEditionMinter } from "src/minters/BaseEditionMinter.sol";
@@ -62,10 +61,12 @@ contract EditionMinter is BaseEditionMinter {
      *
      * @param initialized whether the contract has been initialized
      * @param mintInfo mapping of edition -> id -> mint info
+     * @param balance mapping of account -> edition -> id -> balance
      */
     struct EditionMinterStorage {
         bool initialized;
         mapping(address edition => mapping(uint256 id => MintInfo tokenMintInfo)) mintInfo;
+        mapping(address account => mapping(address edition => mapping(uint256 id => uint16 balance))) balance;
     }
 
     /* -------------------------------------------- */
@@ -174,14 +175,15 @@ contract EditionMinter is BaseEditionMinter {
         internal
         override
     {
-        MintInfo storage mintInfo = _storage().mintInfo[edition][id];
+        EditionMinterStorage storage $ = _storage();
+        MintInfo storage mintInfo = $.mintInfo[edition][id];
 
         // verify mint is active
         if (block.timestamp < mintInfo.mintStart) revert MintNotStarted();
         if (block.timestamp > mintInfo.mintEnd) revert MintEnded();
 
         // verify quantity does not exceed max mintable by single address
-        if (ERC1155(edition).balanceOf(to, id) + quantity > mintInfo.maxMintable) {
+        if ($.balance[to][edition][id] + quantity > mintInfo.maxMintable) {
             revert MaxMintableExceeded();
         }
 

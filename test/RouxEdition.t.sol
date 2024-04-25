@@ -46,6 +46,38 @@ contract EditionTest is BaseTest {
         );
     }
 
+    function test__RevertWhen_AddToken_MaxSupplyIsZero() external {
+        vm.expectRevert(IRouxEdition.InvalidParams.selector);
+        vm.prank(users.creator_0);
+        edition.add(
+            TEST_TOKEN_URI,
+            users.creator_0,
+            0, // zero
+            users.creator_0,
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalMintParams
+        );
+    }
+
+    function test__RevertWhen_AddToken_CreatorIsZeroAddress() external {
+        vm.expectRevert(IRouxEdition.InvalidParams.selector);
+        vm.prank(users.creator_0);
+        edition.add(
+            TEST_TOKEN_URI,
+            address(0),
+            TEST_TOKEN_MAX_SUPPLY,
+            users.creator_0,
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalMintParams
+        );
+    }
+
     function test__RevertWhen_OnlyOwner_UpdateUri() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
@@ -62,6 +94,12 @@ contract EditionTest is BaseTest {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
         RouxEdition(address(edition)).updateMintParams(1, users.user_0, "");
+    }
+
+    function test__RevertWhen_OnlyOwner_UpdateControllerData() external {
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.prank(users.user_0);
+        RouxEdition(address(edition)).updateControllerData(1, users.user_1, TEST_PROFIT_SHARE);
     }
 
     function test__RevertWhen_InvalidCaller() external {
@@ -340,5 +378,48 @@ contract EditionTest is BaseTest {
         RouxEdition(address(edition)).updateMintParams(1, address(editionMinter), params);
 
         assertEq(editionMinter.price(address(edition), 1), newPrice);
+    }
+
+    /* -------------------------------------------- */
+    /* fuzz                                         */
+    /* -------------------------------------------- */
+
+    function testFuzz__AddToken(uint256 maxSupply, uint256 profitShare) external {
+        // fuzz boundaries
+        uint256 profitShare_ = bound(profitShare, 0, 10_000);
+        uint128 maxSupply_ = uint128(bound(maxSupply, 1, type(uint128).max));
+
+        // expect transfer to be emitted for token minted to creator
+        vm.expectEmit({ emitter: address(edition) });
+        emit TransferSingle({
+            operator: address(users.creator_0),
+            from: address(0),
+            to: users.creator_0,
+            id: 2,
+            amount: 1
+        });
+
+        vm.prank(users.creator_0);
+        edition.add(
+            TEST_TOKEN_URI,
+            users.creator_0,
+            maxSupply_,
+            users.creator_0,
+            profitShare_,
+            address(0),
+            0,
+            address(editionMinter),
+            optionalMintParams
+        );
+
+        // verify token minted to creator
+        assertEq(edition.balanceOf(users.creator_0, 2), 1);
+        assertEq(edition.totalSupply(2), 1);
+
+        // verify that token can be minted
+        vm.prank(users.user_0);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        assertEq(edition.balanceOf(users.user_0, 1), 1);
+        assertEq(edition.totalSupply(1), 2);
     }
 }

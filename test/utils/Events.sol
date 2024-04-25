@@ -24,9 +24,9 @@ abstract contract Events {
     /* -------------------------------------------- */
     /* Edition                                      */
     /* -------------------------------------------- */
-    event TokenAdded(uint256 indexed tokenId, address indexed minter);
-    event MinterAdded(address indexed minter);
-    event MinterRemoved(address indexed minter);
+    event TokenAdded(uint256 indexed id);
+    event MinterAdded(address indexed minter, uint256 indexed id);
+    event MinterRemoved(address indexed minter, uint256 indexed id);
 
     /* -------------------------------------------- */
     /* EditionFactory                               */

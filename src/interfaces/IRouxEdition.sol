@@ -49,21 +49,22 @@ interface IRouxEdition {
     /**
      * @notice emitted when a token is added
      * @param id token id
-     * @param minter minter
      */
-    event TokenAdded(uint256 indexed id, address indexed minter);
+    event TokenAdded(uint256 indexed id);
 
     /**
      * @notice emitted when a minter is added
      * @param minter minter
+     * @param id token id
      */
-    event MinterAdded(address indexed minter);
+    event MinterAdded(address indexed minter, uint256 indexed id);
 
     /**
      * @notice emitted when a minter is removed
      * @param minter minter
+     * @param id token id
      */
-    event MinterRemoved(address indexed minter);
+    event MinterRemoved(address indexed minter, uint256 indexed id);
 
     /* -------------------------------------------- */
     /* structures                                   */

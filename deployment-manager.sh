@@ -26,7 +26,7 @@ run() {
                 forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
             else
                 echo "Running with account $ACCOUNT"
-                forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender 0xCeb05FfA7b24FA374112C431f9Fe07650C89996D --broadcast -vvvv $args
+                forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender $SENDER --broadcast -vvvv $args
             fi
             ;;
 
@@ -48,6 +48,8 @@ usage() {
     echo "  deploy-free-edition-minter <controller>"
     echo "  deploy-edition-impl <controller> <registry> <minters>"
     echo "  deploy-edition-factory <beacon>"
+    echo "  upgrade-edition-impl <beacon> <controller> <registry> <minters>"
+    echo "  upgrade-controller-impl <controller-proxy> <registry>"
     echo ""
     echo "Options:"
     echo "  NETWORK: Set this environment variable to either 'local', 'sepolia', or 'mainnet'"
@@ -144,6 +146,26 @@ case $1 in
 
         echo "Upgrading Edition Implementation"
         run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeEditionImpl.s.sol:UpgradeEditionImpl" "--sig run(address,address,address,address[]) $2 $3 $4 $5"
+        ;;
+
+    "upgrade-controller-impl")
+        if [ "$#" -ne 3 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller-proxy> <registry>"
+            exit 1
+        fi
+
+        echo "Upgrading Controller Implementation"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeController.s.sol:UpgradeController" "--sig run(address,address) $2 $3"
+        ;;
+
+     "upgrade-edition-minter-impl")
+        if [ "$#" -ne 3 ]; then
+            echo "Invalid param count; Usage: $0 <command> <edition-minter-proxy> <controller>"
+            exit 1
+        fi
+
+        echo "Upgrading Edition Minter Implementation"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeEditionMinter.s.sol:UpgradeEditionMinter" "--sig run(address,address) $2 $3"
         ;;
 
 esac

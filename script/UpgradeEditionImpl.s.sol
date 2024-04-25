@@ -24,7 +24,7 @@ contract UpgradeEditionImpl is BaseScript {
 
         // deploy new implementation
         RouxEdition newEditionImpl = new RouxEdition(controller, registry, minters);
-        console.log("Edition Implementation: %s\n", address(newEditionImpl));
+        console.log("New Edition Implementation: %s\n", address(newEditionImpl));
 
         // upgrade beacon
         UpgradeableBeacon(editionBeacon).upgradeTo(address(newEditionImpl));

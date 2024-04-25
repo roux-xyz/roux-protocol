@@ -153,6 +153,13 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         return _storage().controllerData[edition][tokenId].profitShare;
     }
 
+    /**
+     * @inheritdoc IController
+     */
+    function fundsRecipient(address edition, uint256 tokenId) external view returns (address) {
+        return _storage().controllerData[edition][tokenId].fundsRecipient;
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -160,17 +167,22 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     /**
      * @inheritdoc IController
      */
-    function setControllerData(uint256 tokenId, address fundsRecipient, uint16 profitShare_) external nonReentrant {
-        // revert if funds recipient is zero address
-        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
+    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external {
+        // get storage
+        ControllerStorage storage $ = _storage();
 
-        // revert if profit share exceeds basis point scale
-        if (profitShare_ > BASIS_POINT_SCALE) revert InvalidProfitShare();
+        // revert if funds recipient is zero address
+        if (fundsRecipient_ == address(0)) revert InvalidFundsRecipient();
+
+        // revert if profit share is decreased
+        if (profitShare_ > BASIS_POINT_SCALE || profitShare_ < $.controllerData[msg.sender][tokenId].profitShare) {
+            revert InvalidProfitShare();
+        }
 
         // set controller data for edition + token id
-        ControllerData storage d = _storage().controllerData[msg.sender][tokenId];
+        ControllerData storage d = $.controllerData[msg.sender][tokenId];
 
-        d.fundsRecipient = fundsRecipient;
+        d.fundsRecipient = fundsRecipient_;
         d.profitShare = profitShare_;
     }
 
@@ -197,11 +209,10 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         ControllerStorage storage $ = _storage();
 
         // cache edition's funds recipient
-        address fundsRecipient = $.controllerData[edition][tokenId].fundsRecipient;
+        address fundsRecipient_ = $.controllerData[edition][tokenId].fundsRecipient;
 
-        // disburse pending balance
-        uint256 pendingBalance = $.pending[edition][tokenId];
-        _disburse(edition, tokenId, pendingBalance);
+        // disburse pending balance (updates balance and parent's pending balance)
+        _disburse(edition, tokenId, $.pending[edition][tokenId]);
 
         // cache balance
         uint256 amount = $.balance[edition][tokenId];
@@ -210,10 +221,10 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         $.balance[edition][tokenId] -= amount;
 
         // transfer to funding recipient
-        (bool success,) = fundsRecipient.call{ value: amount }("");
+        (bool success,) = fundsRecipient_.call{ value: amount }("");
         if (!success) revert TransferFailed();
 
-        emit Withdrawn(edition, tokenId, fundsRecipient, amount);
+        emit Withdrawn(edition, tokenId, fundsRecipient_, amount);
 
         return amount;
     }
@@ -226,23 +237,18 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         ControllerStorage storage $ = _storage();
 
         // cache funding recipient
-        address fundsRecipient = $.controllerData[edition][tokenIds[0]].fundsRecipient;
-
-        // validate funding recipient
-        if (fundsRecipient == address(0)) revert InvalidFundsRecipient();
-
-        // disburse pending balances
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            _disburse(edition, tokenIds[i], $.pending[edition][tokenIds[i]]);
-        }
+        address fundsRecipient_ = $.controllerData[edition][tokenIds[0]].fundsRecipient;
 
         // compute balance
         uint256 amount;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             // validate funding recipient
-            if ($.controllerData[edition][tokenIds[i]].fundsRecipient != fundsRecipient) {
+            if ($.controllerData[edition][tokenIds[i]].fundsRecipient != fundsRecipient_) {
                 revert InvalidFundsRecipient();
             }
+
+            // disburse pending balance
+            _disburse(edition, tokenIds[i], $.pending[edition][tokenIds[i]]);
 
             // update amount
             uint256 tokenAmount = $.balance[edition][tokenIds[i]];
@@ -253,10 +259,10 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         }
 
         // transfer to funding recipient
-        (bool success,) = fundsRecipient.call{ value: amount }("");
+        (bool success,) = fundsRecipient_.call{ value: amount }("");
         if (!success) revert TransferFailed();
 
-        emit WithdrawnBatch(edition, tokenIds, fundsRecipient, amount);
+        emit WithdrawnBatch(edition, tokenIds, fundsRecipient_, amount);
 
         return amount;
     }

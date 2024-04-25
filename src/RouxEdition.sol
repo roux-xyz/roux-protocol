@@ -151,14 +151,14 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
             (
                 string memory tokenUri,
                 address creator_,
-                uint32 maxSupply,
+                uint128 maxSupply,
                 address fundsRecipient,
                 uint16 profitShare,
                 address parentEdition,
                 uint256 parentTokenId,
                 address minter,
                 bytes memory options
-            ) = abi.decode(init, (string, address, uint32, address, uint16, address, uint256, address, bytes));
+            ) = abi.decode(init, (string, address, uint128, address, uint16, address, uint256, address, bytes));
 
             // add token
             _add(
@@ -321,7 +321,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         _storage().tokens[id].minters[minter] = false;
 
         // emit event
-        emit MinterRemoved(minter);
+        emit MinterRemoved(minter, id);
     }
 
     /**
@@ -330,6 +330,14 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     function updateMintParams(uint256 id, address minter, bytes calldata params) external onlyOwner {
         // set sales params via minter
         _setMintParams(id, minter, params);
+    }
+
+    /**
+     * @notice update controller data
+     */
+    function updateControllerData(uint256 id, address newFundsRecipient, uint256 newProfitShare) external onlyOwner {
+        // set controller data
+        _setControllerData(id, newFundsRecipient, newProfitShare);
     }
 
     /* -------------------------------------------- */
@@ -374,6 +382,9 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         // get storage pointer
         TokenData storage d = $.tokens[id];
 
+        // validate params
+        if (creator_ == address(0) || maxSupply == 0) revert InvalidParams();
+
         // set token data
         d.uri = tokenUri;
         d.creator = creator_;
@@ -383,7 +394,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         _addMinter(id, minter);
 
         // set controller data
-        _controller.setControllerData(id, fundsRecipient, profitShare.toUint16());
+        _setControllerData(id, fundsRecipient, profitShare);
 
         // optionally set registry data
         if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
@@ -394,7 +405,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         // mint token to creator
         _mint(creator_, id, 1, "");
 
-        emit TokenAdded(id, minter);
+        emit TokenAdded(id);
 
         return id;
     }
@@ -428,6 +439,11 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     function _setMintParams(uint256 id, address minter, bytes memory options) internal {
         // set sales params via minter
         IEditionMinter(minter).setMintParams(id, options);
+    }
+
+    function _setControllerData(uint256 id, address fundsRecipient, uint256 profitShare) internal {
+        // set controller data
+        _controller.setControllerData(id, fundsRecipient, profitShare.toUint16());
     }
 
     /**
@@ -475,6 +491,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         _storage().tokens[id].minters[minter] = true;
 
         // emit event
-        emit MinterAdded(minter);
+        emit MinterAdded(minter, id);
     }
 }

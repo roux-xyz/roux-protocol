@@ -32,6 +32,10 @@ interface IEditionMinter {
      */
     event MintParamsUpdated(uint256 id, bytes mintParams);
 
+    /* -------------------------------------------- */
+    /* view                                         */
+    /* -------------------------------------------- */
+
     /**
      * @notice get token price
      * @param edition edition
@@ -39,6 +43,10 @@ interface IEditionMinter {
      * @return token price
      */
     function price(address edition, uint256 id) external view returns (uint128);
+
+    /* -------------------------------------------- */
+    /* write                                        */
+    /* -------------------------------------------- */
 
     /**
      * @notice set mint params
@@ -58,4 +66,24 @@ interface IEditionMinter {
      * @param data optional data
      */
     function mint(address to, address edition, uint256 id, uint256 quantity, bytes memory data) external payable;
+
+    /* -------------------------------------------- */
+    /* admin                                        */
+    /* -------------------------------------------- */
+    /**
+     * @notice get proxy implementation
+     * @return implementation address
+     *
+     * @dev do not remove this function
+     */
+    function getImplementation() external view returns (address);
+
+    /**
+     * @notice upgrade proxy
+     * @param newImplementation new implementation contract
+     * @param data optional calldata
+     *
+     * @dev do not remove this function
+     */
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external;
 }

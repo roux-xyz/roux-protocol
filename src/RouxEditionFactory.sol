@@ -56,12 +56,19 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* immutable state                              */
     /* -------------------------------------------- */
 
+    /**
+     * @notice edition beacon
+     */
     address internal immutable _editionBeacon;
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
+    /**
+     * @notice constructor
+     * @param editionBeacon edition beacon
+     */
     constructor(address editionBeacon) {
         RouxEditionFactoryStorage storage $ = _storage();
 
@@ -114,10 +121,16 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* view                                         */
     /* -------------------------------------------- */
 
+    /**
+     * @inheritdoc IRouxEditionFactory
+     */
     function isEdition(address token) external view returns (bool) {
         return _storage().editions.contains(token);
     }
 
+    /**
+     * @inheritdoc IRouxEditionFactory
+     */
     function getEditions() external view returns (address[] memory) {
         return _storage().editions.values();
     }
@@ -126,6 +139,9 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* write                                        */
     /* -------------------------------------------- */
 
+    /**
+     * @inheritdoc IRouxEditionFactory
+     */
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
@@ -155,10 +171,18 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* admin                                        */
     /* -------------------------------------------- */
 
+    /**
+     * @notice set allowlist to enabled or disabled
+     * @param enable whether to enable allowlist
+     */
     function setAllowlist(bool enable) external onlyOwner {
         _storage().enableAllowlist = enable;
     }
 
+    /**
+     * @notice add accounts to allowlist
+     * @param accounts accounts to add to allowlist
+     */
     function addAllowlist(address[] memory accounts) external onlyOwner {
         RouxEditionFactoryStorage storage $ = _storage();
 
@@ -167,6 +191,10 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice remove account from allowlist
+     * @param account  acuount to remove from allowlist
+     */
     function removeAllowlist(address account) external onlyOwner {
         _storage().allowlist[account] = false;
     }
