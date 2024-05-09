@@ -115,6 +115,17 @@ abstract contract BaseEditionMinter is IEditionMinter, Ownable {
     { }
 
     /* -------------------------------------------- */
+    /* supports interface                           */
+    /* -------------------------------------------- */
+
+    /**
+     * @inheritdoc IEditionMinter
+     */
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IEditionMinter).interfaceId;
+    }
+
+    /* -------------------------------------------- */
     /* proxy | danger zone                          */
     /* -------------------------------------------- */
 
