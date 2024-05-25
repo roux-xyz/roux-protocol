@@ -66,7 +66,7 @@ contract FreeMinterTest is BaseTest {
         freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
     }
 
-    function test__RevertWhen_AlreadyMinted() external {
+    function test__RevertWhen_AlreadyMintedMaximum() external {
         vm.startPrank(users.user_0);
         freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
 
@@ -124,6 +124,45 @@ contract FreeMinterTest is BaseTest {
             abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION))
         );
         vm.stopPrank();
+
+        vm.prank(users.user_0);
+        freeMinter.mint(users.user_0, address(edition1), tokenId, 1, "");
+        assertEq(edition1.balanceOf(users.user_0, tokenId), 1);
+    }
+
+    function test__UpdateMintParams() external {
+        vm.startPrank(users.creator_1);
+
+        /* create edition instance */
+        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        RouxEdition edition1 = RouxEdition(factory.create(params));
+
+        /* create forked token with attribution */
+        uint256 tokenId = edition1.add(
+            TEST_TOKEN_URI,
+            users.creator_1,
+            TEST_TOKEN_MAX_SUPPLY,
+            users.creator_1,
+            TEST_PROFIT_SHARE,
+            address(edition),
+            1,
+            address(freeMinter),
+            abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION))
+        );
+
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + TEST_TOKEN_MINT_DURATION + 1 seconds);
+        vm.expectRevert(FreeEditionMinter.MintEnded.selector);
+        vm.prank(users.user_0);
+        freeMinter.mint(users.user_0, address(edition1), tokenId, 1, "");
+
+        vm.prank(users.creator_1);
+        edition1.updateMintParams(
+            tokenId,
+            address(freeMinter),
+            abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION + 7 days))
+        );
 
         vm.prank(users.user_0);
         freeMinter.mint(users.user_0, address(edition1), tokenId, 1, "");

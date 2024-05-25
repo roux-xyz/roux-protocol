@@ -160,7 +160,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
-    function test__IsEdtion_False() external {
+    function test__IsEdition_False() external {
         assertFalse(factory.isEdition(address(users.creator_0)));
     }
 
