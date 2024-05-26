@@ -22,12 +22,8 @@ contract UpgradeTest is BaseTest {
         // assert current implementation
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
-        // new minter array
-        address[] memory minters = new address[](1);
-        minters[0] = address(freeMinter);
-
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry), minters);
+        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
 
         // revert when not owner
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, users.user_0));
@@ -114,12 +110,8 @@ contract UpgradeTest is BaseTest {
         // assert current implementation
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
-        // new minter array
-        address[] memory minters = new address[](1);
-        minters[0] = address(freeMinter);
-
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry), minters);
+        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
 
         // set new implementation in beacon
         vm.prank(users.deployer);
@@ -153,20 +145,6 @@ contract UpgradeTest is BaseTest {
 
         // validate new token
         assertEq(RouxEdition(newEdition).totalSupply(1), 1);
-
-        // revert when adding another token with non-allowlisted minter
-        vm.expectRevert(IRouxEdition.InvalidMinter.selector);
-        RouxEdition(newEdition).add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter), // non-allowlisted minter
-            optionalMintParams
-        );
     }
 
     function test__UpgradeController() external {

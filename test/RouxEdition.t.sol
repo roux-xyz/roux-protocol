@@ -127,16 +127,16 @@ contract EditionTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
     }
 
-    function test__RevertWhen_AddInvalidMinter() external {
-        vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidMinter.selector);
-        RouxEdition(address(edition)).addMinter(1, address(users.user_1));
-    }
-
     function test__RevertWhen_AddInvalidMinter_ZeroAddress() external {
         vm.prank(users.creator_0);
         vm.expectRevert(IRouxEdition.InvalidMinter.selector);
         RouxEdition(address(edition)).addMinter(1, address(0));
+    }
+
+    function test__RevertWhen_AddInvalidMinter_UnsupportedInteface() external {
+        vm.prank(users.creator_0);
+        vm.expectRevert(IRouxEdition.InvalidMinter.selector);
+        RouxEdition(address(edition)).addMinter(1, address(edition));
     }
 
     function test__RevertWhen_AlreadyInitialized() external {

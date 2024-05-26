@@ -44,6 +44,11 @@ interface IEditionMinter {
      */
     function price(address edition, uint256 id) external view returns (uint128);
 
+    /**
+     * @notice supports interface
+     */
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */

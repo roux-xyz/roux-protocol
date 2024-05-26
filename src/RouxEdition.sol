@@ -49,15 +49,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
      */
     IController internal immutable _controller;
 
-    /**
-     * @notice minters (max 5)
-     */
-    address internal immutable _minter1;
-    address internal immutable _minter2;
-    address internal immutable _minter3;
-    address internal immutable _minter4;
-    address internal immutable _minter5;
-
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
@@ -88,9 +79,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
      * @notice constructor
      * @param controller controller
      * @param registry registry
-     * @param minters minters
      */
-    constructor(address controller, address registry, address[] memory minters) {
+    constructor(address controller, address registry) {
         // disable initialization of implementation contract
         _storage().initialized = true;
 
@@ -102,13 +92,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
 
         // set registry
         _registry = IRegistry(registry);
-
-        // allowlist available minters
-        _minter1 = (minters.length > 0) ? minters[0] : address(0);
-        _minter2 = (minters.length > 1) ? minters[1] : address(0);
-        _minter3 = (minters.length > 2) ? minters[2] : address(0);
-        _minter4 = (minters.length > 3) ? minters[3] : address(0);
-        _minter5 = (minters.length > 4) ? minters[4] : address(0);
 
         // renounce ownership of implementation contract
         renounceOwnership();
@@ -305,6 +288,16 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     }
 
     /**
+     * @notice update contract uri
+     * @param newContractUri new contract uri
+     */
+    function updateContractUri(string memory newContractUri) external onlyOwner {
+        _storage().contractURI = newContractUri;
+
+        emit ContractURIUpdated();
+    }
+
+    /**
      * @notice add minter
      * @param minter minter address
      */
@@ -477,15 +470,11 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
      * @param minter minter
      */
     function _addMinter(uint256 id, address minter) internal {
-        if (
-            minter == address(0)
-                || (
-                    minter != _minter1 && minter != _minter2 && minter != _minter3 && minter != _minter4
-                        && minter != _minter5
-                )
-        ) {
-            revert InvalidMinter();
-        }
+        // validate minter is not zero
+        if (minter == address(0)) revert InvalidMinter();
+
+        // validate minter interface support
+        if (!IEditionMinter(minter).supportsInterface(type(IEditionMinter).interfaceId)) revert InvalidMinter();
 
         // set minter
         _storage().tokens[id].minters[minter] = true;

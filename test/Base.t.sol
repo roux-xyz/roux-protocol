@@ -224,7 +224,7 @@ abstract contract BaseTest is Test, Events, Constants {
         minters[2] = address(freeMinter);
 
         // edition deployment
-        editionImpl = new RouxEdition(address(controller), address(registry), minters);
+        editionImpl = new RouxEdition(address(controller), address(registry));
         vm.label({ account: address(editionImpl), newLabel: "Edition" });
 
         // beacon deployment

@@ -66,6 +66,11 @@ interface IRouxEdition {
      */
     event MinterRemoved(address indexed minter, uint256 indexed id);
 
+    /**
+     * @notice emitted when a contract uri is updated
+     */
+    event ContractURIUpdated();
+
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
