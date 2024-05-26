@@ -139,13 +139,13 @@ case $1 in
         ;;
 
     "upgrade-edition-impl")
-        if [ "$#" -ne 5 ]; then
-            echo "Invalid param count; Usage: $0 <command> <beacon> <controller> <registry> <minters>"
+        if [ "$#" -ne 4 ]; then
+            echo "Invalid param count; Usage: $0 <command> <beacon> <controller> <registry>"
             exit 1
         fi
 
         echo "Upgrading Edition Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeEditionImpl.s.sol:UpgradeEditionImpl" "--sig run(address,address,address,address[]) $2 $3 $4 $5"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/UpgradeEditionImpl.s.sol:UpgradeEditionImpl" "--sig run(address,address,address) $2 $3 $4"
         ;;
 
     "upgrade-controller-impl")
