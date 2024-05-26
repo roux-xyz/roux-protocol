@@ -412,11 +412,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
      * @dev sets administrator data on the administrator
      */
     function _setRegistryData(uint256 id, address parentEdition, uint256 parentTokenId) internal {
-        // revert if parent is the same contract, not an edition, or not a valid token
-        if (
-            !_storage().factory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
-                || parentEdition == address(this)
-        ) {
+        // revert if not an edition or not a valid token
+        if (!_storage().factory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)) {
             revert InvalidAttribution();
         }
 
