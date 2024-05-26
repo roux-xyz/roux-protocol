@@ -471,11 +471,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         if (minter == address(0)) revert InvalidMinter();
 
         // validate minter interface support
-<<<<<<< HEAD
         if (!IEditionMinter(minter).supportsInterface(type(IEditionMinter).interfaceId)) revert InvalidMinter();
-=======
-        // if (!IEditionMinter(minter).supportsInterface(type(IEditionMinter).interfaceId)) revert InvalidMinter();
->>>>>>> ededc51 (Minor updates (#24))
 
         // set minter
         _storage().tokens[id].minters[minter] = true;
