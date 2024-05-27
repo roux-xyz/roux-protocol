@@ -119,13 +119,13 @@ case $1 in
         ;;
 
     "deploy-edition-impl")
-        if [ "$#" -ne 4 ]; then
-            echo "Invalid param count; Usage: $0 <command> <controller> <registry> <minters>"
+        if [ "$#" -ne 3 ]; then
+            echo "Invalid param count; Usage: $0 <command> <controller> <registry>"
             exit 1
         fi
 
         echo "Deploying Edition Implementation"
-        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address[]) $2 $3 $4"
+        run "$NETWORK" "${NETWORK^^}_RPC_URL" "script/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address) $2 $3"
         ;;
 
     "deploy-edition-factory")
