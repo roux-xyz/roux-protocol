@@ -9,7 +9,7 @@
   "DefaultEditionMinterProxy": "0xE5c8B790a310B76346e3914383245566E310a02f",
   "FreeEditionMinterImpl": "0x2FD3180a49F0585833b72CA9e9800602901E49a7",
   "FreeEditionMinterProxy": "0xE3d5108EEbA6b42Eb3C0dB7c2eaBa6ab66995e3B",
-  "RouxEditionImplementation": "0xBa8b6AF5039A29af6bfa65476F839dd34641c7A6",
+  "RouxEditionImplementation": "0x508c0ca51B96579de008db1c16A091c813B2E078",
   "RouxEditionBeacon": "0xCDc9d8BDda9fe4E2f895Fd040C77c43d6Fa931d4",
   "RouxEditionFactoryImpl": "0xF1d03E14A48AC559c026d7487d27191aaDDDd5b0",
   "RouxEditionFactoryProxy": "0x438E184e761Ba70379f20a0f49E130481716118B"
