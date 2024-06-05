@@ -27,11 +27,6 @@ contract FreeEditionMinter is BaseEditionMinter {
      */
     error MintEnded();
 
-    /**
-     * @notice already minted
-     */
-    error AlreadyMinted();
-
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
