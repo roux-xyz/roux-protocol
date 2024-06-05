@@ -5,7 +5,6 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
-import { RouxEdition } from "src/RouxEdition.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
 /**
