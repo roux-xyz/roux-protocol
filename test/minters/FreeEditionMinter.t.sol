@@ -70,7 +70,7 @@ contract FreeMinterTest is BaseTest {
         vm.startPrank(users.user_0);
         freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
 
-        vm.expectRevert(FreeEditionMinter.AlreadyMinted.selector);
+        vm.expectRevert(IEditionMinter.AlreadyMinted.selector);
         freeMinter.mint(users.user_0, address(edition), freeMinterTokendId, 1, "");
     }
 

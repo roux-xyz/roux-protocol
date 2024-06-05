@@ -21,6 +21,11 @@ interface IEditionMinter {
      */
     error InvalidMintParams();
 
+    /**
+     * @notice already minted
+     */
+    error AlreadyMinted();
+
     /* -------------------------------------------- */
     /* events                                       */
     /* -------------------------------------------- */
