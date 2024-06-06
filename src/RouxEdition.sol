@@ -66,6 +66,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     struct RouxEditionStorage {
         bool initialized;
         IRouxEditionFactory factory;
+        address batchMinter;
         uint256 tokenId;
         string contractURI;
         mapping(uint256 tokenId => TokenData tokenData) tokens;
@@ -140,8 +141,14 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
                 address parentEdition,
                 uint256 parentTokenId,
                 address minter,
+                address batchMinter,
                 bytes memory options
-            ) = abi.decode(init, (string, address, uint128, address, uint16, address, uint256, address, bytes));
+            ) = abi.decode(init, (string, address, uint128, address, uint16, address, uint256, address, address, bytes));
+
+            // set batch minter if provided
+            if (batchMinter != address(0)) {
+                $.batchMinter = batchMinter;
+            }
 
             // add token
             _add(
@@ -246,6 +253,37 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
 
         // mint
         _mint(to, id, quantity, "");
+    }
+
+    /**
+     * @inheritdoc IRouxEdition
+     */
+    function batchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes calldata /*  data */
+    )
+        external
+    {
+        RouxEditionStorage storage $ = _storage();
+
+        // validate caller
+        if (msg.sender != $.batchMinter) revert InvalidCaller();
+
+        // validate tokens
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 id = ids[i];
+
+            // verify token exists
+            if (!_exists(id)) revert InvalidTokenId();
+
+            // validate max supply
+            if (quantities[i] + $.tokens[id].totalSupply > $.tokens[id].maxSupply) revert MaxSupplyExceeded();
+        }
+
+        // mint
+        _batchMint(to, ids, quantities, "");
     }
 
     /* -------------------------------------------- */
