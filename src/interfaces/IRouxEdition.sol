@@ -181,4 +181,20 @@ interface IRouxEdition {
      * @param data additional data
      */
     function mint(address to, uint256 tokenId, uint256 quantity, bytes calldata data) external;
+
+    /**
+     * @notice mint a token
+     * @param to token receiver
+     * @param tokenIds token id
+     * @param quantities number of tokens to mint
+     * @param data additional data
+     *
+     */
+    function batchMint(
+        address to,
+        uint256[] memory tokenIds,
+        uint256[] memory quantities,
+        bytes calldata data
+    )
+        external;
 }
