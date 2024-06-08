@@ -105,15 +105,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     /**
      * @notice initialize RouxEdition
      * @param contractURI_ contract uri
-     * @param init initial token data
-     *
-     * @dev init encoded as follows:
-     *      (string tokenUri, address creator, uint32 maxSupply, address fundsRecipient, uint16 profitShare, address
-     *      parentEdition, uint256 parentTokenId, address minter, bytes options)
-     *
-     *      options params encoded as required by minter
      */
-    function initialize(string memory contractURI_, bytes calldata init) external nonReentrant {
+    function initialize(string memory contractURI_) external nonReentrant {
         RouxEditionStorage storage $ = _storage();
 
         // initialize
@@ -128,41 +121,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
 
         // set contract uri
         $.contractURI = contractURI_;
-
-        // add initial token if provided
-        if (init.length > 0) {
-            // decode token data
-            (
-                string memory tokenUri,
-                address creator_,
-                uint128 maxSupply,
-                address fundsRecipient,
-                uint16 profitShare,
-                address parentEdition,
-                uint256 parentTokenId,
-                address minter,
-                address batchMinter,
-                bytes memory options
-            ) = abi.decode(init, (string, address, uint128, address, uint16, address, uint256, address, address, bytes));
-
-            // set batch minter if provided
-            if (batchMinter != address(0)) {
-                $.batchMinter = batchMinter;
-            }
-
-            // add token
-            _add(
-                tokenUri,
-                creator_,
-                maxSupply,
-                fundsRecipient,
-                profitShare,
-                parentEdition,
-                parentTokenId,
-                minter,
-                options
-            );
-        }
     }
 
     /* -------------------------------------------- */

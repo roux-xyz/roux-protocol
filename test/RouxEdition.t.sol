@@ -143,8 +143,7 @@ contract EditionTest is BaseTest {
         // assert current implementation
         vm.prank(users.user_0);
         vm.expectRevert("Already initialized");
-        bytes memory params = abi.encode("");
-        edition.initialize("https://new-contract-uri.com", params);
+        edition.initialize("https://new-contract-uri.com");
     }
 
     /* -------------------------------------------- */
@@ -269,7 +268,7 @@ contract EditionTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // create forked token with attribution
@@ -300,7 +299,7 @@ contract EditionTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create new edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // create forked token with attribution

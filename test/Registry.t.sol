@@ -52,7 +52,7 @@ contract RegistryTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         RouxEdition edition1 = RouxEdition(factory.create(params));
 
         /* create forked token with attribution */
@@ -130,7 +130,7 @@ contract RegistryTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // expect the relevant event to be emitted
@@ -173,7 +173,7 @@ contract RegistryTest is BaseTest {
         vm.startPrank(users.creator_1);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         RouxEdition edition1 = RouxEdition(factory.create(params));
 
         // expect the relevant event to be emitted

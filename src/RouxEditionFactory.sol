@@ -149,12 +149,11 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         if ($.enableAllowlist && !$.allowlist[msg.sender]) revert OnlyAllowlist();
 
         // decode params
-        (string memory contractURI, bytes memory init) = abi.decode(params, (string, bytes));
+        (string memory contractURI) = abi.decode(params, (string));
 
         // create edition instance
-        address editionInstance = address(
-            new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(string,bytes)", contractURI, init))
-        );
+        address editionInstance =
+            address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(string)", contractURI)));
 
         // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);

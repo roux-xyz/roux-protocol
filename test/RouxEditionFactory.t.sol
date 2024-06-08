@@ -20,7 +20,7 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.user_0);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         factory.create(params);
     }
 
@@ -63,7 +63,7 @@ contract RouxEditionFactoryTest is BaseTest {
 
         // allow anyone to create
         vm.prank(users.user_0);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -84,7 +84,7 @@ contract RouxEditionFactoryTest is BaseTest {
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
         vm.prank(users.creator_2);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -105,7 +105,7 @@ contract RouxEditionFactoryTest is BaseTest {
         // attempt to create new edition
         vm.prank(users.creator_2);
         vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         factory.create(params);
     }
 
@@ -113,48 +113,15 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.creator_0);
 
         // create instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
     }
 
-    function test__Create_WithParams() external {
-        bytes memory init = abi.encode(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        vm.prank(users.creator_0);
-        bytes memory params_ = abi.encode(TEST_CONTRACT_URI, init);
-        RouxEdition newEdition = RouxEdition(factory.create(params_));
-
-        assertEq(factory.isEdition(address(newEdition)), true);
-
-        // verify token was added
-        assertEq(newEdition.currentToken(), 1);
-
-        // mint new token
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(newEdition), 1, 1, "");
-
-        // verify token was minted
-        assertEq(newEdition.balanceOf(users.user_0, 1), 1);
-
-        // verify total supply - creator minted token on add
-        assertEq(newEdition.totalSupply(1), 2);
-    }
-
     function test__IsEdition_True() external {
         vm.prank(users.creator_0);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -177,7 +144,7 @@ contract RouxEditionFactoryTest is BaseTest {
         address[] memory editions = new address[](3);
 
         // set params
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(TEST_CONTRACT_URI);
 
         vm.prank(users.creator_0);
         editions[0] = factory.create(params);
