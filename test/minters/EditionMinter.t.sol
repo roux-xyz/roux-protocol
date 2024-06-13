@@ -21,7 +21,7 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: 0.04 ether }(users.user_0, address(edition), 1, 1, "");
     }
 
-    function test__RevertWhen__MintNotStarted() external {
+    function test__RevertWhen_MintNotStarted() external {
         // create optional sale data
         bytes memory saleData = _encodeMintParams(
             TEST_TOKEN_PRICE,
@@ -48,12 +48,48 @@ contract EditionMinterTest is BaseTest {
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
     }
 
-    function test__RevertWhen__MintEnded() external {
+    function test__RevertWhen_MintEnded() external {
         vm.warp(block.timestamp + TEST_TOKEN_MINT_DURATION + 1 seconds);
 
         vm.prank(users.user_0);
         vm.expectRevert(EditionMinter.MintEnded.selector);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+    }
+
+    function test__RevertWhen_MintParamsNotSet() internal {
+        vm.prank(users.creator_0);
+        uint256 tokenId = edition.add(
+            TEST_TOKEN_URI,
+            users.creator_0,
+            TEST_TOKEN_MAX_SUPPLY,
+            users.creator_0,
+            TEST_PROFIT_SHARE,
+            address(0),
+            0,
+            address(editionMinter),
+            "" // no mint params
+        );
+
+        vm.prank(users.user_0);
+        vm.expectRevert(IEditionMinter.MintParamsNotSet.selector);
+        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId, 1, "");
+    }
+
+    function test__RevertsWhen_BatchMint() external {
+        // create token id array
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+
+        // create quantity array
+        uint256[] memory quantities = new uint256[](3);
+        quantities[0] = 1;
+        quantities[1] = 1;
+        quantities[2] = 1;
+
+        vm.expectRevert(bytes("Batch minting not supported"));
+        editionMinter.batchMint{ value: 0.25 ether }(users.user_0, address(edition), tokenIds, quantities, "");
     }
 
     function test__Price() external {

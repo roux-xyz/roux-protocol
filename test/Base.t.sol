@@ -17,6 +17,7 @@ import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
 import { EditionMinter } from "src/minters/EditionMinter.sol";
 import { DefaultEditionMinter } from "src/minters/DefaultEditionMinter.sol";
 import { FreeEditionMinter } from "src/minters/FreeEditionMinter.sol";
+import { EditionBatchMinter } from "src/minters/EditionBatchMinter.sol";
 
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
@@ -75,6 +76,8 @@ abstract contract BaseTest is Test, Events, Constants {
     DefaultEditionMinter internal defaultMinter;
     FreeEditionMinter internal freeMinterImpl;
     FreeEditionMinter internal freeMinter;
+    EditionBatchMinter internal editionBatchMinterImpl;
+    EditionBatchMinter internal editionBatchMinter;
 
     // edition
     RouxEdition internal editionImpl;
@@ -113,13 +116,15 @@ abstract contract BaseTest is Test, Events, Constants {
         _deployRegistry();
         _deployController();
         _deployEditionMinter();
+        _deployEditionBatchMinter();
         _deployDefaultMinter();
         _deployFreeMinter();
-        _deployEdition();
+        _deployEditionBeacon();
         _deployEditionFactory();
         _setOptionalSaleData();
         _deployTokenBoundContracts();
         _allowlistUsers();
+        _deployEdition();
         _addToken();
     }
 
@@ -177,6 +182,24 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
+    function _deployEditionBatchMinter() internal {
+        // deployer
+        vm.startPrank(users.deployer);
+
+        // edition minter implementation deployment
+        editionBatchMinterImpl = new EditionBatchMinter(address(controller));
+        vm.label({ account: address(editionBatchMinterImpl), newLabel: "EditionBatchMinterImplementation" });
+
+        // encode params
+        bytes memory initData = abi.encodeWithSelector(editionBatchMinterImpl.initialize.selector);
+
+        // deploy proxy
+        editionBatchMinter = EditionBatchMinter(address(new ERC1967Proxy(address(editionBatchMinterImpl), initData)));
+        vm.label({ account: address(editionBatchMinter), newLabel: "EditionBatchMinterProxy" });
+
+        vm.stopPrank();
+    }
+
     function _deployDefaultMinter() internal {
         // deployer
         vm.startPrank(users.deployer);
@@ -213,7 +236,7 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
-    function _deployEdition() internal {
+    function _deployEditionBeacon() internal {
         // deployer
         vm.startPrank(users.deployer);
 
@@ -281,7 +304,7 @@ abstract contract BaseTest is Test, Events, Constants {
         vm.stopPrank();
     }
 
-    function _addToken() internal {
+    function _deployEdition() internal {
         // user
         vm.startPrank(users.creator_0);
 
@@ -289,8 +312,14 @@ abstract contract BaseTest is Test, Events, Constants {
         bytes memory params = abi.encode(TEST_CONTRACT_URI);
         edition = RouxEdition(factory.create(params));
 
+        vm.stopPrank();
+    }
+
+    function _addToken() internal {
+        vm.startPrank(users.creator_0);
+
         /* add token */
-        edition.add(
+        RouxEdition(edition).add(
             TEST_TOKEN_URI,
             address(users.creator_0),
             TEST_TOKEN_MAX_SUPPLY,
@@ -381,5 +410,11 @@ abstract contract BaseTest is Test, Events, Constants {
         }
 
         return editions;
+    }
+
+    function _addMultipleTokens(uint256 num) internal {
+        for (uint256 i = 0; i < num; i++) {
+            _addToken();
+        }
     }
 }

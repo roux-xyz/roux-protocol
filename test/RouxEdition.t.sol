@@ -87,7 +87,13 @@ contract EditionTest is BaseTest {
     function test__RevertWhen_OnlyOwner_AddMinter() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
-        RouxEdition(address(edition)).addMinter(1, users.user_0);
+        RouxEdition(address(edition)).setMinter(1, address(editionMinter), true, "");
+    }
+
+    function test__RevertWhen_OnlyOwner_AddBatchMinter() external {
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.prank(users.user_0);
+        RouxEdition(address(edition)).setBatchMinter(1, address(editionBatchMinter), true, "");
     }
 
     function test__RevertWhen_OnlyOwner_UpdateMintParams() external {
@@ -106,6 +112,31 @@ contract EditionTest is BaseTest {
         vm.prank(users.user_1);
         vm.expectRevert(IRouxEdition.InvalidCaller.selector);
         edition.mint(users.user_0, 1, 1, "");
+    }
+
+    function test__RevertWhen_InvalidCaller_Batch() external {
+        // create token id array
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+
+        uint256[] memory quantities = new uint256[](3);
+        quantities[0] = 1;
+        quantities[1] = 1;
+        quantities[2] = 1;
+
+        // get encoded batch id
+        uint256 batchId = uint256(keccak256(abi.encode(tokenIds)));
+
+        vm.prank(users.creator_0);
+        RouxEdition(address(edition)).setBatchMinter(batchId, address(editionBatchMinter), true, "");
+        assertEq(edition.isBatchMinter(batchId, address(editionBatchMinter)), true);
+
+        // call mint with invalid caller
+        vm.prank(users.user_1);
+        vm.expectRevert(IRouxEdition.InvalidCaller.selector);
+        edition.batchMint(users.user_0, tokenIds, quantities, "");
     }
 
     function test__RevertWhen_MaxSupplyExceeded() external {
@@ -130,13 +161,13 @@ contract EditionTest is BaseTest {
     function test__RevertWhen_AddInvalidMinter_ZeroAddress() external {
         vm.prank(users.creator_0);
         vm.expectRevert(IRouxEdition.InvalidMinter.selector);
-        RouxEdition(address(edition)).addMinter(1, address(0));
+        RouxEdition(address(edition)).setMinter(1, address(0), true, "");
     }
 
     function test__RevertWhen_AddInvalidMinter_UnsupportedInteface() external {
         vm.prank(users.creator_0);
         vm.expectRevert(IRouxEdition.InvalidMinter.selector);
-        RouxEdition(address(edition)).addMinter(1, address(edition));
+        RouxEdition(address(edition)).setMinter(1, address(edition), true, "");
     }
 
     function test__RevertWhen_AlreadyInitialized() external {
@@ -350,19 +381,55 @@ contract EditionTest is BaseTest {
 
     function test__AddMinter() external {
         vm.prank(users.creator_0);
-        RouxEdition(address(edition)).addMinter(1, address(defaultMinter));
+        RouxEdition(address(edition)).setMinter(1, address(defaultMinter), true, "");
         assertEq(edition.isMinter(1, address(defaultMinter)), true);
+    }
+
+    function test__AddBatchMinter() external {
+        // create token id array
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+
+        // get encoded batch id
+        uint256 batchId = uint256(keccak256(abi.encode(tokenIds)));
+
+        vm.prank(users.creator_0);
+        RouxEdition(address(edition)).setBatchMinter(batchId, address(editionBatchMinter), true, "");
+        assertEq(edition.isBatchMinter(batchId, address(editionBatchMinter)), true);
     }
 
     function test__RemoveMinter() external {
         vm.prank(users.creator_0);
-        RouxEdition(address(edition)).removeMinter(1, address(editionMinter));
+        RouxEdition(address(edition)).setMinter(1, address(editionMinter), false, "");
         assertFalse(edition.isMinter(1, address(editionMinter)));
 
         // verify that token cannot be minted
         vm.prank(users.user_0);
         vm.expectRevert(IRouxEdition.InvalidCaller.selector);
         editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+    }
+
+    function test__RemoveBatchMinter() external {
+        // create token id array
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+
+        // get encoded batch id
+        uint256 batchId = uint256(keccak256(abi.encode(tokenIds)));
+
+        // add batch minter
+        vm.prank(users.creator_0);
+        RouxEdition(address(edition)).setBatchMinter(batchId, address(editionBatchMinter), true, "");
+        assertTrue(edition.isBatchMinter(batchId, address(editionBatchMinter)));
+
+        // remove batch minter
+        vm.prank(users.creator_0);
+        RouxEdition(address(edition)).setBatchMinter(batchId, address(editionBatchMinter), false, "");
+        assertFalse(edition.isBatchMinter(batchId, address(editionBatchMinter)));
     }
 
     function test__UpdateMintParams() external {
