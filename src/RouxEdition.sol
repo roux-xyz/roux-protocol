@@ -66,9 +66,9 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     struct RouxEditionStorage {
         bool initialized;
         IRouxEditionFactory factory;
-        address batchMinter;
         uint256 tokenId;
         string contractURI;
+        mapping(uint256 batchId => mapping(address batchMinter => bool enable)) batchMinters;
         mapping(uint256 tokenId => TokenData tokenData) tokens;
     }
 
@@ -190,6 +190,13 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         return _storage().tokens[id].minters[minter];
     }
 
+    /**
+     * @inheritdoc IRouxEdition
+     */
+    function isBatchMinter(uint256 batchId, address minter) external view returns (bool) {
+        return _storage().batchMinters[batchId][minter];
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -197,7 +204,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     /**
      * @inheritdoc IRouxEdition
      */
-    function mint(address to, uint256 id, uint256 quantity, bytes calldata /*  data */ ) external {
+    function mint(address to, uint256 id, uint256 quantity, bytes calldata /*  data */ ) external nonReentrant {
         RouxEditionStorage storage $ = _storage();
 
         // validate caller
@@ -223,11 +230,15 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         bytes calldata /*  data */
     )
         external
+        nonReentrant
     {
         RouxEditionStorage storage $ = _storage();
 
+        // encode batch id
+        uint256 batchId = _encodeBatchId(ids);
+
         // validate caller
-        if (msg.sender != $.batchMinter) revert InvalidCaller();
+        if (!$.batchMinters[batchId][msg.sender]) revert InvalidCaller();
 
         // validate tokens
         for (uint256 i = 0; i < ids.length; i++) {
@@ -295,28 +306,54 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
 
     /**
      * @notice add minter
+     * @param id token id
      * @param minter minter address
+     * @param enable enable or disable minter
+     * @param options optional mint params
      */
-    function addMinter(uint256 id, address minter) external onlyOwner {
-        _addMinter(id, minter);
+    function setMinter(uint256 id, address minter, bool enable, bytes memory options) external onlyOwner nonReentrant {
+        _setMinter(id, minter, enable);
+
+        // set mint params if provided
+        if (options.length > 0) _setMintParams(id, minter, options);
     }
 
     /**
-     * @notice remove minter
+     * @notice add batch minter
+     * @param batchId batchId (encoded token ids)
      * @param minter minter address
+     * @param enable enable or disable batch minter
+     * @param options optional mint params
+     *
+     * @dev derive batchId using `uint256(keccak256(abi.encode(tokenIds)))`
      */
-    function removeMinter(uint256 id, address minter) external onlyOwner {
-        // remove minter
-        _storage().tokens[id].minters[minter] = false;
+    function setBatchMinter(
+        uint256 batchId,
+        address minter,
+        bool enable,
+        bytes memory options
+    )
+        external
+        onlyOwner
+        nonReentrant
+    {
+        // validate minter
+        _validateMinter(minter);
+
+        // set batch minter
+        _storage().batchMinters[batchId][minter] = enable;
+
+        // set mint params if provided
+        if (options.length > 0) _setMintParams(batchId, minter, options);
 
         // emit event
-        emit MinterRemoved(minter, id);
+        emit BatchMinterAdded(minter);
     }
 
     /**
      * @notice update mint params
      */
-    function updateMintParams(uint256 id, address minter, bytes calldata params) external onlyOwner {
+    function updateMintParams(uint256 id, address minter, bytes calldata params) external onlyOwner nonReentrant {
         // set sales params via minter
         _setMintParams(id, minter, params);
     }
@@ -324,13 +361,21 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     /**
      * @notice update controller data
      */
-    function updateControllerData(uint256 id, address newFundsRecipient, uint256 newProfitShare) external onlyOwner {
+    function updateControllerData(
+        uint256 id,
+        address newFundsRecipient,
+        uint256 newProfitShare
+    )
+        external
+        onlyOwner
+        nonReentrant
+    {
         // set controller data
         _setControllerData(id, newFundsRecipient, newProfitShare);
     }
 
     /* -------------------------------------------- */
-    /* internal                                     */
+    /* internal | core                              */
     /* -------------------------------------------- */
 
     /**
@@ -371,19 +416,22 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         // get storage pointer
         TokenData storage d = $.tokens[id];
 
-        // validate params
-        if (creator_ == address(0) || maxSupply == 0) revert InvalidParams();
+        // validate params (fundsRecipient and profitShare validated in Controller)
+        if (
+            creator_ == address(0) || maxSupply == 0 || (parentEdition != address(0) && parentTokenId == 0)
+                || (parentEdition == address(0) && parentTokenId != 0)
+        ) revert InvalidParams();
 
         // set token data
         d.uri = tokenUri;
         d.creator = creator_;
         d.maxSupply = maxSupply.toUint128();
 
-        // add minter
-        _addMinter(id, minter);
-
         // set controller data
         _setControllerData(id, fundsRecipient, profitShare);
+
+        // optionally add minter
+        if (minter != address(0)) _setMinter(id, minter, true);
 
         // optionally set registry data
         if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
@@ -458,21 +506,68 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     }
 
     /**
+     * @notice internal function to batch mint
+     * @param to token receiver
+     * @param ids array of token ids
+     * @param quantities array of token quantities
+     * @param data additional data
+     */
+    function _batchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes memory data
+    )
+        internal
+        override
+    {
+        // update total supply
+        for (uint256 i = 0; i < ids.length; i++) {
+            _storage().tokens[ids[i]].totalSupply += quantities[i].toUint128();
+        }
+
+        // mint
+        super._batchMint(to, ids, quantities, data);
+    }
+
+    /**
      * @notice internal function to add minter
      * @param id token id
      * @param minter minter
+     * @param enable enable or disable minter
      */
-    function _addMinter(uint256 id, address minter) internal {
+    function _setMinter(uint256 id, address minter, bool enable) internal {
+        // validate minter if enabling
+        if (enable) _validateMinter(minter);
+
+        // set minter
+        _storage().tokens[id].minters[minter] = enable;
+
+        // emit event
+        emit MinterAdded(minter, id);
+    }
+
+    /* -------------------------------------------- */
+    /* internal | utility                           */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice validate minter
+     * @param minter minter
+     */
+    function _validateMinter(address minter) internal view {
         // validate minter is not zero
         if (minter == address(0)) revert InvalidMinter();
 
         // validate minter interface support
         if (!IEditionMinter(minter).supportsInterface(type(IEditionMinter).interfaceId)) revert InvalidMinter();
+    }
 
-        // set minter
-        _storage().tokens[id].minters[minter] = true;
-
-        // emit event
-        emit MinterAdded(minter, id);
+    /**
+     * @notice encode batch id
+     * @param ids token ids
+     */
+    function _encodeBatchId(uint256[] memory ids) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode(ids)));
     }
 }

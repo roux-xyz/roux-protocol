@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-interface IEditionMinter {
+interface IEditionBatchMinter {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -25,11 +25,6 @@ interface IEditionMinter {
      * @notice already minted
      */
     error AlreadyMinted();
-
-    /**
-     * @notice batch id does not exist
-     */
-    error MintParamsNotSet();
 
     /* -------------------------------------------- */
     /* events                                       */
@@ -76,21 +71,11 @@ interface IEditionMinter {
      * @notice mint
      * @param to address receiving minted tokens
      * @param edition edition
-     * @param id token id
-     * @param quantity quantity
+     * @param ids token ids
+     * @param quantities quantities
      * @param data optional data
      */
-    function mint(address to, address edition, uint256 id, uint256 quantity, bytes memory data) external payable;
-
-    /**
-     * @notice batch mint
-     * @param to address receiving minted tokens
-     * @param edition edition
-     * @param ids array of token ids
-     * @param quantities array of quantities
-     * @param data optional data
-     */
-    function batchMint(
+    function mintBatch(
         address to,
         address edition,
         uint256[] memory ids,

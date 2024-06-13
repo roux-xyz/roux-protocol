@@ -9,7 +9,7 @@ import { BaseEditionMinter } from "src/minters/BaseEditionMinter.sol";
  * @title Edition Minter
  * @author Roux
  */
-contract EditionMinter is BaseEditionMinter {
+contract EditionBatchMinter is BaseEditionMinter {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -35,11 +35,11 @@ contract EditionMinter is BaseEditionMinter {
 
     /**
      * @notice edition minter storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("editionMinter.EditionMinterStorage")) - 1)) &
+     * @dev keccak256(abi.encode(uint256(keccak256("editionBatchMinter.EditionBatchMinterStorage")) - 1)) &
      * ~bytes32(uint256(0xff));
      */
-    bytes32 internal constant EDITION_MINTER_STORAGE_SLOT =
-        0x3c7a207398ddd2f021fb7a4bbb30885545bdcf0f21488ce720cd5be6123bb700;
+    bytes32 internal constant EDITION_BATCH_MINTER_STORAGE_SLOT =
+        0x42c6cccd5b9fd14ee0c3b09b6c90ff0d2260d9f10f0d535eb56b70850096f400;
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -52,7 +52,6 @@ contract EditionMinter is BaseEditionMinter {
         uint128 price;
         uint40 mintStart;
         uint40 mintEnd;
-        uint16 maxMintable;
     }
 
     /**
@@ -65,8 +64,7 @@ contract EditionMinter is BaseEditionMinter {
      */
     struct EditionMinterStorage {
         bool initialized;
-        mapping(address edition => mapping(uint256 id => MintInfo tokenMintInfo)) mintInfo;
-        mapping(address account => mapping(address edition => mapping(uint256 id => uint16 balance))) balance;
+        mapping(address edition => mapping(uint256 batchId => MintInfo tokenMintInfo)) mintInfo;
     }
 
     /* -------------------------------------------- */
@@ -116,7 +114,7 @@ contract EditionMinter is BaseEditionMinter {
      */
     function _storage() internal pure returns (EditionMinterStorage storage $) {
         assembly {
-            $.slot := EDITION_MINTER_STORAGE_SLOT
+            $.slot := EDITION_BATCH_MINTER_STORAGE_SLOT
         }
     }
 
@@ -127,8 +125,8 @@ contract EditionMinter is BaseEditionMinter {
     /**
      * @inheritdoc IEditionMinter
      */
-    function price(address edition, uint256 id) external view override returns (uint128) {
-        return _storage().mintInfo[edition][id].price;
+    function price(address edition, uint256 batchId) external view override returns (uint128) {
+        return _storage().mintInfo[edition][batchId].price;
     }
 
     /* -------------------------------------------- */
@@ -138,9 +136,43 @@ contract EditionMinter is BaseEditionMinter {
     /**
      * @inheritdoc IEditionMinter
      */
-    function setMintParams(uint256 id, bytes calldata params) external {
-        // includes padding
-        if (params.length != 128) revert InvalidParamsLength();
+    function batchMint(
+        address to,
+        address edition,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes memory data
+    )
+        external
+        payable
+        override
+    {
+        // derive batchId
+        uint256 batchId = uint256(keccak256(abi.encode(ids)));
+
+        // before token transfer
+        _beforeTokenTransfer(to, edition, batchId, 1, "");
+
+        // mint via edition contract
+        IRouxEdition(edition).batchMint(to, ids, quantities, data);
+
+        // disburse funds
+        uint256 derivedPrice = msg.value / ids.length;
+        uint256 totalValue = msg.value;
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 allocatedPrice = totalValue < derivedPrice ? totalValue : derivedPrice;
+            totalValue -= allocatedPrice;
+
+            _controller.disburse{ value: allocatedPrice }(edition, ids[i]);
+        }
+    }
+
+    /**
+     * @inheritdoc IEditionMinter
+     */
+    function setMintParams(uint256 batchId, bytes calldata params) external {
+        // includes zero padding
+        if (params.length != 96) revert InvalidParamsLength();
 
         // decode params
         MintInfo memory mintInfo = abi.decode(params, (MintInfo));
@@ -149,9 +181,26 @@ contract EditionMinter is BaseEditionMinter {
         if (mintInfo.mintStart >= mintInfo.mintEnd) revert InvalidMintParams();
 
         // set mint info
-        _storage().mintInfo[msg.sender][id] = mintInfo;
+        _storage().mintInfo[msg.sender][batchId] = mintInfo;
 
-        emit MintParamsUpdated(id, params);
+        emit MintParamsUpdated(batchId, params);
+    }
+
+    /**
+     * @inheritdoc IEditionMinter
+     */
+    function mint(
+        address, /* to */
+        address, /* edition */
+        uint256, /* id */
+        uint256, /* quantity */
+        bytes memory /* data */
+    )
+        external
+        payable
+        override
+    {
+        revert("Batch mint only");
     }
 
     /* -------------------------------------------- */
@@ -160,37 +209,30 @@ contract EditionMinter is BaseEditionMinter {
 
     /**
      * @notice before mint
-     * @param to address receiving minted tokens
      * @param edition edition
-     * @param id token id
-     * @param quantity quantity
+     * @param batchId batch id
      */
     function _beforeTokenTransfer(
-        address to,
+        address, /* to */
         address edition,
-        uint256 id,
-        uint256 quantity,
+        uint256 batchId,
+        uint256, /* quantity */
         bytes memory
     )
         internal
         override
     {
         EditionMinterStorage storage $ = _storage();
-        MintInfo storage mintInfo = $.mintInfo[edition][id];
+        MintInfo storage mintInfo = $.mintInfo[edition][batchId];
 
-        // verify mint info exists
+        // verify mint params exist
         if (mintInfo.mintEnd == 0) revert MintParamsNotSet();
 
         // verify mint is active
         if (block.timestamp < mintInfo.mintStart) revert MintNotStarted();
         if (block.timestamp > mintInfo.mintEnd) revert MintEnded();
 
-        // verify quantity does not exceed max mintable by single address
-        if ($.balance[to][edition][id] + quantity > mintInfo.maxMintable) {
-            revert MaxMintableExceeded();
-        }
-
         // verify sufficient funds
-        if (msg.value < mintInfo.price * quantity) revert InsufficientFunds();
+        if (msg.value < mintInfo.price) revert InsufficientFunds();
     }
 }

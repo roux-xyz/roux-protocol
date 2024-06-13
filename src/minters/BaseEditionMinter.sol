@@ -69,6 +69,24 @@ abstract contract BaseEditionMinter is IEditionMinter, Ownable {
     /**
      * @inheritdoc IEditionMinter
      */
+    function batchMint(
+        address, /* to */
+        address, /* edition */
+        uint256[] memory, /* ids */
+        uint256[] memory, /* quantities */
+        bytes memory /* data */
+    )
+        external
+        payable
+        virtual
+    {
+        // default implementation reverts - override in EditionBatchMinter
+        revert("Batch minting not supported");
+    }
+
+    /**
+     * @inheritdoc IEditionMinter
+     */
     function price(address edition, uint256 id) external view virtual returns (uint128);
 
     /* -------------------------------------------- */

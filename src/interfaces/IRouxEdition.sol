@@ -60,6 +60,12 @@ interface IRouxEdition {
     event MinterAdded(address indexed minter, uint256 indexed id);
 
     /**
+     * @notice emitted when a batch minter is added
+     * @param minter minter
+     */
+    event BatchMinterAdded(address indexed minter);
+
+    /**
      * @notice emitted when a minter is removed
      * @param minter minter
      * @param id token id
@@ -82,7 +88,7 @@ interface IRouxEdition {
         address creator;
         uint128 totalSupply;
         uint128 maxSupply;
-        mapping(address minter => bool valid) minters;
+        mapping(address minter => bool enable) minters;
         string uri;
     }
 
@@ -141,6 +147,13 @@ interface IRouxEdition {
      * @param minter minter
      */
     function isMinter(uint256 id, address minter) external view returns (bool);
+
+    /**
+     * @notice check if batch minter is valid
+     * @param batchId batch id
+     * @param minter minter
+     */
+    function isBatchMinter(uint256 batchId, address minter) external view returns (bool);
 
     /* -------------------------------------------- */
     /* write functions                              */
