@@ -61,6 +61,7 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
      * @param factory roux edition factory
      * @param tokenId current token id
      * @param contractURI contract uri
+     * @param batchMinters mapping of batch id to minter to enable
      * @param tokens mapping of token id to token data
      */
     struct RouxEditionStorage {
@@ -278,9 +279,43 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         nonReentrant
         returns (uint256)
     {
-        return _add(
-            tokenUri, creator_, maxSupply, fundsRecipient, profitShare, parentEdition, parentTokenId, minter, options
-        );
+        RouxEditionStorage storage $ = _storage();
+
+        // increment token id
+        uint256 id = ++$.tokenId;
+
+        // get storage pointer
+        TokenData storage d = $.tokens[id];
+
+        // validate params (fundsRecipient and profitShare validated in Controller)
+        if (
+            creator_ == address(0) || maxSupply == 0 || (parentEdition != address(0) && parentTokenId == 0)
+                || (parentEdition == address(0) && parentTokenId != 0)
+        ) revert InvalidParams();
+
+        // set token data
+        d.uri = tokenUri;
+        d.creator = creator_;
+        d.maxSupply = maxSupply.toUint128();
+
+        // set controller data
+        _setControllerData(id, fundsRecipient, profitShare);
+
+        // optionally add minter
+        if (minter != address(0)) _setMinter(id, minter, true);
+
+        // optionally set registry data
+        if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
+
+        // set optional params in minter if provided - not all minters will require this
+        if (options.length > 0) _setMintParams(id, minter, options);
+
+        // mint token to creator
+        _mint(creator_, id, 1, "");
+
+        emit TokenAdded(id);
+
+        return id;
     }
 
     /**
@@ -377,75 +412,6 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
     /* internal | core                              */
     /* -------------------------------------------- */
-
-    /**
-     * @notice internal function to add token
-     * @param tokenUri token uri
-     * @param creator_ creator
-     * @param maxSupply max supply
-     * @param fundsRecipient funds recipient
-     * @param profitShare profit share
-     * @param parentEdition parent edition - zero if original
-     * @param parentTokenId parent token id - zero if original
-     * @param minter minter - must be provided to add token
-     * @param options additional options - mint params
-     *
-     * @dev makes external calls to set controller and set registry (if attribution included)
-     *      sets optional mint params, if provided
-     *      mints token to creator
-     */
-    function _add(
-        string memory tokenUri,
-        address creator_,
-        uint256 maxSupply,
-        address fundsRecipient,
-        uint256 profitShare,
-        address parentEdition,
-        uint256 parentTokenId,
-        address minter,
-        bytes memory options
-    )
-        internal
-        returns (uint256)
-    {
-        RouxEditionStorage storage $ = _storage();
-
-        // increment token id
-        uint256 id = ++$.tokenId;
-
-        // get storage pointer
-        TokenData storage d = $.tokens[id];
-
-        // validate params (fundsRecipient and profitShare validated in Controller)
-        if (
-            creator_ == address(0) || maxSupply == 0 || (parentEdition != address(0) && parentTokenId == 0)
-                || (parentEdition == address(0) && parentTokenId != 0)
-        ) revert InvalidParams();
-
-        // set token data
-        d.uri = tokenUri;
-        d.creator = creator_;
-        d.maxSupply = maxSupply.toUint128();
-
-        // set controller data
-        _setControllerData(id, fundsRecipient, profitShare);
-
-        // optionally add minter
-        if (minter != address(0)) _setMinter(id, minter, true);
-
-        // optionally set registry data
-        if (parentEdition != address(0) && parentTokenId != 0) _setRegistryData(id, parentEdition, parentTokenId);
-
-        // set optional params in minter if provided - not all minters will require this
-        if (options.length > 0) _setMintParams(id, minter, options);
-
-        // mint token to creator
-        _mint(creator_, id, 1, "");
-
-        emit TokenAdded(id);
-
-        return id;
-    }
 
     /**
      * @notice set administrator data
@@ -547,8 +513,8 @@ contract RouxEdition is IRouxEdition, ERC1155, OwnableRoles, ReentrancyGuard {
         emit MinterAdded(minter, id);
     }
 
-    /* -------------------------------------------- */
-    /* internal | utility                           */
+    /* -------------------------------------`------- */
+    /* internal | utility                  `         */
     /* -------------------------------------------- */
 
     /**
