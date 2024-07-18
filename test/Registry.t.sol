@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+
+import { EditionData } from "src/types/DataTypes.sol";
 
 contract RegistryTest is BaseTest {
     function setUp() public virtual override {
@@ -20,20 +22,17 @@ contract RegistryTest is BaseTest {
         // create forks up to max depth
         RouxEdition[] memory editions = _createForks(MAX_FORK_DEPTH);
 
+        // copy default add params
+        EditionData.AddParams memory modifiedAddParams = defaultAddParams;
+
+        // modify default add params
+        modifiedAddParams.parentEdition = address(editions[MAX_FORK_DEPTH]);
+        modifiedAddParams.parentTokenId = 1;
+
         // attempt to add another fork
         vm.prank(users.creator_0);
         vm.expectRevert(IRegistry.MaxDepthExceeded.selector);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(editions[MAX_FORK_DEPTH]),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
+        edition.add(modifiedAddParams);
     }
 
     function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
@@ -48,29 +47,11 @@ contract RegistryTest is BaseTest {
     /* -------------------------------------------- */
 
     function test__Root_Depth1() external {
-        // prank
-        vm.startPrank(users.creator_1);
-
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        /* create forked token with attribution */
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
+        // create fork
+        (RouxEdition forkEdition, uint256 forkTokenId) = _createFork(edition, 1, users.creator_1);
 
         /* get root */
-        (address root, uint256 tokenId, uint256 depth) = registry.root(address(edition1), 1);
+        (address root, uint256 tokenId, uint256 depth) = registry.root(address(forkEdition), forkTokenId);
 
         assertEq(root, address(edition));
         assertEq(tokenId, 1);
@@ -126,29 +107,12 @@ contract RegistryTest is BaseTest {
     /* -------------------------------------------- */
 
     function test__AddToken() external {
-        // prank
-        vm.startPrank(users.creator_1);
-
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
+        RouxEdition edition1 = _createEdition(users.creator_1);
 
-        // expect the relevant event to be emitted
-        vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1 });
-
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
+        // add token
+        vm.prank(users.creator_1);
+        edition1.add(defaultAddParams);
 
         // check token data
         assertEq(edition1.currentToken(), 1);
@@ -169,53 +133,17 @@ contract RegistryTest is BaseTest {
     }
 
     function test__AddToken_WithAttribution() external {
-        // prank
-        vm.startPrank(users.creator_1);
-
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // expect the relevant event to be emitted
-        vm.expectEmit({ emitter: address(registry) });
-        emit RegistryUpdated({
-            edition: address(edition1),
-            tokenId: 1,
-            parentEdition: address(edition),
-            parentTokenId: 1
-        });
-
-        vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1 });
-
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
+        // create fork
+        (RouxEdition forkEdition, uint256 forkTokenId) = _createFork(edition, 1, users.creator_1);
 
         // check token data
-        assertEq(edition1.currentToken(), 1);
+        assertEq(forkEdition.currentToken(), forkTokenId);
 
         // get attribution
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
+        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(forkEdition), forkTokenId);
 
         // verify attribution
         assertEq(parentEdition, address(edition));
         assertEq(parentTokenId, 1);
-
-        // get attribution from registry
-        (address parentEditionReg, uint256 parentTokenIdReg) = registry.attribution(address(edition1), 1);
-
-        // verify attribution
-        assertEq(parentEditionReg, address(edition));
-        assertEq(parentTokenIdReg, 1);
     }
 }

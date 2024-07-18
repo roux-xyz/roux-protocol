@@ -2,13 +2,14 @@
 pragma solidity ^0.8.25;
 
 import { IController } from "src/interfaces/IController.sol";
+import { EditionData } from "src/types/DataTypes.sol";
 
 interface IRouxEdition {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
     /**
-     * @notice invalid token id
+     * @notice invalid parameters
      */
     error InvalidParams();
 
@@ -28,19 +29,39 @@ interface IRouxEdition {
     error InvalidAttribution();
 
     /**
-     * @notice invalid attribution
+     * @notice invalid caller
      */
     error InvalidCaller();
 
     /**
-     * @notice invalid minter
+     * @notice invalid extension
      */
-    error InvalidMinter();
+    error InvalidExtension();
+
+    /**
+     * @notice inactive mint
+     */
+    error InactiveMint();
 
     /**
      * @notice max supply exceeded
      */
     error MaxSupplyExceeded();
+
+    /**
+     * @notice gated mint
+     */
+    error GatedMint();
+
+    /**
+     * @notice invalid collection
+     */
+    error InvalidCollection();
+
+    /**
+     * @notice only allowlist
+     */
+    error OnlyAllowlist();
 
     /* -------------------------------------------- */
     /* events                                       */
@@ -53,24 +74,11 @@ interface IRouxEdition {
     event TokenAdded(uint256 indexed id);
 
     /**
-     * @notice emitted when a minter is added
-     * @param minter minter
+     * @notice emitted when an extension is added
+     * @param extension extension address
      * @param id token id
      */
-    event MinterAdded(address indexed minter, uint256 indexed id);
-
-    /**
-     * @notice emitted when a batch minter is added
-     * @param minter minter
-     */
-    event BatchMinterAdded(address indexed minter);
-
-    /**
-     * @notice emitted when a minter is removed
-     * @param minter minter
-     * @param id token id
-     */
-    event MinterRemoved(address indexed minter, uint256 indexed id);
+    event ExtensionAdded(address indexed extension, uint256 indexed id);
 
     /**
      * @notice emitted when a contract uri is updated
@@ -78,28 +86,13 @@ interface IRouxEdition {
     event ContractURIUpdated();
 
     /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice token data
-     */
-    struct TokenData {
-        address creator;
-        uint128 totalSupply;
-        uint128 maxSupply;
-        mapping(address minter => bool enable) minters;
-        string uri;
-    }
-
-    /* -------------------------------------------- */
     /* view functions                               */
     /* -------------------------------------------- */
 
     /**
      * @notice get creator
-     *
-     * @dev creator is set by factory at initialization
+     * @param id token id
+     * @return creator address
      */
     function creator(uint256 id) external view returns (address);
 
@@ -108,6 +101,12 @@ interface IRouxEdition {
      * @return current token id
      */
     function currentToken() external view returns (uint256);
+
+    /**
+     * @notice get currency address
+     * @return currency address
+     */
+    function currency() external view returns (address);
 
     /**
      * @notice get implementation version
@@ -131,6 +130,7 @@ interface IRouxEdition {
 
     /**
      * @notice contract uri
+     * @return contract uri
      */
     function contractURI() external view returns (string memory);
 
@@ -142,72 +142,95 @@ interface IRouxEdition {
     function exists(uint256 id) external view returns (bool);
 
     /**
-     * @notice check if minter is valid
+     * @notice check if extension is valid for a token
      * @param id token id
-     * @param minter minter
+     * @param extension extension address
+     * @return true if extension is valid
      */
-    function isMinter(uint256 id, address minter) external view returns (bool);
+    function isExtension(uint256 id, address extension) external view returns (bool);
 
     /**
-     * @notice check if batch minter is valid
-     * @param batchId batch id
-     * @param minter minter
+     * @notice check if collection is valid for a collection id
+     * @param collectionId collection id
+     * @param collection collection address
+     * @return true if collection is valid
      */
-    function isBatchMinter(uint256 batchId, address minter) external view returns (bool);
+    function isCollection(uint256 collectionId, address collection) external view returns (bool);
+
+    /**
+     * @notice get default price for a token
+     * @param id token id
+     * @return default price
+     */
+    function defaultPrice(uint256 id) external view returns (uint256);
+
+    /**
+     * @notice check if a token is gated
+     * @param id token id
+     * @return true if token is gated
+     */
+    function isGated(uint256 id) external view returns (bool);
+
+    /**
+     * @notice get default mint parameters for a token
+     * @param id token id
+     * @return default mint parameters
+     */
+    function defaultMintParams(uint256 id) external view returns (EditionData.MintParams memory);
 
     /* -------------------------------------------- */
     /* write functions                              */
     /* -------------------------------------------- */
 
     /**
-     * @notice add a token
-     * @param tokenUri token uri
-     * @param creator_ creator
-     * @param maxSupply max supply
-     * @param fundsRecipient funds recipient
-     * @param profitShare profit share
-     * @param parentEdition parent edition - address(0) if root
-     * @param parentTokenId parent token id - 0 if root
-     * @param minter minter - must be previously set to add token
-     * @param options additional options
-     * @return token id
+     * @notice add a new token
+     * @param p AddParams struct containing token parameters
+     * @return new token id
      */
-    function add(
-        string memory tokenUri,
-        address creator_,
-        uint256 maxSupply,
-        address fundsRecipient,
-        uint256 profitShare,
-        address parentEdition,
-        uint256 parentTokenId,
-        address minter,
-        bytes calldata options
-    )
-        external
-        returns (uint256);
+    function add(EditionData.AddParams calldata p) external returns (uint256);
 
     /**
      * @notice mint a token
      * @param to token receiver
-     * @param tokenId token id
+     * @param id token id
      * @param quantity number of tokens to mint
+     * @param referrer referrer address
+     * @param extension extension address
      * @param data additional data
      */
-    function mint(address to, uint256 tokenId, uint256 quantity, bytes calldata data) external;
-
-    /**
-     * @notice mint a token
-     * @param to token receiver
-     * @param tokenIds token id
-     * @param quantities number of tokens to mint
-     * @param data additional data
-     *
-     */
-    function batchMint(
+    function mint(
         address to,
-        uint256[] memory tokenIds,
-        uint256[] memory quantities,
+        uint256 id,
+        uint256 quantity,
+        address referrer,
+        address extension,
         bytes calldata data
     )
-        external;
+        external
+        payable;
+
+    /**
+     * @notice mint tokens for a single edition collection
+     * @param to token receiver
+     * @param ids array of token ids
+     * @param totalAmount total amount to pay
+     * @param data additional data
+     */
+    function collectionSingleMint(
+        address to,
+        uint256[] memory ids,
+        uint256 totalAmount,
+        bytes calldata data
+    )
+        external
+        payable;
+
+    /**
+     * @notice mint a token for a multi edition collection
+     * @param to token receiver
+     * @param id token id
+     * @param amount amount to pay
+     * @param data additional data
+     */
+    function collectionMultiMint(address to, uint256 id, uint256 amount, bytes calldata data) external payable;
 }

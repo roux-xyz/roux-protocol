@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 interface IController {
     /* -------------------------------------------- */
@@ -21,153 +21,195 @@ interface IController {
      */
     error InvalidProfitShare();
 
+    /**
+     * @notice invalid array length
+     */
+    error InvalidArrayLength();
+
     /* -------------------------------------------- */
     /* events                                       */
     /* -------------------------------------------- */
 
     /**
-     * @notice disbursement
-     * @param edition edition
-     * @param tokenId token id
-     * @param amount amount disbursed
+     * @notice emitted when funds are deposited
+     * @param recipient recipient of the funds
+     * @param amount amount deposited
      */
-    event Disbursement(address indexed edition, uint256 indexed tokenId, uint256 amount);
+    event Deposited(address indexed recipient, uint256 amount);
 
     /**
-     * @notice pending balance updated
-     * @param edition edition that filled the pending balance
-     * @param tokenId token id that filled the pending balance
-     * @param parent parent edition
-     * @param parentTokenId parent token id
-     * @param amount amount
+     * @notice emitted when pending balance is updated
+     * @param edition edition address
+     * @param tokenId token ID
+     * @param parentEdition parent edition address
+     * @param parentTokenId parent token ID
+     * @param amount amount pending
      */
     event PendingUpdated(
-        address edition, uint256 indexed tokenId, address parent, uint256 indexed parentTokenId, uint256 amount
+        address edition, uint256 indexed tokenId, address parentEdition, uint256 indexed parentTokenId, uint256 amount
     );
 
     /**
-     * @notice withdrawal
-     * @param edition edition
-     * @param tokenId token id
+     * @notice emitted when funds are withdrawn
+     * @param recipient recipient of the withdrawal
      * @param amount amount withdrawn
      */
-    event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
+    event Withdrawn(address indexed recipient, uint256 amount);
 
     /**
-     * @notice batch withdrawal
-     * @param edition edition
-     * @param tokenIds token ids
-     * @param amount amount withdrawn
-     *
-     * @dev token ids must have same funds recipient
-     */
-    event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
-
-    /**
-     * @notice admin fee enabled
-     * @param enabled admin fee enabled
+     * @notice emitted when platform fee status is updated
+     * @param enabled whether the platform fee is enabled
      */
     event PlatformFeeUpdated(bool enabled);
 
-    /**
-     * @notice get funds recipient for a given edition and tokenId
-     * @param edition edition
-     * @param tokenId token id
-     */
-    function fundsRecipient(address edition, uint256 tokenId) external view returns (address);
-
     /* -------------------------------------------- */
-    /* structures                                   */
+    /* constants                                    */
     /* -------------------------------------------- */
 
     /**
-     * @notice attribution data
+     * @notice platform fee percentage
+     * @return platform fee in basis points
      */
-    struct ControllerData {
-        address fundsRecipient;
-        uint16 profitShare;
-    }
+    function PLATFORM_FEE() external pure returns (uint256);
+
+    /**
+     * @notice referral fee percentage
+     * @return referral fee in basis points
+     */
+    function REFERRAL_FEE() external pure returns (uint256);
+
+    /**
+     * @notice collection fee percentage
+     * @return collection fee in basis points
+     */
+    function COLLECTION_FEE() external pure returns (uint256);
 
     /* -------------------------------------------- */
-    /* view                                         */
+    /* view functions                               */
     /* -------------------------------------------- */
 
     /**
-     * @notice get balance by edition token
-     * @param edition edition
-     * @param tokenId token id
-     * @return balance
+     * @notice get the currency address
+     * @return address of the currency token
      */
-    function balance(address edition, uint256 tokenId) external view returns (uint256);
+    function currency() external view returns (address);
 
     /**
-     * @notice get total balance for a batch of tokenIds
-     * @param edition edition
-     * @param tokenIds token ids
-     * @return balance
+     * @notice get the balance of a recipient
+     * @param recipient address of the recipient
+     * @return balance of the recipient
      */
-    function balanceBatch(address edition, uint256[] calldata tokenIds) external view returns (uint256);
+    function balance(address recipient) external view returns (uint256);
 
     /**
-     * @notice get pending balance by edition token
-     * @param edition edition
-     * @param tokenId token id
+     * @notice get the pending balance for an edition and token ID
+     * @param edition address of the edition
+     * @param tokenId token ID
+     * @return pending balance
      */
     function pending(address edition, uint256 tokenId) external view returns (uint256);
 
     /**
-     * @notice get admin fee balance
+     * @notice get the platform fee balance
+     * @return platform fee balance
      */
     function platformFeeBalance() external view returns (uint256);
 
     /**
-     * @notice get profit share for a given edition and tokenId
-     * @param edition edition
-     * @param tokenId tokenId
+     * @notice get the profit share for an edition and token ID
+     * @param edition address of the edition
+     * @param tokenId token ID
+     * @return profit share percentage
      */
     function profitShare(address edition, uint256 tokenId) external view returns (uint256);
 
+    /**
+     * @notice get the funds recipient for an edition and token ID
+     * @param edition address of the edition
+     * @param tokenId token ID
+     * @return address of the funds recipient
+     */
+    function fundsRecipient(address edition, uint256 tokenId) external view returns (address);
+
     /* -------------------------------------------- */
-    /* write                                        */
+    /* write functions                              */
     /* -------------------------------------------- */
 
     /**
-     * @notice set attribution for an edition and tokenId
-     * @param tokenId token id
-     * @param fundsRecipient funding recipient
-     * @param profitShare profit share
-     *
-     * @dev this should be called by the edition contract, as the attribution mapping
-     *       is keyed by the edition contract address and token id
+     * @notice set controller data for a token
+     * @param tokenId token ID
+     * @param fundsRecipient_ address of the funds recipient
+     * @param profitShare_ profit share percentage
      */
-    function setControllerData(uint256 tokenId, address fundsRecipient, uint16 profitShare) external;
+    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external;
 
     /**
-     * @notice disburse mint funds to edition and pending balance
-     * @param edition edition
-     * @param tokenId token id
+     * @notice disburse funds for a token
+     * @param tokenId token ID
+     * @param amount amount to disburse
+     * @param referrer address of the referrer
      */
-    function disburse(address edition, uint256 tokenId) external payable;
+    function disburse(uint256 tokenId, uint256 amount, address referrer) external payable;
 
     /**
-     * @notice withdraw balance from edition for given token id
-     * @param edition edition
-     * @param tokenId token id
+     * @notice record funds for a recipient
+     * @param recipient address of the recipient
+     * @param amount amount to record
+     */
+    function recordFunds(address recipient, uint256 amount) external payable;
+
+    /**
+     * @notice disburse pending balance for an edition and token ID
+     * @param edition address of the edition
+     * @param tokenId token ID
+     */
+    function disbursePending(address edition, uint256 tokenId) external;
+
+    /**
+     * @notice disburse pending balance for multiple editions and token IDs
+     * @param editions array of edition addresses
+     * @param tokenIds array of token IDs
+     */
+    function disbursePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external;
+
+    /**
+     * @notice disburse pending balance and withdraw for an edition and token ID
+     * @param edition address of the edition
+     * @param tokenId token ID
      * @return amount withdrawn
-     *
-     * @dev anyone can call this function to withdraw to the funding recipient
-     *      for the given token id
      */
-    function withdraw(address edition, uint256 tokenId) external returns (uint256);
+    function disbursePendingAndWithdraw(address edition, uint256 tokenId) external returns (uint256);
 
     /**
-     * @notice withdraw balance from edition for given token id
-     * @param edition edition
-     * @param tokenIds array of token ids
+     * @notice withdraw funds for a recipient
+     * @param recipient address of the recipient
      * @return amount withdrawn
-     *
-     * @dev anyone can call this function to withdraw to the funding recipient
-     *      for the given token id
      */
-    function withdrawBatch(address edition, uint256[] calldata tokenIds) external returns (uint256);
+    function withdraw(address recipient) external returns (uint256);
+
+    /**
+     * @notice enable or disable the platform fee
+     * @param enable whether to enable the platform fee
+     */
+    function enablePlatformFee(bool enable) external;
+
+    /**
+     * @notice withdraw the platform fee
+     * @param to address to send the platform fee to
+     * @return amount withdrawn
+     */
+    function withdrawPlatformFee(address to) external returns (uint256);
+
+    /**
+     * @notice get the implementation address of the proxy
+     * @return address of the implementation
+     */
+    function getImplementation() external view returns (address);
+
+    /**
+     * @notice upgrade the proxy to a new implementation
+     * @param newImplementation address of the new implementation
+     * @param data optional calldata for the upgrade
+     */
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external;
 }

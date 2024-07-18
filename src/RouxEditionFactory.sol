@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -90,16 +90,16 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /**
      * @notice initialize RouxEditionFactory
      */
-    function initialize() external {
+    function initialize(address admin) external {
         RouxEditionFactoryStorage storage $ = _storage();
 
         require(!$.initialized, "Already initialized");
         $.initialized = true;
 
-        /* Set owner of proxy */
-        _initializeOwner(msg.sender);
+        // Set owner of proxy
+        _initializeOwner(admin);
 
-        /* enable allowlist */
+        // enable allowlist
         $.enableAllowlist = true;
     }
 
@@ -135,6 +135,13 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         return _storage().editions.values();
     }
 
+    /**
+     * @inheritdoc IRouxEditionFactory
+     */
+    function canCreate(address user) external view returns (bool) {
+        return _storage().allowlist[user];
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -145,15 +152,9 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        // verify allowlist
-        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert OnlyAllowlist();
-
-        // decode params
-        (string memory contractURI) = abi.decode(params, (string));
-
         // create edition instance
         address editionInstance =
-            address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(string)", contractURI)));
+            address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
         // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);

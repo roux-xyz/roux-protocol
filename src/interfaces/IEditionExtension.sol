@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-interface IEditionMinter {
+interface IEditionExtension {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -55,6 +55,24 @@ interface IEditionMinter {
     function price(address edition, uint256 id) external view returns (uint128);
 
     /**
+     * @notice approve mint
+     * @param id id
+     * @param quantity quantity
+     * @param operator operator
+     * @param account account
+     * @param data data
+     */
+    function approveMint(
+        uint256 id,
+        uint256 quantity,
+        address operator,
+        address account,
+        bytes calldata data
+    )
+        external
+        returns (uint256);
+
+    /**
      * @notice supports interface
      */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -71,34 +89,6 @@ interface IEditionMinter {
      * @dev must be called via edition
      */
     function setMintParams(uint256 id, bytes calldata params) external;
-
-    /**
-     * @notice mint
-     * @param to address receiving minted tokens
-     * @param edition edition
-     * @param id token id
-     * @param quantity quantity
-     * @param data optional data
-     */
-    function mint(address to, address edition, uint256 id, uint256 quantity, bytes memory data) external payable;
-
-    /**
-     * @notice batch mint
-     * @param to address receiving minted tokens
-     * @param edition edition
-     * @param ids array of token ids
-     * @param quantities array of quantities
-     * @param data optional data
-     */
-    function batchMint(
-        address to,
-        address edition,
-        uint256[] memory ids,
-        uint256[] memory quantities,
-        bytes memory data
-    )
-        external
-        payable;
 
     /* -------------------------------------------- */
     /* admin                                        */

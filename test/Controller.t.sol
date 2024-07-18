@@ -1,77 +1,55 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { BaseTest } from "./Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { EditionData } from "src/types/DataTypes.sol";
 
 import "forge-std/console.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract ControllerTest is BaseTest {
+    address testMinter;
+
     function setUp() public virtual override {
         BaseTest.setUp();
+
+        // set test edition minter
+        testMinter = address(users.user_0);
+
+        // approve test edition to spend mock usdc
+        _approveToken(address(edition), testMinter);
     }
 
-    // --------------------------------------------
-    // reverts
-    // --------------------------------------------
+    /* -------------------------------------------- */
+    /* reverts                                      */
+    /* -------------------------------------------- */
 
     function test__RevertWhen_SetController_FundsRecipientIsZero() external {
+        // modifiy default add params
+        defaultAddParams.fundsRecipient = address(0);
+
         vm.prank(users.creator_0);
         vm.expectRevert(IController.InvalidFundsRecipient.selector);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            address(0),
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
+        edition.add(defaultAddParams);
     }
 
     function test__RevertWhen_SetController_ProfitShareTooHigh() external {
-        // modify default controller data
-        defaultControllerData.fundsRecipient = address(0);
+        // create new edition instance
+        _createEdition(users.creator_0);
+
+        // modify default add params
+        defaultAddParams.profitShare = 10_001;
+        defaultAddParams.parentEdition = address(edition);
+        defaultAddParams.parentTokenId = 1;
 
         vm.prank(users.creator_0);
         vm.expectRevert(IController.InvalidProfitShare.selector);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            10_001,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-    }
-
-    function test__RevertWhen_SetController_ProfitShareDecreased() external {
-        // modify default controller data
-        defaultControllerData.fundsRecipient = address(0);
-
-        vm.startPrank(users.creator_0);
-        uint256 tokenId = edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        vm.expectRevert(IController.InvalidProfitShare.selector);
-        edition.updateControllerData(tokenId, users.creator_0, TEST_PROFIT_SHARE - 1);
+        edition.add(defaultAddParams);
     }
 
     function test__RevertWhen_EnablePlatformFee_OnlyOwner() external {
@@ -88,184 +66,77 @@ contract ControllerTest is BaseTest {
         controller.upgradeToAndCall(address(edition), "");
     }
 
-    function test__RevertWhen_WithdrawBatch_DifferentFundsRecipients() external {
-        // add token with different funds recipient
-        vm.prank(users.creator_0);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1, // different funds recipient
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
-
-        // mint 2nd token
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 2, 1, "");
-
-        // check balance
-        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
-        assertEq(controller.balance(address(edition), 2), TEST_TOKEN_PRICE);
-
-        // set up token ids
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 2;
-
-        // withdraw
-        vm.prank(users.creator_0);
-        vm.expectRevert(IController.InvalidFundsRecipient.selector);
-        controller.withdrawBatch(address(edition), tokenIds);
+    function test__RevertWhen_AlreadyInitialized() external {
+        // attempt to initialize
+        vm.expectRevert(bytes("Already initialized"));
+        controller.initialize();
     }
 
-    // --------------------------------------------
-    // view
-    // --------------------------------------------
+    /* -------------------------------------------- */
+    /* view                                        */
+    /* -------------------------------------------- */
+
+    function test__Currency() external {
+        assertEq(controller.currency(), address(edition.currency()));
+        assertEq(controller.currency(), address(mockUSDC));
+    }
 
     function test__Owner() external {
         assertEq(controller.owner(), address(users.deployer));
     }
 
     function test__ProfitShare() external {
-        assertEq(controller.profitShare(address(edition), 1), TEST_PROFIT_SHARE);
+        assertEq(controller.profitShare(address(edition), 1), PROFIT_SHARE);
     }
 
     function test__FundsRecipient() external {
         assertEq(controller.fundsRecipient(address(edition), 1), users.creator_0);
     }
 
-    // --------------------------------------------
-    // write
-    // --------------------------------------------
+    /* -------------------------------------------- */
+    /* write                                        */
+    /* -------------------------------------------- */
 
-    function test__AddToken() external {
-        // create edition instance
-        vm.startPrank(users.creator_1);
+    function test__AddToken_SetControllerData() external {
+        (, uint256 tokenId) = _addToken(edition);
 
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
+        assertEq(tokenId, 2);
 
-        // expect the relevant event to be emitted
-        vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1 });
-
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
-
-        // check token data
-        assertEq(edition1.currentToken(), 1);
-
-        // get attribution
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
-
-        // verify attribution
-        assertEq(parentEdition, address(0));
-        assertEq(parentTokenId, 0);
+        // verify token config
+        assertEq(controller.fundsRecipient(address(edition), tokenId), defaultAddParams.fundsRecipient);
+        assertEq(controller.profitShare(address(edition), tokenId), PROFIT_SHARE);
     }
 
-    function test__Mint_BalanceUpdated() external {
+    function test__Mint() external {
         // expect disbursement to be emitted
         vm.expectEmit({ emitter: address(controller) });
-        emit Disbursement({ edition: address(edition), tokenId: 1, amount: TEST_TOKEN_PRICE });
+        emit Deposited({ recipient: controller.fundsRecipient(address(edition), 1), amount: TOKEN_PRICE });
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        _mintToken(edition, 1, testMinter);
 
         // check balance
-        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE);
     }
 
-    function test__AddToken_WithAttribution() external {
-        // create edition instance
-        vm.startPrank(users.creator_1);
+    function test__Mint_Fork() external {
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
 
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // expect the relevant event to be emitted
-        vm.expectEmit({ emitter: address(edition1) });
-        emit TokenAdded({ id: 1 });
-
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
-
-        // check token data
-        assertEq(edition1.currentToken(), 1);
-
-        // get attribution
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
-
-        // verify attribution
-        assertEq(parentEdition, address(edition));
-        assertEq(parentTokenId, 1);
-    }
-
-    function test__Mint_WithAttribution_DepthOf1_BalancesUpdated() external {
-        // create edition instance
-        vm.startPrank(users.creator_1);
-
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // create forked token with attribution
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
+        // approve fork
+        _approveToken(address(forkEdition), testMinter);
 
         // compute split
-        uint256 profitShare = controller.profitShare(address(edition), 1);
-        uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
-        uint256 childShare = TEST_TOKEN_PRICE - parentShare;
+        (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE);
 
-        // expect disbursement to be emitted
+        // expect deposit to be emitted
         vm.expectEmit({ emitter: address(controller) });
-        emit Disbursement({ edition: address(edition1), tokenId: 1, amount: childShare });
+        emit Deposited({ recipient: controller.fundsRecipient(address(forkEdition), 1), amount: childShare });
 
         // expect pending to be emitted
         vm.expectEmit({ emitter: address(controller) });
         emit PendingUpdated({
-            edition: address(edition1),
+            edition: address(forkEdition),
             tokenId: 1,
             parent: address(edition),
             parentTokenId: 1,
@@ -273,483 +144,317 @@ contract ControllerTest is BaseTest {
         });
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
+        _mintToken(forkEdition, tokenId, testMinter);
 
         // check balance
-        assertEq(controller.balance(address(edition1), 1), childShare);
+        assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), 1)), childShare);
         assertEq(controller.pending(address(edition), 1), parentShare);
+    }
+
+    function test__Mint_Referral() external {
+        // compute referral fee
+        uint256 referralFee = (TOKEN_PRICE * controller.REFERRAL_FEE()) / 10_000;
+
+        // mint
+        vm.prank(users.user_0);
+        edition.mint(users.user_0, 1, 1, users.user_0, address(0), "");
+
+        // check balance
+        assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee);
+        assertEq(controller.balance(users.user_0), referralFee);
+    }
+
+    function test__Mint_Fork_Referral() external {
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
+
+        // approve fork
+        _approveToken(address(forkEdition), testMinter);
+
+        // compute referral fee
+        uint256 referralFee = (TOKEN_PRICE * controller.REFERRAL_FEE()) / 10_000;
+
+        // mint with referral
+        vm.prank(users.user_0);
+        forkEdition.mint(users.user_0, tokenId, 1, users.user_1, address(0), "");
+
+        // compute split
+        (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE - referralFee);
+
+        // check balances
+        assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), tokenId)), childShare);
+        assertEq(controller.pending(address(edition), 1), parentShare);
+        assertEq(controller.balance(users.user_1), referralFee);
+    }
+
+    function test__RecordFunds() external {
+        // approve
+        vm.prank(users.user_0);
+        mockUSDC.approve(address(controller), type(uint256).max);
+
+        // record funds
+        vm.prank(users.user_0);
+        controller.recordFunds(users.user_1, TOKEN_PRICE);
+
+        // check balance
+        assertEq(controller.balance(users.user_1), TOKEN_PRICE);
+    }
+
+    function test__DisbursePending_Fork_1() external {
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
+
+        // approve fork
+        _approveToken(address(forkEdition), testMinter);
+
+        // compute split
+        (uint256 parentShare,) = _computeSplit(edition, tokenId, TOKEN_PRICE);
+
+        // mint
+        _mintToken(forkEdition, tokenId, testMinter);
+
+        // disburse pending from original edition
+        controller.disbursePending(address(edition), tokenId);
+
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(edition), 1);
+
+        // check balances
+        assertEq(controller.pending(address(edition), 1), 0);
+        assertEq(controller.balance(fundsRecipient), parentShare);
+    }
+
+    function test__DisbursePending_Fork_2() external {
+        _disburse_pending(2);
+    }
+
+    function test__DisbursePending_Fork_3() external {
+        _disburse_pending(3);
+    }
+
+    function test__DisbursePending_Fork_4() external {
+        _disburse_pending(4);
+    }
+
+    function test__DisbursePending_Fork_5() external {
+        _disburse_pending(5);
+    }
+
+    function test__DisbursePending_Fork_6() external {
+        _disburse_pending(6);
+    }
+
+    function test__DisbursePending_Fork_7() external {
+        _disburse_pending(7);
+    }
+
+    function test__DisbursePending_Fork_8() external {
+        _disburse_pending(8);
+    }
+
+    function test__Mint_Fork_3() external {
+        // create forks
+        RouxEdition[] memory editions = _createForks(3);
+
+        // approve fork
+        _approveToken(address(editions[3]), testMinter);
+
+        // assert length is 4 (original + 3 forks)
+        assertEq(editions.length, 4, "length should be 4");
+
+        // mint token
+        _mintToken(editions[3], 1, testMinter);
+
+        // get funds recipient
+        address fork3fundsRecipient = controller.fundsRecipient(address(editions[3]), 1);
+
+        // compute split
+        (uint256 parentShareToFork2, uint256 childShareToFork3) = _computeSplit(editions[3], 1, TOKEN_PRICE);
+
+        // check recipient balance
+        assertEq(controller.balance(fork3fundsRecipient), childShareToFork3);
+
+        // check pending balance
+        assertEq(controller.pending(address(editions[2]), 1), parentShareToFork2);
+    }
+
+    function test__DisbursePendingBatch_Fork_3() external {
+        // create original edition and 3 forks
+        RouxEdition[] memory editions = _createForks(3);
+
+        // approve and mint on the last fork
+        _approveToken(address(editions[3]), testMinter);
+        _mintToken(editions[3], 1, testMinter);
+
+        // create running balances array
+        uint256[] memory runningBalances = new uint256[](creatorArray.length);
+
+        // prepare arrays for batch disburse
+        address[] memory editionAddresses = new address[](3);
+        uint256[] memory tokenIds = new uint256[](3);
+
+        for (uint256 i = 0; i < 3; i++) {
+            editionAddresses[i] = address(editions[2 - i]); // 2nd fork, 1st fork, original
+            tokenIds[i] = 1;
+        }
+
+        // compute expected splits + update running balances using _computeSplit and _getRecipientIndex
+        // fork 3
+        (uint256 parentShare2, uint256 childShare3) = _computeSplit(editions[2], 1, TOKEN_PRICE);
+        address edition3recipient = controller.fundsRecipient(address(editions[3]), 1);
+        runningBalances[_getRecipientIndex(edition3recipient, creatorArray)] += childShare3;
+
+        // fork 2
+        (uint256 parentShare1, uint256 childShare2) = _computeSplit(editions[1], 1, parentShare2);
+        address edition2recipient = controller.fundsRecipient(address(editions[2]), 1);
+        runningBalances[_getRecipientIndex(edition2recipient, creatorArray)] += childShare2;
+
+        // fork 1
+        (uint256 parentShare0, uint256 childShare1) = _computeSplit(editions[0], 1, parentShare1);
+        address edition1recipient = controller.fundsRecipient(address(editions[1]), 1);
+        runningBalances[_getRecipientIndex(edition1recipient, creatorArray)] += childShare1;
+
+        // root
+        address edition0recipient = controller.fundsRecipient(address(editions[0]), 1);
+        runningBalances[_getRecipientIndex(edition0recipient, creatorArray)] += parentShare0;
+
+        // call disbursePendingBatch
+        controller.disbursePendingBatch(editionAddresses, tokenIds);
+
+        // check balances and pending amounts
+        for (uint256 i = 0; i < creatorArray.length; i++) {
+            assertEq(controller.balance(creatorArray[i]), runningBalances[i], "final balance mismatch");
+        }
+
+        for (uint256 i = 0; i < editions.length; i++) {
+            assertEq(controller.pending(address(editions[i]), 1), 0, "pending should be 0 for all editions");
+        }
+
+        // verify total balance matches the initial mint price
+        uint256 totalBalance = childShare3 + childShare2 + childShare1 + parentShare0;
+        assertEq(totalBalance, TOKEN_PRICE, "total balance should match initial mint price");
     }
 
     function test__Withdraw() external {
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(edition), 1);
+
         // cache starting balance
-        uint256 creator0StartingBalance = address(users.creator_0).balance;
+        uint256 fundsRecipientStartingBalance = mockUSDC.balanceOf(fundsRecipient);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        _mintToken(edition, 1, testMinter);
 
         // check balance
-        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
+        assertEq(controller.balance(fundsRecipient), TOKEN_PRICE);
 
         // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(controller) });
-        emit Withdrawn({ edition: address(edition), tokenId: 1, to: users.creator_0, amount: TEST_TOKEN_PRICE });
+        // vm.expectEmit({emitter: address(controller)});
+        // emit Withdrawn({recipient: fundsRecipient, amount: TOKEN_PRICE});
 
         // withdraw
-        controller.withdraw(address(edition), 1);
+        controller.withdraw(fundsRecipient);
 
         // check balance
-        assertEq(address(users.creator_0).balance, creator0StartingBalance + TEST_TOKEN_PRICE);
+        assertEq(mockUSDC.balanceOf(fundsRecipient), fundsRecipientStartingBalance + TOKEN_PRICE);
     }
 
-    function test__Withdraw_WithAttribution_DepthOf1() external {
-        // cache starting balances
-        uint256 creator0StartingBalance = address(users.creator_0).balance;
-        uint256 creator1StartingBalance = address(users.creator_1).balance;
+    function test__Withdraw_Fork_1() external {
+        // cache starting balance
+        uint256 creator0StartingBalance = mockUSDC.balanceOf(users.creator_0);
+        uint256 creator1StartingBalance = mockUSDC.balanceOf(users.creator_1);
 
-        // prank
-        vm.startPrank(users.creator_1);
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
 
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // create forked token with attribution
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
+        // approve fork
+        _approveToken(address(forkEdition), testMinter);
 
         // compute split
-        uint256 profitShare = controller.profitShare(address(edition), 1);
-        uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
-        uint256 childShare = TEST_TOKEN_PRICE - parentShare;
+        (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
+        _mintToken(forkEdition, tokenId, testMinter);
 
-        // check balance
-        assertEq(controller.balance(address(edition1), 1), childShare);
-        assertEq(controller.pending(address(edition), 1), parentShare);
+        // disburse pending from original edition
+        controller.disbursePending(address(edition), tokenId);
 
-        // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(controller) });
-        emit Withdrawn({ edition: address(edition1), tokenId: 1, to: users.creator_1, amount: childShare });
-
-        // withdraw
-        controller.withdraw(address(edition1), 1);
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(edition), 1);
 
         // check balances
-        assertEq(address(users.creator_1).balance, creator1StartingBalance + childShare);
+        assertEq(controller.pending(address(edition), 1), 0);
+        assertEq(controller.balance(fundsRecipient), parentShare);
 
-        // expect withdrawal to be emitted
-        vm.expectEmit({ emitter: address(controller) });
-        emit Withdrawn({ edition: address(edition), tokenId: 1, to: users.creator_0, amount: parentShare });
+        // withdraw - fork
+        vm.prank(users.creator_1);
+        controller.withdraw(controller.fundsRecipient(address(forkEdition), 1));
 
-        // withdraw
-        controller.withdraw(address(edition), 1);
-
-        // check balances
-        assertEq(address(users.creator_0).balance, creator0StartingBalance + parentShare);
-    }
-
-    function test__WithdrawBatch() external {
-        // cache starting balances
-        uint256 creator0StartingBalance = address(users.creator_0).balance;
-
-        // add token
+        // withdraw - original
         vm.prank(users.creator_0);
-        edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
-
-        // mint 2nd token
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 2, 1, "");
-
-        // check balance
-        assertEq(controller.balance(address(edition), 1), TEST_TOKEN_PRICE);
-        assertEq(controller.balance(address(edition), 2), TEST_TOKEN_PRICE);
-
-        // expect withdrawal to be emitted
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 2;
-
-        vm.expectEmit({ emitter: address(controller) });
-        emit WithdrawnBatch({
-            edition: address(edition),
-            tokenIds: tokenIds,
-            to: users.creator_0,
-            amount: TEST_TOKEN_PRICE * 2
-        });
-
-        // withdraw
-        controller.withdrawBatch(address(edition), tokenIds);
+        controller.withdraw(controller.fundsRecipient(address(edition), 1));
 
         // check balances
-        assertEq(address(users.creator_0).balance, creator0StartingBalance + TEST_TOKEN_PRICE * 2);
+        assertEq(mockUSDC.balanceOf(address(users.creator_0)), creator0StartingBalance + parentShare);
+        assertEq(mockUSDC.balanceOf(address(users.creator_1)), creator1StartingBalance + childShare);
     }
 
-    function test__WithdrawBatch_WithAttribution_DepthOf1() external {
-        // cache starting balances
-        uint256 creator1StartingBalance = address(users.creator_1).balance;
+    function test__DisbursePendingAndWithdraw_Fork_1() external {
+        // cache starting balance
+        uint256 creator0StartingBalance = mockUSDC.balanceOf(users.creator_0);
 
-        // prank
-        vm.startPrank(users.creator_1);
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
 
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // create forked token with attribution
-
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        vm.stopPrank();
+        // approve fork
+        _approveToken(address(forkEdition), testMinter);
 
         // compute split
-        uint256 profitShare = controller.profitShare(address(edition), 1);
-        uint256 parentShare = (TEST_TOKEN_PRICE * (10_000 - profitShare)) / 10_000;
-        uint256 childShare = TEST_TOKEN_PRICE - parentShare;
+        (uint256 parentShare,) = _computeSplit(edition, tokenId, TOKEN_PRICE);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 1, 1, "");
+        _mintToken(forkEdition, tokenId, testMinter);
 
-        // check balance
-        assertEq(controller.balance(address(edition1), 1), childShare);
-        assertEq(controller.pending(address(edition), 1), parentShare);
+        // call disburse pending and withdraw
+        controller.disbursePendingAndWithdraw(address(edition), tokenId);
 
-        // create a 2nd token
-        vm.prank(users.creator_1);
-        edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // mint 2nd token
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition1), 2, 1, "");
-
-        // expect withdrawal to be emitted
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 2;
-
-        vm.expectEmit({ emitter: address(controller) });
-        emit WithdrawnBatch({
-            edition: address(edition1),
-            tokenIds: tokenIds,
-            to: users.creator_1,
-            amount: childShare + TEST_TOKEN_PRICE
-        });
-
-        // withdraw
-        controller.withdrawBatch(address(edition1), tokenIds);
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(edition), 1);
 
         // check balances
-        assertEq(address(users.creator_1).balance, creator1StartingBalance + childShare + TEST_TOKEN_PRICE);
+        assertEq(controller.pending(address(edition), 1), 0);
+        assertEq(controller.balance(fundsRecipient), 0);
+
+        // check balances
+        assertEq(mockUSDC.balanceOf(users.creator_0), creator0StartingBalance + parentShare);
     }
 
-    function test__Withdraw_WithAttribution_DepthOf3() external {
-        // prank
-        vm.startPrank(users.creator_1);
-
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
-
-        // create forked token with attribution
-        uint256 tokenId = edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-        vm.stopPrank();
-
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
-
-        assertEq(parentEdition, address(edition));
-        assertEq(parentTokenId, 1);
-
-        // create forked token from the fork with attribution
-        vm.prank(users.creator_0);
-
-        uint256 tokenId2 = edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(edition1),
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // cache starting balances
-        uint256 balance0 = address(users.creator_0).balance;
-        uint256 balance1 = address(users.creator_1).balance;
-
-        // mint 2nd fork
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), tokenId2, 1, "");
-        assertEq(edition.balanceOf(users.user_0, tokenId2), 1);
-
-        // calculate expected splits
-        uint256 edition2CreatorSplit = (TEST_TOKEN_PRICE * TEST_PROFIT_SHARE) / 10_000;
-        uint256 edition1EarnedSplit = (TEST_TOKEN_PRICE * (10_000 - TEST_PROFIT_SHARE)) / 10_000;
-        uint256 edition1CreatorSplit = (edition1EarnedSplit * TEST_PROFIT_SHARE) / 10_000;
-        uint256 rootSplit = (edition1EarnedSplit * (10_000 - TEST_PROFIT_SHARE)) / 10_000;
-
-        // withdraw from fork2, tokenId2
-        vm.prank(users.creator_0);
-        uint256 withdrawalAmount = controller.withdraw(address(edition), tokenId2);
-        assertEq(withdrawalAmount, edition2CreatorSplit);
-
-        // withdraw from fork1
-        vm.prank(users.creator_1);
-        uint256 withdrawalAmount2 = controller.withdraw(address(edition1), tokenId);
-        assertEq(withdrawalAmount2, edition1CreatorSplit);
-
-        // withdraw from root
-        vm.prank(users.creator_0);
-        uint256 withdrawalAmount3 = controller.withdraw(address(edition), 1);
-        assertEq(withdrawalAmount3, rootSplit);
-
-        // verify balances
-        assertEq(address(users.creator_0).balance, balance0 + rootSplit + edition2CreatorSplit);
-        assertEq(address(users.creator_1).balance, balance1 + edition1CreatorSplit);
+    function test__DisbursePendingAndWithdraw_Fork_2() external {
+        _disbursePendingAndWithdraw(2);
     }
 
-    function test__WithdrawBatch_WithAttribution_DepthOf3() external {
-        // prank
-        vm.prank(users.creator_0);
+    function test__DisbursePendingAndWithdraw_Fork_3() external {
+        _disbursePendingAndWithdraw(3);
+    }
 
-        // create second token in root edition
-        uint256 rootTokenId2 = edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
+    function test__DisbursePendingAndWithdraw_Fork_4() external {
+        _disbursePendingAndWithdraw(4);
+    }
 
-        // prank
-        vm.startPrank(users.creator_1);
+    function test__DisbursePendingAndWithdraw_Fork_5() external {
+        _disbursePendingAndWithdraw(5);
+    }
 
-        // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        RouxEdition edition1 = RouxEdition(factory.create(params));
+    function test__DisbursePendingAndWithdraw_Fork_6() external {
+        _disbursePendingAndWithdraw(6);
+    }
 
-        // create forked token with attribution
-        uint256 forkOneTokenId1 = edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition), // edition token 1
-            1,
-            address(editionMinter),
-            optionalMintParams
-        );
+    function test__DisbursePendingAndWithdraw_Fork_7() external {
+        _disbursePendingAndWithdraw(7);
+    }
 
-        // create forked token with attribution from 2nd token
-        uint256 forkOneTokenId2 = edition1.add(
-            TEST_TOKEN_URI,
-            users.creator_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_1,
-            TEST_PROFIT_SHARE,
-            address(edition), // edition token 2
-            rootTokenId2,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        vm.stopPrank();
-
-        // verify attribution
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), forkOneTokenId1);
-        assertEq(parentEdition, address(edition));
-        assertEq(parentTokenId, 1);
-
-        (address parentEdition2, uint256 parentTokenId2) = registry.attribution(address(edition1), forkOneTokenId2);
-        assertEq(parentEdition2, address(edition));
-        assertEq(parentTokenId2, rootTokenId2);
-
-        // add user_1 to allowlist
-        vm.prank(users.deployer);
-        address[] memory allowlist = new address[](1);
-        allowlist[0] = address(users.user_1);
-        factory.addAllowlist(allowlist);
-
-        // create forked token from the fork with attribution
-        vm.startPrank(users.user_1);
-
-        // create another edition instance
-        RouxEdition edition2 = RouxEdition(factory.create(params));
-
-        // add forked token
-        uint256 forkTwoTokenId1 = edition2.add(
-            TEST_TOKEN_URI,
-            users.user_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.user_1,
-            TEST_PROFIT_SHARE,
-            address(edition1),
-            forkOneTokenId1,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // add second forked token
-        uint256 forkTwoTokenId2 = edition2.add(
-            TEST_TOKEN_URI,
-            users.user_1,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.user_1,
-            TEST_PROFIT_SHARE,
-            address(edition1),
-            forkOneTokenId2,
-            address(editionMinter),
-            optionalMintParams
-        );
-
-        // verify attribution
-        (address parentEdition3, uint256 parentTokenId3) = registry.attribution(address(edition2), forkTwoTokenId1);
-        assertEq(parentEdition3, address(edition1));
-        assertEq(parentTokenId3, forkOneTokenId1);
-
-        (address parentEdition4, uint256 parentTokenId4) = registry.attribution(address(edition2), forkTwoTokenId2);
-        assertEq(parentEdition4, address(edition1));
-        assertEq(parentTokenId4, forkOneTokenId2);
-
-        // cache starting balances
-        uint256 balance0 = address(users.creator_0).balance; // original creator
-        uint256 balance1 = address(users.creator_1).balance; // 1st fork creator
-        uint256 balanceUser1 = address(users.user_1).balance; // 2nd fork creator
-
-        vm.stopPrank();
-
-        // mint 2nd fork tokens
-        vm.startPrank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition2), forkTwoTokenId1, 1, "");
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition2), forkTwoTokenId2, 1, "");
-        vm.stopPrank();
-
-        assertEq(edition2.balanceOf(users.user_0, forkTwoTokenId1), 1);
-        assertEq(edition2.balanceOf(users.user_0, forkTwoTokenId2), 1);
-
-        // calculate expected splits
-        uint256 edition2CreatorSplit = (TEST_TOKEN_PRICE * TEST_PROFIT_SHARE) / 10_000;
-        uint256 edition1EarnedSplit = (TEST_TOKEN_PRICE * (10_000 - TEST_PROFIT_SHARE)) / 10_000;
-        uint256 edition1CreatorSplit = (edition1EarnedSplit * TEST_PROFIT_SHARE) / 10_000;
-        uint256 rootSplit = (edition1EarnedSplit * (10_000 - TEST_PROFIT_SHARE)) / 10_000;
-
-        // verify balances
-        assertEq(controller.balance(address(edition2), forkTwoTokenId1), edition2CreatorSplit, "fork2 creator split 1");
-        assertEq(controller.balance(address(edition2), forkTwoTokenId2), edition2CreatorSplit, "fork2 creator split 2");
-        assertEq(controller.pending(address(edition1), forkOneTokenId1), edition1EarnedSplit, "fork1 earned split 1");
-        assertEq(controller.pending(address(edition1), forkOneTokenId2), edition1EarnedSplit, "fork1 earned split 2");
-
-        uint256[] memory fork2TokenIds = new uint256[](2);
-        fork2TokenIds[0] = forkTwoTokenId1;
-        fork2TokenIds[1] = forkTwoTokenId2;
-
-        assertEq(
-            controller.balanceBatch(address(edition2), fork2TokenIds),
-            edition2CreatorSplit * 2,
-            "fork2 creator split total"
-        );
-
-        // withdraw batch from fork2
-        vm.prank(users.user_1);
-        uint256 withdrawalAmount = controller.withdrawBatch(address(edition2), fork2TokenIds);
-        assertEq(withdrawalAmount, edition2CreatorSplit * 2, "fork2 creator split");
-
-        uint256[] memory fork1TokenIds = new uint256[](2);
-        fork1TokenIds[0] = forkOneTokenId1;
-        fork1TokenIds[1] = forkOneTokenId2;
-
-        // withdraw batch from fork1
-        vm.prank(users.creator_1);
-        uint256 withdrawalAmount2 = controller.withdrawBatch(address(edition1), fork1TokenIds);
-        assertEq(withdrawalAmount2, edition1CreatorSplit * 2, "fork1 creator split");
-
-        assertEq(controller.pending(address(edition), 1), rootSplit, "root split 1");
-        assertEq(controller.pending(address(edition), rootTokenId2), rootSplit, "root split 2");
-
-        // withdraw from root
-        uint256[] memory rootTokenIds = new uint256[](2);
-        rootTokenIds[0] = 1;
-        rootTokenIds[1] = rootTokenId2;
-
-        console.log("withdraw from root");
-        vm.prank(users.creator_0);
-        uint256 withdrawalAmount3 = controller.withdrawBatch(address(edition), rootTokenIds);
-        assertEq(withdrawalAmount3, rootSplit * 2, "fork1 parent split");
-
-        // verify balances
-        assertEq(address(users.creator_0).balance, balance0 + rootSplit * 2, "creator 0 balance");
-        assertEq(address(users.creator_1).balance, balance1 + edition1CreatorSplit * 2, "creator 1 balance");
-        assertEq(address(users.user_1).balance, balanceUser1 + edition2CreatorSplit * 2, "user 1 balance");
-
-        // verify user balances are zero
-        assertEq(controller.balanceBatch(address(edition), rootTokenIds), 0);
-        assertEq(controller.balanceBatch(address(edition1), fork1TokenIds), 0);
-        assertEq(controller.balanceBatch(address(edition2), fork2TokenIds), 0);
+    function test__DisbursePendingAndWithdraw_Fork_8() external {
+        _disbursePendingAndWithdraw(8);
     }
 
     function test__PlatformFee_RecordedOnMint() external {
@@ -761,11 +466,10 @@ contract ControllerTest is BaseTest {
         controller.enablePlatformFee(true);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        _mintToken(edition, 1, testMinter);
 
         // check balance
-        assertEq(controller.platformFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000);
     }
 
     function test__DisablePlatformFee() external {
@@ -773,11 +477,10 @@ contract ControllerTest is BaseTest {
         controller.enablePlatformFee(true);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        _mintToken(edition, 1, testMinter);
 
         // check balance
-        assertEq(controller.platformFeeBalance(), (TEST_TOKEN_PRICE * 1_000) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000);
 
         // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
@@ -790,17 +493,16 @@ contract ControllerTest is BaseTest {
 
     function test__WithdrawPlatformFee() external {
         // cache deployer starting balance
-        uint256 startingBalance = address(users.deployer).balance;
+        uint256 startingBalance = mockUSDC.balanceOf(users.deployer);
 
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
         // mint
-        vm.prank(users.user_0);
-        editionMinter.mint{ value: TEST_TOKEN_PRICE }(users.user_0, address(edition), 1, 1, "");
+        _mintToken(edition, 1, testMinter);
 
         // expected admin fee
-        uint256 expectedPlatformFee = (TEST_TOKEN_PRICE * 1_000) / 10_000;
+        uint256 expectedPlatformFee = (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000;
 
         // check balance
         assertEq(controller.platformFeeBalance(), expectedPlatformFee);
@@ -813,26 +515,255 @@ contract ControllerTest is BaseTest {
         assertEq(controller.platformFeeBalance(), 0);
 
         // check deployer balance
-        assertEq(address(users.deployer).balance, startingBalance + expectedPlatformFee);
+        assertEq(mockUSDC.balanceOf(users.deployer), startingBalance + expectedPlatformFee);
     }
 
-    function test__SetController_NewFundsRecipient() external {
-        vm.startPrank(users.creator_0);
-        uint256 tokenId = edition.add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(editionMinter),
-            optionalMintParams
-        );
+    /* -------------------------------------------- */
+    /* utility                                      */
+    /* -------------------------------------------- */
 
-        edition.updateControllerData(tokenId, users.creator_1, TEST_PROFIT_SHARE);
+    function _getRecipientIndex(address recipient, address[] memory recipientArray) internal pure returns (uint256) {
+        uint256 recipientIndex = type(uint256).max;
+        for (uint256 j = 0; j < recipientArray.length; j++) {
+            if (recipientArray[j] == recipient) {
+                recipientIndex = j;
+                break;
+            }
+        }
+        if (recipientIndex == type(uint256).max) revert("Recipient not found in creatorArray");
+        return recipientIndex;
+    }
 
-        // check controller data
-        assertEq(controller.fundsRecipient(address(edition), tokenId), users.creator_1);
+    function _disburse_pending(uint256 numForks) internal {
+        // create forks
+        RouxEdition[] memory editions = _createForks(numForks);
+
+        // validate length
+        assertEq(editions.length, numForks + 1, "length should be numForks + 1");
+
+        // approve last fork
+        _approveToken(address(editions[editions.length - 1]), testMinter);
+
+        // create running balances array
+        uint256[] memory runningBalances = new uint256[](creatorArray.length);
+
+        // mint last fork
+        _mintToken(editions[editions.length - 1], 1, testMinter);
+
+        // initialize remaining amount
+        uint256 remainingAmount = TOKEN_PRICE;
+
+        // process editions
+        for (uint256 i = editions.length - 1; i >= 0; i--) {
+            // get recipient
+            address recipient = controller.fundsRecipient(address(editions[i]), 1);
+
+            // get recipient index
+            uint256 recipientIndex = _getRecipientIndex(recipient, creatorArray);
+
+            // get current balance
+            uint256 currentBalance = controller.balance(recipient);
+
+            // get current pending
+            uint256 currentPending = controller.pending(address(editions[i]), 1);
+
+            // last fork
+            if (i == editions.length - 1) {
+                (uint256 parentShare, uint256 childShare) = _computeSplit(editions[i - 1], 1, remainingAmount);
+
+                // update running balances
+                runningBalances[recipientIndex] += childShare;
+
+                // validate balances
+                assertEq(currentBalance, runningBalances[recipientIndex], "last fork balance incorrect");
+                assertEq(currentPending, 0, "last fork pending should be 0");
+
+                // update remaining amount
+                remainingAmount = parentShare;
+            } else {
+                // validate pending
+                assertApproxEqAbs(currentPending, remainingAmount, 1, "pending amount incorrect");
+
+                // call disburse pending (anyone can call)
+                controller.disbursePending(address(editions[i]), 1);
+
+                // calculate running balance if not root
+                if (i > 0) {
+                    // compute split
+                    (uint256 parentShare, uint256 childShare) = _computeSplit(editions[i - 1], 1, remainingAmount);
+
+                    // update running balances
+                    runningBalances[recipientIndex] += childShare;
+
+                    // validate balances
+                    assertApproxEqAbs(
+                        controller.balance(recipient),
+                        runningBalances[recipientIndex],
+                        1,
+                        string(abi.encodePacked("balance after disburse incorrect for edition ", Strings.toString(i)))
+                    );
+
+                    // validate pending
+                    assertApproxEqAbs(
+                        controller.pending(address(editions[i]), 1), 0, 1, "pending after disburse should be 0"
+                    );
+
+                    // update remaining amount
+                    remainingAmount = parentShare;
+                } else {
+                    // calculate balance if root - update running balance with remaining amount
+                    runningBalances[recipientIndex] += remainingAmount;
+
+                    // validate balances
+                    assertApproxEqAbs(
+                        controller.balance(recipient),
+                        runningBalances[recipientIndex],
+                        1,
+                        "root balance after disburse incorrect"
+                    );
+
+                    // validate pending
+                    assertEq(controller.pending(address(editions[i]), 1), 0, "root pending after disburse should be 0");
+
+                    // remaining amount is now 0
+                    remainingAmount = 0;
+                }
+            }
+
+            if (i == 0) break; // Break the loop when i becomes 0 to avoid underflow
+        }
+
+        uint256 totalDistributed = 0;
+        for (uint256 j = 0; j < creatorArray.length; j++) {
+            uint256 actualBalance = controller.balance(creatorArray[j]);
+            totalDistributed += actualBalance;
+            assertApproxEqAbs(actualBalance, runningBalances[j], 1, "final balance mismatch");
+        }
+        assertEq(totalDistributed, TOKEN_PRICE, "total distributed not equal to token price");
+    }
+
+    function _disbursePendingAndWithdraw(uint256 numForks) internal {
+        // create forks
+        RouxEdition[] memory editions = _createForks(numForks);
+
+        // validate length
+        assertEq(editions.length, numForks + 1, "length should be numForks + 1");
+
+        // approve last fork
+        _approveToken(address(editions[editions.length - 1]), testMinter);
+
+        // create running withdrawal amounts array
+        uint256[] memory runningWithdrawals = new uint256[](creatorArray.length);
+
+        // store initial balances
+        uint256[] memory initialBalances = new uint256[](creatorArray.length);
+        for (uint256 i = 0; i < creatorArray.length; i++) {
+            initialBalances[i] = mockUSDC.balanceOf(creatorArray[i]);
+        }
+
+        // mint last fork
+        _mintToken(editions[editions.length - 1], 1, testMinter);
+
+        // initialize remaining amount
+        uint256 remainingAmount = TOKEN_PRICE;
+
+        // process editions
+        for (uint256 i = editions.length - 1; i >= 0; i--) {
+            // get recipient
+            address recipient = controller.fundsRecipient(address(editions[i]), 1);
+
+            // get recipient index
+            uint256 recipientIndex = type(uint256).max;
+            for (uint256 j = 0; j < creatorArray.length; j++) {
+                if (creatorArray[j] == recipient) {
+                    recipientIndex = j;
+                    break;
+                }
+            }
+            if (recipientIndex == type(uint256).max) revert("Recipient not found in creatorArray");
+
+            // get current pending
+            uint256 currentPending = controller.pending(address(editions[i]), 1);
+
+            // last fork
+            if (i == editions.length - 1) {
+                (uint256 parentShare, uint256 childShare) = _computeSplit(editions[i - 1], 1, remainingAmount);
+
+                // update running withdrawals
+                runningWithdrawals[recipientIndex] += childShare;
+
+                // validate pending
+                assertEq(currentPending, 0, "last fork pending should be 0");
+
+                // call normal withdraw for last fork
+                controller.withdraw(recipient);
+
+                // validate actual withdrawal
+                assertApproxEqAbs(
+                    mockUSDC.balanceOf(recipient) - initialBalances[recipientIndex],
+                    runningWithdrawals[recipientIndex],
+                    1,
+                    "last fork withdrawal incorrect"
+                );
+
+                // update remaining amount
+                remainingAmount = parentShare;
+            } else {
+                // validate pending
+                assertApproxEqAbs(currentPending, remainingAmount, 1, "pending amount incorrect");
+
+                // call disburse pending and withdraw
+                controller.disbursePendingAndWithdraw(address(editions[i]), 1);
+
+                if (i > 0) {
+                    // compute split
+                    (uint256 parentShare, uint256 childShare) = _computeSplit(editions[i - 1], 1, remainingAmount);
+
+                    // update running withdrawals
+                    runningWithdrawals[recipientIndex] += childShare;
+
+                    // validate actual withdrawal
+                    assertApproxEqAbs(
+                        mockUSDC.balanceOf(recipient) - initialBalances[recipientIndex],
+                        runningWithdrawals[recipientIndex],
+                        1,
+                        string(abi.encodePacked("withdrawal incorrect for edition ", Strings.toString(i)))
+                    );
+
+                    // validate pending is now 0
+                    assertEq(controller.pending(address(editions[i]), 1), 0, "pending after withdraw should be 0");
+
+                    // update remaining amount
+                    remainingAmount = parentShare;
+                } else {
+                    // root edition - withdraw remaining amount
+                    runningWithdrawals[recipientIndex] += remainingAmount;
+
+                    // validate actual withdrawal
+                    assertApproxEqAbs(
+                        mockUSDC.balanceOf(recipient) - initialBalances[recipientIndex],
+                        runningWithdrawals[recipientIndex],
+                        1,
+                        "root withdrawal incorrect"
+                    );
+
+                    // validate pending
+                    assertEq(controller.pending(address(editions[i]), 1), 0, "root pending after withdraw should be 0");
+
+                    // remaining amount is now 0
+                    remainingAmount = 0;
+                }
+            }
+
+            if (i == 0) break; // Break the loop when i becomes 0 to avoid underflow
+        }
+
+        uint256 totalWithdrawn = 0;
+        for (uint256 j = 0; j < creatorArray.length; j++) {
+            uint256 actualWithdrawn = mockUSDC.balanceOf(creatorArray[j]) - initialBalances[j];
+            totalWithdrawn += actualWithdrawn;
+            assertApproxEqAbs(actualWithdrawn, runningWithdrawals[j], 1, "final withdrawal mismatch");
+        }
+        assertEq(totalWithdrawn, TOKEN_PRICE, "total withdrawn not equal to token price");
     }
 }

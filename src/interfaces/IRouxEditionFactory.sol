@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 interface IRouxEditionFactory {
     /* -------------------------------------------- */
@@ -37,6 +37,12 @@ interface IRouxEditionFactory {
      * @return all editions
      */
     function getEditions() external view returns (address[] memory);
+
+    /**
+     * @notice check if caller can create an edition
+     * @param caller caller
+     */
+    function canCreate(address caller) external view returns (bool);
 
     /* -------------------------------------------- */
     /* write functions                              */

@@ -6,9 +6,13 @@ abstract contract Events {
     /* Controller                                   */
     /* -------------------------------------------- */
 
-    event Disbursement(address indexed edition, uint256 indexed tokenId, uint256 amount);
+    event Deposited(address indexed recipient, uint256 amount);
     event PendingUpdated(
-        address edition, uint256 indexed tokenId, address parent, uint256 indexed parentTokenId, uint256 amount
+        address edition,
+        uint256 indexed tokenId,
+        address parent,
+        uint256 indexed parentTokenId,
+        uint256 amount
     );
     event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
     event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
@@ -18,7 +22,10 @@ abstract contract Events {
     /* Registry                                     */
     /* -------------------------------------------- */
     event RegistryUpdated(
-        address indexed edition, uint256 indexed tokenId, address indexed parentEdition, uint256 parentTokenId
+        address indexed edition,
+        uint256 indexed tokenId,
+        address indexed parentEdition,
+        uint256 parentTokenId
     );
 
     /* -------------------------------------------- */
@@ -38,10 +45,18 @@ abstract contract Events {
     /* -------------------------------------------- */
 
     event TransferSingle(
-        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256 id,
+        uint256 amount
     );
     event TransferBatch(
-        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] amounts
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256[] ids,
+        uint256[] amounts
     );
     event ApprovalForAll(address indexed owner, address indexed operator, bool isApproved);
     event URI(string value, uint256 indexed id);

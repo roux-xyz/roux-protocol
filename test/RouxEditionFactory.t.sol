@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
@@ -15,13 +15,16 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__RevertWhen_OnlyAllowlist() external {
-        vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
-
-        vm.prank(users.user_0);
+        vm.startPrank(users.user_0);
 
         // create edition instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        factory.create(params);
+        bytes memory params = abi.encode(CONTRACT_URI);
+        RouxEdition edition_ = RouxEdition(factory.create(params));
+
+        vm.expectRevert(IRouxEdition.OnlyAllowlist.selector);
+        edition_.add(defaultAddParams);
+
+        vm.stopPrank();
     }
 
     function test__RevertWhen_OnlyOwner_AddAllowlist() external {
@@ -43,7 +46,7 @@ contract RouxEditionFactoryTest is BaseTest {
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
         // init data
-        bytes memory initData = abi.encodeWithSelector(factory.initialize.selector);
+        bytes memory initData = abi.encodeWithSelector(factory.initialize.selector, users.deployer);
 
         // upgrade
         vm.expectRevert("Already initialized");
@@ -63,7 +66,7 @@ contract RouxEditionFactoryTest is BaseTest {
 
         // allow anyone to create
         vm.prank(users.user_0);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
+        bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -84,7 +87,7 @@ contract RouxEditionFactoryTest is BaseTest {
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
         vm.prank(users.creator_2);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
+        bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -98,22 +101,27 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.deployer);
         RouxEditionFactory(factory).addAllowlist(allowlist);
 
-        // remove edition from allowlist
+        // remove user from allowlist
         vm.prank(users.deployer);
         RouxEditionFactory(factory).removeAllowlist(users.creator_2);
 
-        // attempt to create new edition
-        vm.prank(users.creator_2);
-        vm.expectRevert(IRouxEditionFactory.OnlyAllowlist.selector);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
-        factory.create(params);
+        // add new edition
+        vm.startPrank(users.creator_2);
+        bytes memory params = abi.encode(CONTRACT_URI);
+        RouxEdition edition1 = RouxEdition(factory.create(params));
+
+        // attempt to add token
+        vm.expectRevert(IRouxEdition.OnlyAllowlist.selector);
+        edition1.add(defaultAddParams);
+
+        vm.stopPrank();
     }
 
     function test__Create() external {
         vm.prank(users.creator_0);
 
         // create instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
+        bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -121,7 +129,7 @@ contract RouxEditionFactoryTest is BaseTest {
 
     function test__IsEdition_True() external {
         vm.prank(users.creator_0);
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
+        bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
@@ -144,7 +152,7 @@ contract RouxEditionFactoryTest is BaseTest {
         address[] memory editions = new address[](3);
 
         // set params
-        bytes memory params = abi.encode(TEST_CONTRACT_URI);
+        bytes memory params = abi.encode(CONTRACT_URI);
 
         vm.prank(users.creator_0);
         editions[0] = factory.create(params);

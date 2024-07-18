@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { RouxEdition } from "src/RouxEdition.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
@@ -16,6 +17,7 @@ import { IRegistry } from "src/interfaces/IRegistry.sol";
  */
 contract Controller is IController, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
+    using SafeERC20 for IERC20;
 
     /* -------------------------------------------- */
     /* constants                                    */
@@ -23,11 +25,10 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
 
     /**
      * @notice Controller storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxController.rouxContollerStorage")) - 1)) &
-     * ~bytes32(uint256(0xff));
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxController.controllerStorage")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_CONTROLLER_STORAGE_SLOT =
-        0x3bc9af0df4c5885c004faa3875945a13032d22a808904023c4e4d719ec439800;
+        0x6ee44408b62b797b2b3f7454b8d82b4275ea0345c9fb009071c08e21e5ce6a00;
 
     /**
      * @notice basis point scale
@@ -37,43 +38,80 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     /**
      * @notice platform fee
      *
-     * @dev 1000 basis points / 10%
+     * @dev 1000 basis points / 20%
      */
-    uint256 internal constant PLATFORM_FEE = 1_000;
+    uint256 public constant PLATFORM_FEE = 2_000;
+
+    /**
+     * @notice platform fee
+     *
+     * @dev 500 basis points / 5%
+     */
+    uint256 public constant REFERRAL_FEE = 500;
+
+    /**
+     * @notice collection fee
+     *
+     * @dev 2000 basis points / 20%
+     */
+    uint256 public constant COLLECTION_FEE = 2_000;
 
     /**
      * @notice registry
      */
     IRegistry internal immutable _registry;
 
+    /**
+     * @notice currency
+     */
+    IERC20 internal immutable _currency;
+
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
 
     /**
+     * @notice attribution data
+     * @param fundsRecipient funds recipient
+     * @param profitShare profit share
+     */
+    struct TokenConfig {
+        address fundsRecipient;
+        uint16 profitShare;
+    }
+
+    /**
      * @notice RouxEdition storage
-     * @custom:storage-location erc7201:rouxController.rouxControllerStorage
+     * @custom:storage-location erc7201:rouxController.cntrollerStorage
+     * @param initialized whether the contract has been initialized
+     * @param platformFeeEnabled whether platform fee is enabled
+     * @param platformFeeBalance platform fee balance
+     * @param tokenConfig token data
+     * @param tokenPending token pending
+     * @param balance balance
      */
     struct ControllerStorage {
         bool initialized;
         bool platformFeeEnabled;
         uint192 platformFeeBalance;
-        uint48 gap;
-        mapping(address edition => mapping(uint256 tokenId => ControllerData)) controllerData;
-        mapping(address edition => mapping(uint256 tokenId => uint256 balance)) balance;
-        mapping(address edition => mapping(uint256 tokenId => uint256 amount)) pending;
+        mapping(address edition => mapping(uint256 tokenId => TokenConfig)) tokenConfig;
+        mapping(address edition => mapping(uint256 tokenId => uint256 amount)) tokenPending;
+        mapping(address fundsRecipient => uint256 balance) balance;
     }
 
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
-    constructor(address registry) {
+    constructor(address registry, address currency_) {
         // disable initialization of implementation contract
         _storage().initialized = true;
 
         // set registry
         _registry = IRegistry(registry);
+
+        // set currency
+        _currency = IERC20(currency_);
 
         // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
@@ -117,26 +155,22 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     /**
      * @inheritdoc IController
      */
-    function balance(address edition, uint256 tokenId) external view returns (uint256) {
-        return _storage().balance[edition][tokenId];
+    function currency() external view returns (address) {
+        return address(_currency);
     }
 
     /**
      * @inheritdoc IController
      */
-    function balanceBatch(address edition, uint256[] calldata tokenIds) external view returns (uint256) {
-        uint256 total;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            total += _storage().balance[edition][tokenIds[i]];
-        }
-        return total;
+    function balance(address recipient) external view returns (uint256) {
+        return _storage().balance[recipient];
     }
 
     /**
      * @inheritdoc IController
      */
     function pending(address edition, uint256 tokenId) external view returns (uint256) {
-        return _storage().pending[edition][tokenId];
+        return _storage().tokenPending[edition][tokenId];
     }
 
     /**
@@ -150,14 +184,14 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
      * @inheritdoc IController
      */
     function profitShare(address edition, uint256 tokenId) external view returns (uint256) {
-        return _storage().controllerData[edition][tokenId].profitShare;
+        return _storage().tokenConfig[edition][tokenId].profitShare;
     }
 
     /**
      * @inheritdoc IController
      */
     function fundsRecipient(address edition, uint256 tokenId) external view returns (address) {
-        return _storage().controllerData[edition][tokenId].fundsRecipient;
+        return _storage().tokenConfig[edition][tokenId].fundsRecipient;
     }
 
     /* -------------------------------------------- */
@@ -175,96 +209,100 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         if (fundsRecipient_ == address(0)) revert InvalidFundsRecipient();
 
         // revert if profit share is decreased
-        if (profitShare_ > BASIS_POINT_SCALE || profitShare_ < $.controllerData[msg.sender][tokenId].profitShare) {
+        if (profitShare_ > BASIS_POINT_SCALE || profitShare_ < $.tokenConfig[msg.sender][tokenId].profitShare) {
             revert InvalidProfitShare();
         }
 
         // set controller data for edition + token id
-        ControllerData storage d = $.controllerData[msg.sender][tokenId];
+        TokenConfig storage d = $.tokenConfig[msg.sender][tokenId];
 
         d.fundsRecipient = fundsRecipient_;
         d.profitShare = profitShare_;
+
+        // emit ControllerDataUpdated(msg.sender, tokenId, fundsRecipient_, profitShare_);
     }
 
     /**
      * @inheritdoc IController
      */
-    function disburse(address edition, uint256 tokenId) external payable nonReentrant {
-        // handle mint fee
+    function disburse(uint256 tokenId, uint256 amount, address referrer) external payable nonReentrant {
+        // transfer payment
+        _transferPayment(msg.sender, amount);
+
+        // handle platform fee
         uint192 fee;
         if (_storage().platformFeeEnabled) {
-            fee = ((msg.value * PLATFORM_FEE) / BASIS_POINT_SCALE).toUint192();
+            fee = ((amount * PLATFORM_FEE) / BASIS_POINT_SCALE).toUint192();
             _storage().platformFeeBalance += fee;
         }
 
-        // disburse
-        _disburse(edition, tokenId, msg.value - fee);
-    }
-
-    /**
-     * @inheritdoc IController
-     */
-    function withdraw(address edition, uint256 tokenId) external nonReentrant returns (uint256) {
-        // get storage
-        ControllerStorage storage $ = _storage();
-
-        // cache edition's funds recipient
-        address fundsRecipient_ = $.controllerData[edition][tokenId].fundsRecipient;
-
-        // disburse pending balance (updates balance and parent's pending balance)
-        _disburse(edition, tokenId, $.pending[edition][tokenId]);
-
-        // cache balance
-        uint256 amount = $.balance[edition][tokenId];
-
-        // decrement balance
-        $.balance[edition][tokenId] -= amount;
-
-        // transfer to funding recipient
-        (bool success,) = fundsRecipient_.call{ value: amount }("");
-        if (!success) revert TransferFailed();
-
-        emit Withdrawn(edition, tokenId, fundsRecipient_, amount);
-
-        return amount;
-    }
-
-    /**
-     * @inheritdoc IController
-     */
-    function withdrawBatch(address edition, uint256[] calldata tokenIds) external nonReentrant returns (uint256) {
-        // get storage
-        ControllerStorage storage $ = _storage();
-
-        // cache funding recipient
-        address fundsRecipient_ = $.controllerData[edition][tokenIds[0]].fundsRecipient;
-
-        // compute balance
-        uint256 amount;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            // validate funding recipient
-            if ($.controllerData[edition][tokenIds[i]].fundsRecipient != fundsRecipient_) {
-                revert InvalidFundsRecipient();
-            }
-
-            // disburse pending balance
-            _disburse(edition, tokenIds[i], $.pending[edition][tokenIds[i]]);
-
-            // update amount
-            uint256 tokenAmount = $.balance[edition][tokenIds[i]];
-            amount += tokenAmount;
-
-            // decrement balance
-            $.balance[edition][tokenIds[i]] -= tokenAmount;
+        // handle referral fee
+        uint192 referralFee;
+        if (referrer != address(0)) {
+            referralFee = ((amount * REFERRAL_FEE) / BASIS_POINT_SCALE).toUint192();
+            _storage().balance[referrer] += referralFee;
         }
 
-        // transfer to funding recipient
-        (bool success,) = fundsRecipient_.call{ value: amount }("");
-        if (!success) revert TransferFailed();
+        // disburse
+        _disburse(msg.sender, tokenId, amount - fee - referralFee);
+    }
 
-        emit WithdrawnBatch(edition, tokenIds, fundsRecipient_, amount);
+    /**
+     * @inheritdoc IController
+     */
+    function recordFunds(address recipient, uint256 amount) external payable nonReentrant {
+        // transfer payment
+        _transferPayment(msg.sender, amount);
 
-        return amount;
+        // record funds
+        _storage().balance[recipient] += amount;
+
+        emit Deposited(recipient, amount);
+    }
+
+    /**
+     * @inheritdoc IController
+     */
+    function disbursePending(address edition, uint256 tokenId) external nonReentrant {
+        // disburse pending balance (updates balance and parent's pending balance)
+        _disbursePending(edition, tokenId);
+    }
+
+    /**
+     * @inheritdoc IController
+     */
+    function disbursePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external nonReentrant {
+        // validate arrays
+        if (editions.length != tokenIds.length) revert InvalidArrayLength();
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            // disburse pending balance
+            _disbursePending(editions[i], tokenIds[i]);
+        }
+    }
+
+    /**
+     * @inheritdoc IController
+     */
+    function disbursePendingAndWithdraw(address edition, uint256 tokenId) external nonReentrant returns (uint256) {
+        // get storage
+        ControllerStorage storage $ = _storage();
+
+        // disburse pending balance
+        _disbursePending(edition, tokenId);
+
+        // get funds recipient
+        address fundsRecipient_ = $.tokenConfig[edition][tokenId].fundsRecipient;
+
+        // withdraw
+        return _withdraw(fundsRecipient_);
+    }
+
+    /**
+     * @inheritdoc IController
+     */
+    function withdraw(address recipient) external nonReentrant returns (uint256) {
+        return _withdraw(recipient);
     }
 
     /* -------------------------------------------- */
@@ -296,8 +334,7 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         $.platformFeeBalance = 0;
 
         // transfer to owner
-        (bool success,) = to.call{ value: amount }("");
-        if (!success) revert TransferFailed();
+        _currency.safeTransfer(to, amount);
 
         return amount;
     }
@@ -332,6 +369,43 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
 
     /**
+     * @notice handle transfer payment
+     * @param from sender
+     * @param amount amount
+     */
+    function _transferPayment(address from, uint256 amount) internal {
+        // cache currency balance
+        uint256 startingBalance = _currency.balanceOf(address(this));
+
+        // transfer currency
+        _currency.safeTransferFrom(from, address(this), amount);
+
+        // validate transfer
+        if (_currency.balanceOf(address(this)) != startingBalance + amount) {
+            revert TransferFailed();
+        }
+    }
+
+    /**
+     * @notice disburse pending balance
+     * @param edition edition
+     * @param tokenId token id
+     */
+    function _disbursePending(address edition, uint256 tokenId) internal {
+        // get storage
+        ControllerStorage storage $ = _storage();
+
+        // pending balance
+        uint256 pendingBalance = $.tokenPending[edition][tokenId];
+
+        // set pending balance to zero
+        $.tokenPending[edition][tokenId] = 0;
+
+        // disburse pending balance (updates balance and parent's pending balance)
+        _disburse(edition, tokenId, pendingBalance);
+    }
+
+    /**
      * @notice disburse proceeds to edition and parent
      * @param edition edition
      * @param tokenId token id
@@ -348,27 +422,55 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         // retrieve parent data
         (address parentEdition, uint256 parentTokenId) = _registry.attribution(edition, tokenId);
 
-        // if root, increment current edition balance
+        // get recipient
+        address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;
+
+        // if root, increment recipient's balance
         if (parentEdition == address(0)) {
-            $.balance[edition][tokenId] += amount;
-            emit Disbursement(edition, tokenId, amount);
+            // increment recipient's balance
+            $.balance[recipient] += amount;
+
+            emit Deposited(recipient, amount);
         } else {
             // if not root, compute split, increment balance for current edition and increment pending for parent
             // get profit share from parent
-            uint256 parentProfitShareBps = $.controllerData[parentEdition][parentTokenId].profitShare;
+            uint256 currentEditionProfitShare = $.tokenConfig[parentEdition][parentTokenId].profitShare;
 
             // calculate share of proceeds
-            uint256 currentEditionShare = (amount * parentProfitShareBps) / BASIS_POINT_SCALE;
+            uint256 currentEditionShare = (amount * currentEditionProfitShare) / BASIS_POINT_SCALE;
             uint256 parentShare = amount - currentEditionShare;
 
-            // increment currentEdition balance by its share
-            $.balance[edition][tokenId] += currentEditionShare;
+            // increment recipient's balance
+            $.balance[recipient] += currentEditionShare;
 
-            // increment the parent's pending balance - will be disbursed when parent withdraws
-            $.pending[parentEdition][parentTokenId] += parentShare;
+            // increment the parent's pending balance
+            $.tokenPending[parentEdition][parentTokenId] += parentShare;
 
-            emit Disbursement(edition, tokenId, currentEditionShare);
+            emit Deposited(recipient, currentEditionShare);
             emit PendingUpdated(edition, tokenId, parentEdition, parentTokenId, parentShare);
         }
+    }
+
+    /**
+     * @notice withdraw
+     * @param recipient recipient
+     * @return amount amount withdrawn
+     */
+    function _withdraw(address recipient) internal returns (uint256) {
+        // get storage
+        ControllerStorage storage $ = _storage();
+
+        // cache balance
+        uint256 amount = $.balance[recipient];
+
+        // decrement balance
+        $.balance[recipient] -= amount;
+
+        // transfer to funding recipient
+        _currency.safeTransfer(recipient, amount);
+
+        emit Withdrawn(recipient, amount);
+
+        return amount;
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import { BaseTest } from "./Base.t.sol";
 
@@ -23,7 +23,8 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
+        IRouxEdition newCreatorImpl =
+            new RouxEdition(address(controller), address(registry), address(factory), address(collectionFactory));
 
         // revert when not owner
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, users.user_0));
@@ -36,7 +37,7 @@ contract UpgradeTest is BaseTest {
         assertEq(controller.getImplementation(), address(controllerImpl));
 
         // deploy new controller implementation
-        Controller newControllerImpl = new Controller(address(registry));
+        Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
         vm.prank(users.user_0);
         vm.expectRevert(SoladyOwnable.Unauthorized.selector);
@@ -48,7 +49,7 @@ contract UpgradeTest is BaseTest {
         assertEq(controller.getImplementation(), address(controllerImpl));
 
         // deploy new controller implementation
-        Controller newControllerImpl = new Controller(address(registry));
+        Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
         bytes memory initData = abi.encodeWithSelector(Controller.initialize.selector, address(registry));
         vm.prank(users.deployer);
@@ -100,7 +101,7 @@ contract UpgradeTest is BaseTest {
         // deploy new roux edition factory implementation
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
-        bytes memory initData = abi.encodeWithSelector(Registry.initialize.selector);
+        bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector, users.deployer);
         vm.prank(users.deployer);
         vm.expectRevert("Already initialized");
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
@@ -111,7 +112,8 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
+        IRouxEdition newCreatorImpl =
+            new RouxEdition(address(controller), address(registry), address(factory), address(collectionFactory));
 
         // set new implementation in beacon
         vm.prank(users.deployer);
@@ -127,21 +129,11 @@ contract UpgradeTest is BaseTest {
         vm.startPrank(users.creator_0);
 
         // create instance
-        bytes memory params = abi.encode(TEST_CONTRACT_URI, "");
+        bytes memory params = abi.encode(CONTRACT_URI, "");
         address newEdition = factory.create(params);
 
         // add token
-        RouxEdition(newEdition).add(
-            TEST_TOKEN_URI,
-            users.creator_0,
-            TEST_TOKEN_MAX_SUPPLY,
-            users.creator_0,
-            TEST_PROFIT_SHARE,
-            address(0),
-            0,
-            address(freeMinter), // allowlisted minter
-            abi.encode(uint40(block.timestamp), uint40(block.timestamp + TEST_TOKEN_MINT_DURATION))
-        );
+        RouxEdition(newEdition).add(defaultAddParams);
 
         // validate new token
         assertEq(RouxEdition(newEdition).totalSupply(1), 1);
@@ -152,7 +144,7 @@ contract UpgradeTest is BaseTest {
         assertEq(controller.getImplementation(), address(controllerImpl));
 
         // deploy new controller implementation
-        Controller newControllerImpl = new Controller(address(registry));
+        Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
         vm.prank(users.deployer);
         controller.upgradeToAndCall(address(newControllerImpl), "");
