@@ -41,6 +41,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      * @param initialized whether the contract has been initialized
      * @param editions set of editions
      * @param owner owner of the contract
+     * @param collectionFactory collection factory
      * @param enableAllowlist whether to enable allowlist
      * @param allowlist allowlist of editions
      */
@@ -48,6 +49,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         bool initialized;
         EnumerableSet.AddressSet editions;
         address owner;
+        address collectionFactory;
         bool enableAllowlist;
         mapping(address => bool) allowlist;
     }
@@ -90,14 +92,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /**
      * @notice initialize RouxEditionFactory
      */
-    function initialize(address admin) external {
+    function initialize() external {
         RouxEditionFactoryStorage storage $ = _storage();
 
         require(!$.initialized, "Already initialized");
         $.initialized = true;
 
-        // Set owner of proxy
-        _initializeOwner(admin);
+        // set owner of proxy
+        _initializeOwner(msg.sender);
 
         // enable allowlist
         $.enableAllowlist = true;
@@ -140,6 +142,13 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      */
     function canCreate(address user) external view returns (bool) {
         return _storage().allowlist[user];
+    }
+
+    /**
+     * @inheritdoc IRouxEditionFactory
+     */
+    function collectionFactory() external view returns (address) {
+        return _storage().collectionFactory;
     }
 
     /* -------------------------------------------- */
@@ -197,6 +206,10 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      */
     function removeAllowlist(address account) external onlyOwner {
         _storage().allowlist[account] = false;
+    }
+
+    function setCollectionFactory(address collectionFactory_) external onlyOwner {
+        _storage().collectionFactory = collectionFactory_;
     }
 
     /* -------------------------------------------- */

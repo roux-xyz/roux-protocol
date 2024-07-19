@@ -12,24 +12,9 @@ interface IEditionExtension {
     error InsufficientFunds();
 
     /**
-     * @notice invalid params length
-     */
-    error InvalidParamsLength();
-
-    /**
      * @notice invalid mint params
      */
     error InvalidMintParams();
-
-    /**
-     * @notice already minted
-     */
-    error AlreadyMinted();
-
-    /**
-     * @notice batch id does not exist
-     */
-    error MintParamsNotSet();
 
     /* -------------------------------------------- */
     /* events                                       */
@@ -37,10 +22,12 @@ interface IEditionExtension {
 
     /**
      * @notice emitted when mint params are updated
+     *
+     * @param edition edition address
      * @param id edition id
      * @param mintParams mint params
      */
-    event MintParamsUpdated(uint256 id, bytes mintParams);
+    event MintParamsUpdated(address indexed edition, uint256 indexed id, bytes mintParams);
 
     /* -------------------------------------------- */
     /* view                                         */
@@ -89,24 +76,4 @@ interface IEditionExtension {
      * @dev must be called via edition
      */
     function setMintParams(uint256 id, bytes calldata params) external;
-
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
-    /**
-     * @notice get proxy implementation
-     * @return implementation address
-     *
-     * @dev do not remove this function
-     */
-    function getImplementation() external view returns (address);
-
-    /**
-     * @notice upgrade proxy
-     * @param newImplementation new implementation contract
-     * @param data optional calldata
-     *
-     * @dev do not remove this function
-     */
-    function upgradeToAndCall(address newImplementation, bytes calldata data) external;
 }

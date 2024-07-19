@@ -157,7 +157,7 @@ contract ControllerTest is BaseTest {
 
         // mint
         vm.prank(users.user_0);
-        edition.mint(users.user_0, 1, 1, users.user_0, address(0), "");
+        edition.mint({ to: users.user_0, id: 1, quantity: 1, extension: address(0), referrer: users.user_0, data: "" });
 
         // check balance
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee);
@@ -176,7 +176,14 @@ contract ControllerTest is BaseTest {
 
         // mint with referral
         vm.prank(users.user_0);
-        forkEdition.mint(users.user_0, tokenId, 1, users.user_1, address(0), "");
+        forkEdition.mint({
+            to: users.user_0,
+            id: tokenId,
+            quantity: 1,
+            extension: address(0),
+            referrer: users.user_1,
+            data: ""
+        });
 
         // compute split
         (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE - referralFee);

@@ -28,6 +28,10 @@ contract SingleEditionCollectionTest is BaseTest {
         // create collection
         (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
 
+        // set collection
+        vm.prank(users.creator_0);
+        edition.setCollection(tokenIds, address(collection), true);
+
         // set test single edition collection minter
         testMinter = address(users.user_0);
 
@@ -39,34 +43,10 @@ contract SingleEditionCollectionTest is BaseTest {
     /* reverts                                      */
     /* -------------------------------------------- */
 
-    function test__RevertWhen_NonOwnerRegisterMinter() external {
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        vm.prank(users.user_0);
-        collection.setExtension(address(0x123), true, "");
-    }
-
     function test__RevertWhen_NonOwnerUpdateMintParams() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(users.user_0);
         collection.updateMintParams("");
-    }
-
-    function test__RevertWhen_SetInvalidExtension_ZeroAddress() external {
-        vm.startPrank(users.creator_0);
-
-        vm.expectRevert(ICollection.InvalidExtension.selector);
-        collection.setExtension(address(0), true, "");
-
-        vm.stopPrank();
-    }
-
-    function test__RevertWhen_SetInvalidExtension_UnsupportedInterface() external {
-        vm.startPrank(users.creator_0);
-
-        vm.expectRevert(ICollection.InvalidExtension.selector);
-        collection.setExtension(address(edition), true, "");
-
-        vm.stopPrank();
     }
 
     function test__RevertWhen_InvalidItemTarget() external {

@@ -70,14 +70,14 @@ contract CollectionFactory is ICollectionFactory, Ownable {
     /**
      * @notice Initialize CollectionFactory
      */
-    function initialize(address admin) external {
+    function initialize() external {
         CollectionFactoryStorage storage $ = _storage();
 
         require(!$._initialized, "Already initialized");
         $._initialized = true;
 
-        // Set owner of proxy
-        _initializeOwner(admin);
+        // set owner of proxy
+        _initializeOwner(msg.sender);
     }
 
     /* -------------------------------------------- */

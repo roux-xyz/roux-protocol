@@ -77,13 +77,37 @@ interface IRouxEdition {
      * @notice emitted when an extension is added
      * @param extension extension address
      * @param id token id
+     * @param enable extension enabled or disabled
      */
-    event ExtensionAdded(address indexed extension, uint256 indexed id);
+    event ExtensionSet(address indexed extension, uint256 indexed id, bool enable);
+
+    /**
+     * @notice emitted when a collection is set
+     * @param collection collection address
+     * @param collectionId collection id
+     * @param enable enable or disable collection
+     */
+    event CollectionSet(address indexed collection, uint256 collectionId, bool enable);
 
     /**
      * @notice emitted when a contract uri is updated
+     * @param newContractUri new contract uri
      */
-    event ContractURIUpdated();
+    event ContractURIUpdated(string newContractUri);
+
+    /**
+     * @notice emitted when the default price is updated
+     * @param id token id
+     * @param newDefaultPrice new default price
+     */
+    event DefaultPriceUpdated(uint256 indexed id, uint256 newDefaultPrice);
+
+    /**
+     * @notice emitted when the mint gate is updated
+     * @param id token id
+     * @param gate whether the token is gated or not
+     */
+    event MintGated(uint256 indexed id, bool gate);
 
     /* -------------------------------------------- */
     /* view functions                               */
@@ -120,6 +144,13 @@ interface IRouxEdition {
      * @return total supply
      */
     function totalSupply(uint256 id) external view returns (uint256);
+
+    /**
+     * @notice get max supply for a given token id
+     * @param id token id
+     * @return max supply
+     */
+    function maxSupply(uint256 id) external view returns (uint256);
 
     /**
      * @notice get uri for a given token id
@@ -162,7 +193,7 @@ interface IRouxEdition {
      * @param id token id
      * @return default price
      */
-    function defaultPrice(uint256 id) external view returns (uint256);
+    function defaultPrice(uint256 id) external view returns (uint128);
 
     /**
      * @notice check if a token is gated
