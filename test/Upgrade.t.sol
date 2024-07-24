@@ -23,12 +23,12 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
+        IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // revert when not owner
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, users.user_0));
         vm.prank(users.user_0);
-        editionBeacon.upgradeTo(address(newCreatorImpl));
+        editionBeacon.upgradeTo(address(newEditionImpl));
     }
 
     function test__RevertWhen_UpgradeController_OnlyOwner() external {
@@ -111,17 +111,17 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl = new RouxEdition(address(controller), address(registry));
+        IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // set new implementation in beacon
         vm.prank(users.deployer);
-        editionBeacon.upgradeTo(address(newCreatorImpl));
+        editionBeacon.upgradeTo(address(newEditionImpl));
 
         // assert new implementation
-        assertEq(editionBeacon.implementation(), address(newCreatorImpl));
+        assertEq(editionBeacon.implementation(), address(newEditionImpl));
 
         // assert new implementation is not the same as the old one
-        assertNotEq(address(newCreatorImpl), address(editionImpl));
+        assertNotEq(address(newEditionImpl), address(editionImpl));
 
         // add new token
         vm.startPrank(users.creator_0);

@@ -1,55 +1,67 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
+import { ICollection } from "src/interfaces/ICollection.sol";
+import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IController } from "src/interfaces/IController.sol";
+
+import { Collection } from "src/abstracts/Collection.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { ROUX_MULTI_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
+
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { Collection } from "src/Collection.sol";
-
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IController } from "src/interfaces/IController.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
- * @title Single Edition Collection
- * @author Roux
+ * @title Multi Edition Collection
+ * @custom:version 0.1
  */
 contract MultiEditionCollection is Collection {
     using SafeERC20 for IERC20;
 
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice multi edition collection storage slot
+     * @notice MultiEditionCollection storage slot
      * @dev keccak256(abi.encode(uint256(keccak256("multiEditionCollection.multiEditionCollectionStorage")) - 1)) &
      * ~bytes32(uint256(0xff));
      */
     bytes32 internal constant MULTI_EDITION_COLLECTION_STORAGE_SLOT =
         0x80f0f9485e96d2fa1d83203f8bbee993202c4d0ad979d7d0de8ea7e7c4dcbd00;
 
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
+
     /**
-     * @notice controller
+     * @notice Collection storage
+     * @custom:storage-location erc7201:multiEditionCollection.multiEditionCollectionStorage
+     * @param mintParams mint parameters
+     * @param rewardsRecipient rewards recipient address
      */
+    struct MultiEditionCollectionStorage {
+        CollectionData.MultiEditionMintParams mintParams;
+        address rewardsRecipient;
+    }
+
+    /// @notice controller
     IController internal immutable _controller;
 
-    /**
-     * @notice collection salt used for erc6551 implementation
-     */
-    bytes32 internal constant ROUX_MULTI_EDITION_COLLECTION_SALT = keccak256("ROUX_MULTI_EDITION_COLLECTION");
-
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
 
     /**
      * @notice constructor
@@ -69,46 +81,40 @@ contract MultiEditionCollection is Collection {
         _controller = IController(controller);
     }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice MultiEditionCollection storage
      * @return $$ MultiEditionCollection storage location
      */
-    function _multiEditionCollectionStorage()
-        internal
-        pure
-        returns (CollectionData.MultiEditionCollectionStorage storage $$)
-    {
+    function _multiEditionCollectionStorage() internal pure returns (MultiEditionCollectionStorage storage $$) {
         assembly {
             $$.slot := MULTI_EDITION_COLLECTION_STORAGE_SLOT
         }
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
+    /// @inheritdoc ICollection
     function price() external view override returns (uint256) {
         return _price();
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function mint(
         address to,
         address extension,
         bytes calldata data
     )
-        public
-        payable
+        external
         override
         nonReentrant
         returns (uint256)
@@ -116,37 +122,33 @@ contract MultiEditionCollection is Collection {
         CollectionStorage storage $ = _collectionStorage();
 
         if (extension != address(0)) {
-            if (!$.extensions[extension]) revert InvalidExtension();
+            if (!$.extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
             ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
-            if ($.gate) revert GatedMint();
+            if ($.gate) revert ErrorsLib.Collection_GatedMint();
         }
 
-        return _mint(to);
+        return _mint_(to);
     }
 
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @dev see {Collection-updateMintParams}
     function updateMintParams(bytes calldata mintParams) external override onlyOwner {
-        CollectionData.MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
-
         // decode mint params
         (CollectionData.MultiEditionMintParams memory p) =
             abi.decode(mintParams, (CollectionData.MultiEditionMintParams));
 
         // set mint params
-        $$.mintParams = p;
+        _multiEditionCollectionStorage().mintParams = p;
     }
 
-    /* -------------------------------------------- */
-    /* internal                                     */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
 
     /**
      * @notice intialize SingleEditionCollection
@@ -154,20 +156,22 @@ contract MultiEditionCollection is Collection {
      */
     function _createCollection(bytes calldata params) internal override {
         CollectionStorage storage $ = _collectionStorage();
-        CollectionData.MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         // decode params
         (CollectionData.MultiEditionCreateParams memory p) =
             abi.decode(params, (CollectionData.MultiEditionCreateParams));
 
         // validate length
-        if (p.itemTargets.length != p.itemIds.length) revert InvalidItems();
+        if (p.itemTargets.length != p.itemIds.length) revert ErrorsLib.Collection_InvalidItems();
 
         // validate items, targets, minters
         for (uint256 i = 0; i < p.itemIds.length; i++) {
-            if (!_rouxEditionFactory.isEdition(p.itemTargets[i])) revert InvalidItems();
-            if (p.itemIds[i] == 0 || !IRouxEdition(p.itemTargets[i]).exists(p.itemIds[i])) revert InvalidItems();
-            if (IRouxEdition(p.itemTargets[i]).currency() != p.currency) revert InvalidItems();
+            if (!_editionFactory.isEdition(p.itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
+            if (p.itemIds[i] == 0 || !IRouxEdition(p.itemTargets[i]).exists(p.itemIds[i])) {
+                revert ErrorsLib.Collection_InvalidItems();
+            }
+            if (IRouxEdition(p.itemTargets[i]).currency() != p.currency) revert ErrorsLib.Collection_InvalidItems();
         }
 
         // set mintParams
@@ -206,9 +210,8 @@ contract MultiEditionCollection is Collection {
      * @notice internal function mint collection nft
      * @param to address to mint to
      */
-    function _mint(address to) internal returns (uint256) {
+    function _mint_(address to) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
-        CollectionData.MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;
@@ -236,7 +239,7 @@ contract MultiEditionCollection is Collection {
             uint256 cost = IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
 
             // compute referral reward
-            uint256 referralReward = cost * _controller.COLLECTION_FEE() / 10_000;
+            uint256 referralReward = cost * COLLECTION_FEE / 10_000;
 
             // increment total referral rewards
             totalReferralRewards += referralReward;
@@ -246,7 +249,7 @@ contract MultiEditionCollection is Collection {
         }
 
         // record referral rewards for collection
-        _controller.recordFunds($$.rewardsRecipient, totalReferralRewards);
+        _controller.recordFunds(_multiEditionCollectionStorage().rewardsRecipient, totalReferralRewards);
 
         return collectionTokenId;
     }

@@ -1,46 +1,58 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import { ICollection } from "src/interfaces/ICollection.sol";
+import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+
+import { Collection } from "src/abstracts/Collection.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { ROUX_SINGLE_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
+
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { Collection } from "src/Collection.sol";
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
  * @title Single Edition Collection
- * @author Roux
+ * @custom:version 0.1
  */
 contract SingleEditionCollection is Collection {
     using SafeERC20 for IERC20;
 
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice collection storage slot
+     * @notice SingleEditionCollection storage slot
      * @dev keccak256(abi.encode(uint256(keccak256("singleEditionCollection.singleEditionCollectionStorage")) - 1)) &
      * ~bytes32(uint256(0xff));
      */
     bytes32 internal constant SINGLE_EDITION_COLLECTION_STORAGE_SLOT =
         0xa6e0118951a25969bd3c1390bebbde8eb1379a4bbd50f1af4df5dda29b004500;
 
-    /**
-     * @notice collection salt used for erc6551 implementation
-     */
-    bytes32 internal constant ROUX_SINGLE_EDITION_COLLECTION_SALT = keccak256("ROUX_SINGLE_EDITION_COLLECTION");
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /**
+     * @notice Collection storage
+     * @custom:storage-location erc7201:singleEditionCollection.singleEditionCollectionStorage
+     * @param mintParams mint parameters
+     */
+    struct SingleEditionCollectionStorage {
+        CollectionData.SingleEditionMintParams mintParams;
+    }
+
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
 
     /**
      * @notice constructor
@@ -56,92 +68,80 @@ contract SingleEditionCollection is Collection {
         Collection(erc6551registry, accountImplementation, rouxEditionFactory)
     { }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice SingleEditionCollection storage
      * @return $$ SingleEditionCollection storage location
      */
-    function _singleEditionCollectionStorage()
-        internal
-        pure
-        returns (CollectionData.SingleEditionCollectionStorage storage $$)
-    {
+    function _singleEditionCollectionStorage() internal pure returns (SingleEditionCollectionStorage storage $$) {
         assembly {
             $$.slot := SINGLE_EDITION_COLLECTION_STORAGE_SLOT
         }
     }
 
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function price() external view override returns (uint256) {
         return _singleEditionCollectionStorage().mintParams.price;
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function mint(
         address to,
         address extension,
         bytes calldata data
     )
-        public
-        payable
+        external
         override
         nonReentrant
         returns (uint256)
     {
         CollectionStorage storage $ = _collectionStorage();
-        CollectionData.SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         uint128 cost;
         if (extension != address(0)) {
-            if (!$.extensions[extension]) revert InvalidExtension();
+            if (!$.extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
             cost = ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
-            if ($.gate) revert GatedMint();
+            if ($.gate) revert ErrorsLib.Collection_GatedMint();
 
-            // set cost
-            cost = $$.mintParams.price;
+            // set cost ~ only single edition collections have a price set in storage
+            cost = _singleEditionCollectionStorage().mintParams.price;
         }
 
         return _mint_(to, cost);
     }
 
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @dev see {Collection-updateMintParams}
     function updateMintParams(bytes calldata mintParams) external override onlyOwner {
-        CollectionData.SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
+        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         // decode mint params
-        (CollectionData.SingleEditionMintParams memory p) =
+        CollectionData.SingleEditionMintParams memory p =
             abi.decode(mintParams, (CollectionData.SingleEditionMintParams));
 
         // set mint params
         $$.mintParams = p;
     }
 
-    /* -------------------------------------------- */
-    /* internal                                     */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
 
     /**
      * @notice intialize SingleEditionCollection
@@ -149,7 +149,7 @@ contract SingleEditionCollection is Collection {
      */
     function _createCollection(bytes calldata params) internal override {
         CollectionStorage storage $ = _collectionStorage();
-        CollectionData.SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
+        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         // decode params
         (
@@ -166,13 +166,15 @@ contract SingleEditionCollection is Collection {
         ) = abi.decode(params, (string, string, address, string, uint128, address, uint40, uint40, address, uint256[]));
 
         // validate item target is roux edition
-        if (!_rouxEditionFactory.isEdition(itemTarget)) revert InvalidItems();
+        if (!_editionFactory.isEdition(itemTarget)) revert ErrorsLib.Collection_InvalidItems();
 
         // validate items exist + same currency
         for (uint256 i = 0; i < itemIds.length; i++) {
-            if (itemIds[i] == 0 || !IRouxEdition(itemTarget).exists(itemIds[i])) revert InvalidItems();
+            if (itemIds[i] == 0 || !IRouxEdition(itemTarget).exists(itemIds[i])) {
+                revert ErrorsLib.Collection_InvalidItems();
+            }
 
-            if (IRouxEdition(itemTarget).currency() != currency) revert InvalidItems();
+            if (IRouxEdition(itemTarget).currency() != currency) revert ErrorsLib.Collection_InvalidItems();
         }
 
         // set mintParams
@@ -196,6 +198,8 @@ contract SingleEditionCollection is Collection {
     /**
      * @notice internal function mint collection nft
      * @param to address to mint to
+     * @param cost cost
+     * @return collection token id
      */
     function _mint_(address to, uint256 cost) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();

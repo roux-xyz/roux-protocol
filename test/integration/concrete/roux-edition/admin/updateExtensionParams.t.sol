@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 
 contract UpdateExtensionParams_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */

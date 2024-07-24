@@ -1,9 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
-
-import { ERC721 } from "solady/tokens/ERC721.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
@@ -12,17 +8,25 @@ import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+
+import { ERC721 } from "solady/tokens/ERC721.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
- * @title Single Edition Collection
- * @author Roux
+ * @title Collection
+ * @custom:version 0.1
  */
 abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGuard {
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
      * @notice collection storage slot
@@ -31,74 +35,63 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
     bytes32 internal constant COLLECTION_STORAGE_SLOT =
         0x241c1d52679111588d51f8db5132d54ddcf0f237a8a14f5a3086ef7e730b9300;
 
-    /**
-     * @notice implementation version
-     */
-    string public constant IMPLEMENTATION_VERSION = "1.0";
+    /* ------------------------------------------------- */
+    /* immutable state                                   */
+    /* ------------------------------------------------- */
 
-    /* -------------------------------------------- */
-    /* immutable state                              */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice erc6551 registry
-     */
+    /// @notice erc6551 registry
     IERC6551Registry immutable _erc6551Registry;
 
-    /**
-     * @notice initial account implementation
-     */
+    /// @notice erc6551 account implementation
     address immutable _accountImplementation;
 
-    /**
-     * @notice edition factory
-     */
-    IRouxEditionFactory immutable _rouxEditionFactory;
+    /// @notice edition factory
+    IRouxEditionFactory immutable _editionFactory;
 
-    /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice Collection storage
+     * @notice collection storage
      * @custom:storage-location erc7201:collection.collectionStorage
      * @param initialized whether the contract has been initialized
+     * @param curator curator address
      * @param name collection name
      * @param symbol collection symbol
-     * @param curator curator address
      * @param tokenIds current token ID counter
      * @param uri collection URI
      * @param currency currency address
+     * @param gate whether to gate minting
      * @param itemTargets target edition addresses
      * @param itemIds array of item IDs in the collection
      * @param extensions mapping of extension addresses to their enabled status
-     * @param gate whether to gate minting
      */
     struct CollectionStorage {
         bool initialized;
+        address curator;
         string name;
         string symbol;
-        address curator;
         uint256 tokenIds;
         string uri;
         address currency;
+        bool gate;
         address[] itemTargets;
         uint256[] itemIds;
         mapping(address extension => bool enable) extensions;
-        bool gate;
     }
 
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
 
     /**
      * @notice constructor
      * @param erc6551registry registry
-     * @param accountImplementation initial erc6551 account implementation
-     * @param rouxEditionFactory roux edition factory
+     * @param accountImplementation erc6551 account implementation
+     * @param editionFactory roux edition factory
      */
-    constructor(address erc6551registry, address accountImplementation, address rouxEditionFactory) {
+    constructor(address erc6551registry, address accountImplementation, address editionFactory) {
         // disable initialization of implementation contract
         _collectionStorage().initialized = true;
 
@@ -109,12 +102,12 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
         _accountImplementation = accountImplementation;
 
         // set roux edition factory
-        _rouxEditionFactory = IRouxEditionFactory(rouxEditionFactory);
+        _editionFactory = IRouxEditionFactory(editionFactory);
     }
 
-    /* -------------------------------------------- */
-    /* initializer                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
 
     /**
      * @notice initialize collection
@@ -133,9 +126,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
         _createCollection(params);
     }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice Get Collection storage location
@@ -147,17 +140,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
         }
     }
 
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice Get implementation version
-     * @return implementation version
-     */
-    function implementationVersion() external pure returns (string memory) {
-        return IMPLEMENTATION_VERSION;
-    }
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
     /**
      * @notice Get collection name
@@ -177,15 +162,14 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
 
     /**
      * @notice Get token URI
+     * @param id token id
      * @return token URI
      */
-    function tokenURI(uint256) public view override returns (string memory) {
+    function tokenURI(uint256 id) public view override returns (string memory) {
         return _collectionStorage().uri;
     }
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function collection() external view returns (address[] memory itemTargets, uint256[] memory itemIds) {
         CollectionStorage storage $ = _collectionStorage();
 
@@ -193,74 +177,55 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
         itemIds = $.itemIds;
     }
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function curator() external view returns (address) {
         return _collectionStorage().curator;
     }
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function currency() external view returns (address) {
         return _collectionStorage().currency;
     }
 
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function price() external view virtual returns (uint256);
 
-    /**
-     * @notice Get total supply
-     * @return total supply
-     */
+    /// @inheritdoc ICollection
     function totalSupply() external view returns (uint256) {
         return _collectionStorage().tokenIds;
     }
 
-    /**
-     * @notice Check if token exists
-     * @param tokenId_ token ID to check
-     * @return whether token exists
-     */
-    function exists(uint256 tokenId_) external view returns (bool) {
-        return _exists(tokenId_);
-    }
-
-    /**
-     * @inheritdoc ICollection
-     */
+    /// @inheritdoc ICollection
     function isExtension(address extension_) external view returns (bool) {
         return _collectionStorage().extensions[extension_];
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
+
+    /// @inheritdoc ICollection
+    function mint(address to, address extension, bytes calldata data) external virtual returns (uint256);
+
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
 
     /**
-     * @inheritdoc ICollection
-     */
-    function mint(address to, address extension, bytes calldata data) public payable virtual returns (uint256);
-
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
-
-    /**
-     * @inheritdoc ICollection
+     * @notice sets or unsets an extension for a collection
+     * @param extension extension address
+     * @param enable enable or disable extension
+     * @param options optional mint params
      */
     function setExtension(address extension, bool enable, bytes calldata options) external onlyOwner {
         CollectionStorage storage $ = _collectionStorage();
 
         // validate extension is not zero
-        if (extension == address(0)) revert InvalidExtension();
+        if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
 
         // validate extension interface support
         if (!ICollectionExtension(extension).supportsInterface(type(ICollectionExtension).interfaceId)) {
-            revert InvalidExtension();
+            revert ErrorsLib.Collection_InvalidExtension();
         }
 
         // set extension
@@ -271,37 +236,36 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
             ICollectionExtension(extension).setCollectionMintParams(options);
         }
 
-        emit ExtensionSet(extension, enable);
+        emit EventsLib.ExtensionSet(extension, enable);
     }
 
     /**
-     * @inheritdoc ICollection
+     * @notice updates the mint parameters for a collection extension
+     * @param extension extension address
+     * @param params updated extension mint params
      */
-    function updateExtensionMintParams(address extension, bytes calldata options) external onlyOwner {
-        CollectionStorage storage $ = _collectionStorage();
-
-        // must be enabled to update mint params
-        if (!$.extensions[extension]) revert InvalidExtension();
-
+    function updateExtensionParams(address extension, bytes calldata params) external onlyOwner {
         // call extension with updated params
-        ICollectionExtension(extension).setCollectionMintParams(options);
+        ICollectionExtension(extension).setCollectionMintParams(params);
     }
 
     /**
-     * @inheritdoc ICollection
-     */
-    function updateMintParams(bytes calldata mintParams) external virtual;
-
-    /**
-     * @inheritdoc ICollection
+     * @dev Enables or disables gated minting for this collection.
+     * @param gate True to enable gated minting, false to disable it.
      */
     function gateMint(bool gate) external onlyOwner {
         _collectionStorage().gate = gate;
     }
 
-    /* -------------------------------------------- */
-    /* erc165 interface                           */
-    /* -------------------------------------------- */
+    /**
+     * @dev Updates the minting parameters for this collection.
+     * @param mintParams Encoded parameters for updating mint settings.
+     */
+    function updateMintParams(bytes calldata mintParams) external virtual;
+
+    /* ------------------------------------------------- */
+    /* erc165 interface                                */
+    /* ------------------------------------------------- */
 
     /**
      * @inheritdoc IERC165
@@ -310,9 +274,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
         return interfaceId == type(ICollection).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    /* -------------------------------------------- */
-    /* internal functions                           */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* internal functions                                */
+    /* ------------------------------------------------- */
 
     /**
      * @notice initialize collection

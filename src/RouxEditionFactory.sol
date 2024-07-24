@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /**
- * @title Roux Edition Factory
- * @author Roux
+ * @title RouxEdition Factory
+ * @custom:version 0.1
  */
 contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using LibBitmap for LibBitmap.Bitmap;
 
     /* -------------------------------------------- */
     /* constants                                    */
@@ -37,7 +39,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /**
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
-     *
      * @param initialized whether the contract has been initialized
      * @param editions set of editions
      * @param owner owner of the contract
@@ -47,7 +48,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      */
     struct RouxEditionFactoryStorage {
         bool initialized;
-        EnumerableSet.AddressSet editions;
+        LibBitmap.Bitmap editions;
         address owner;
         address collectionFactory;
         bool enableAllowlist;
@@ -58,9 +59,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* immutable state                              */
     /* -------------------------------------------- */
 
-    /**
-     * @notice edition beacon
-     */
+    /// @notice edition beacon
     address internal immutable _editionBeacon;
 
     /* -------------------------------------------- */
@@ -74,13 +73,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     constructor(address editionBeacon) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        /* disable initialization of implementation contract */
+        // disable initialization of implementation contract
         require(!$.initialized, "Already initialized");
         $.initialized = true;
 
+        // set edition beacon
         _editionBeacon = editionBeacon;
 
-        /* renounce ownership of implementation contract */
+        // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
         renounceOwnership();
     }
@@ -89,9 +89,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* initializer                                  */
     /* -------------------------------------------- */
 
-    /**
-     * @notice initialize RouxEditionFactory
-     */
+    /// @notice initialize RouxEditionFactory
     function initialize() external {
         RouxEditionFactoryStorage storage $ = _storage();
 
@@ -100,9 +98,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
 
         // set owner of proxy
         _initializeOwner(msg.sender);
-
-        // enable allowlist
-        $.enableAllowlist = true;
     }
 
     /* -------------------------------------------- */
@@ -123,30 +118,12 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* view                                         */
     /* -------------------------------------------- */
 
-    /**
-     * @inheritdoc IRouxEditionFactory
-     */
-    function isEdition(address token) external view returns (bool) {
-        return _storage().editions.contains(token);
+    /// @inheritdoc IRouxEditionFactory
+    function isEdition(address edition) external view returns (bool) {
+        return _storage().editions.get(uint256(uint160(edition)));
     }
 
-    /**
-     * @inheritdoc IRouxEditionFactory
-     */
-    function getEditions() external view returns (address[] memory) {
-        return _storage().editions.values();
-    }
-
-    /**
-     * @inheritdoc IRouxEditionFactory
-     */
-    function canCreate(address user) external view returns (bool) {
-        return _storage().allowlist[user];
-    }
-
-    /**
-     * @inheritdoc IRouxEditionFactory
-     */
+    /// @inheritdoc IRouxEditionFactory
     function collectionFactory() external view returns (address) {
         return _storage().collectionFactory;
     }
@@ -155,11 +132,12 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* write                                        */
     /* -------------------------------------------- */
 
-    /**
-     * @inheritdoc IRouxEditionFactory
-     */
+    /// @inheritdoc IRouxEditionFactory
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
+
+        // check allowlist
+        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert ErrorsLib.RouxEdition_OnlyAllowlist();
 
         // create edition instance
         address editionInstance =
@@ -168,10 +146,11 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);
 
-        // add to editions set
-        $.editions.add(editionInstance);
+        // add to editions mapping
+        $.editions.set(uint256(uint160(editionInstance)));
 
-        emit NewEdition(editionInstance);
+        // emit event
+        emit EventsLib.NewEdition(editionInstance);
 
         return editionInstance;
     }
@@ -208,8 +187,21 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
         _storage().allowlist[account] = false;
     }
 
+    /**
+     * @notice set collection factory
+     * @param collectionFactory_ collection factory address
+     * @dev one-time setter used to avoid circular dependency
+     */
     function setCollectionFactory(address collectionFactory_) external onlyOwner {
-        _storage().collectionFactory = collectionFactory_;
+        RouxEditionFactoryStorage storage $ = _storage();
+
+        // verify collection factory is not already set
+        if ($.collectionFactory != address(0)) {
+            revert ErrorsLib.RouxEditionFactory_CollectionFactoryAlreadySet();
+        }
+
+        // set collection factory
+        $.collectionFactory = collectionFactory_;
     }
 
     /* -------------------------------------------- */

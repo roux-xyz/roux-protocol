@@ -20,10 +20,8 @@ contract Initialize_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when already initialized
     function test__RevertWhen_AlreadyInitialized() external {
-        // encode params
         bytes memory initData = abi.encodeWithSelector(edition.initialize.selector, "https://new-contract-uri.com");
 
-        // assert current implementation
         vm.prank(users.user_0);
         vm.expectRevert("Already initialized");
         edition.initialize(initData);

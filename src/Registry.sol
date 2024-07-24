@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
+import { IRegistry } from "src/interfaces/IRegistry.sol";
+
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
-import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
 
 /**
- * @title Roux Registry
- * @author Roux
+ * @title Registry
+ * @custom:version 0.1
  */
 contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
@@ -17,20 +21,25 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
 
     /**
-     * @notice Controller storage slot
+     * @notice Registry storage slot
      * @dev keccak256(abi.encode(uint256(keccak256("rouxRegistry.rouxRegistryStorage")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_REGISTRY_STORAGE_SLOT =
         0x526b27153fa869a204893bc4926da2a9c5dc034df85df1046d3f9c814a26d100;
 
-    /**
-     * @notice maximum depth of attribution tree
-     */
-    uint256 internal constant MAX_DEPTH = 8;
-
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
+
+    /**
+     * @notice registry data
+     * @param parentEdition parent edition
+     * @param parentTokenId parent token id
+     */
+    struct RegistryData {
+        address parentEdition;
+        uint256 parentTokenId;
+    }
 
     /**
      * @notice roux registry storage
@@ -85,9 +94,7 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* view                                         */
     /* -------------------------------------------- */
 
-    /**
-     * @inheritdoc IRegistry
-     */
+    /// @inheritdoc IRegistry
     function attribution(address edition, uint256 tokenId) external view returns (address, uint256) {
         RouxRegistryStorage storage $ = _storage();
 
@@ -97,9 +104,7 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
         return (parentEdition, parentTokenId);
     }
 
-    /**
-     * @inheritdoc IRegistry
-     */
+    /// @inheritdoc IRegistry
     function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256) {
         // pass 0 as starting depth
         return _root(edition, tokenId, 0);
@@ -109,15 +114,13 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* write                                        */
     /* -------------------------------------------- */
 
-    /**
-     * @inheritdoc IRegistry
-     */
+    /// @inheritdoc IRegistry
     function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external nonReentrant {
         // get current depth of parent edition and tokenId
         (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 
-        // revert if addition exceeds max depth
-        if (depth + 1 > MAX_DEPTH) revert MaxDepthExceeded();
+        // revert if addition would exceed max depth
+        if (depth + 1 > MAX_NUM_FORKS) revert ErrorsLib.Registry_MaxDepthExceeded();
 
         // set administrator data for edition + token id
         RegistryData storage d = _storage().registryData[msg.sender][tokenId];
@@ -126,7 +129,7 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
         d.parentTokenId = parentTokenId;
 
         // emit event
-        emit RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
+        emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
     }
 
     /* -------------------------------------------- */
@@ -136,8 +139,6 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /**
      * @notice get proxy implementation
      * @return implementation address
-     *
-     * @dev do not remove this function
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
@@ -147,8 +148,6 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
      * @notice upgrade proxy
      * @param newImplementation new implementation contract
      * @param data optional calldata
-     *
-     * @dev do not remove this function
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
@@ -165,10 +164,10 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
      * @param depth depth, should always be called with 0
      * @return edition if current edition is root, otherwise parent edition
      * @return token id if current edition is root, otherwise parent token id
-     * @return depth
+     * @return depth zero-indexed depth eg the root token has a depth of 0, its parent has a depth of 1, etc
      *
      * @dev used to compute the root of an attribution tree
-     *      depth is incremented on each subsequent call
+     *      - depth is incremented on each subsequent call
      */
     function _root(address edition, uint256 tokenId, uint256 depth) internal view returns (address, uint256, uint256) {
         // get storage

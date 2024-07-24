@@ -4,6 +4,9 @@ pragma solidity ^0.8.26;
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
 contract UpdateDefaultPrice_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */
@@ -33,9 +36,8 @@ contract UpdateDefaultPrice_RouxEdition_Unit_Concrete_Test is BaseTest {
         uint128 currentPrice = edition.defaultPrice(1);
         uint128 newPrice = 5 * 10 ** 5;
 
-        // expect event to be emitted
         vm.expectEmit({ emitter: address(edition) });
-        emit DefaultPriceUpdated(1, newPrice);
+        emit EventsLib.DefaultPriceUpdated(1, newPrice);
 
         vm.prank(users.creator_0);
         edition.updateDefaultPrice(1, newPrice);

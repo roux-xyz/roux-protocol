@@ -33,7 +33,6 @@ contract UpdateUri_RouxEdition_Unit_Concrete_Test is BaseTest {
         string memory currentUri = edition.uri(1);
         string memory newUri = "https://new.com";
 
-        // expect event to be emitted
         vm.expectEmit({ emitter: address(edition) });
         emit URI(newUri, 1);
 

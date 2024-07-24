@@ -9,8 +9,12 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
-import "forge-std/console.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
+
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import "forge-std/console.sol";
 
 contract ControllerTest is BaseTest {
     address testMinter;
@@ -30,51 +34,41 @@ contract ControllerTest is BaseTest {
     /* -------------------------------------------- */
 
     function test__RevertWhen_SetController_FundsRecipientIsZero() external {
-        // modifiy default add params
         defaultAddParams.fundsRecipient = address(0);
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IController.InvalidFundsRecipient.selector);
+        vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
         edition.add(defaultAddParams);
     }
 
     function test__RevertWhen_SetController_ProfitShareTooHigh() external {
-        // create new edition instance
         _createEdition(users.creator_0);
 
-        // modify default add params
         defaultAddParams.profitShare = 10_001;
         defaultAddParams.parentEdition = address(edition);
         defaultAddParams.parentTokenId = 1;
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IController.InvalidProfitShare.selector);
+        vm.expectRevert(ErrorsLib.Controller_InvalidProfitShare.selector);
         edition.add(defaultAddParams);
     }
 
     function test__RevertWhen_EnablePlatformFee_OnlyOwner() external {
-        // attempt to enable minting
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.enablePlatformFee(true);
     }
 
     function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
-        // attempt to upgrade to and call
         vm.prank(users.creator_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.upgradeToAndCall(address(edition), "");
     }
 
     function test__RevertWhen_AlreadyInitialized() external {
-        // attempt to initialize
-        vm.expectRevert(bytes("Already initialized"));
+        vm.expectRevert("Already initialized");
         controller.initialize();
     }
-
-    /* -------------------------------------------- */
-    /* view                                        */
-    /* -------------------------------------------- */
 
     function test__Currency() external {
         assertEq(controller.currency(), address(edition.currency()));
@@ -93,49 +87,35 @@ contract ControllerTest is BaseTest {
         assertEq(controller.fundsRecipient(address(edition), 1), users.creator_0);
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
-
     function test__AddToken_SetControllerData() external {
         (, uint256 tokenId) = _addToken(edition);
 
         assertEq(tokenId, 2);
-
-        // verify token config
         assertEq(controller.fundsRecipient(address(edition), tokenId), defaultAddParams.fundsRecipient);
         assertEq(controller.profitShare(address(edition), tokenId), PROFIT_SHARE);
     }
 
     function test__Mint() external {
-        // expect disbursement to be emitted
         vm.expectEmit({ emitter: address(controller) });
-        emit Deposited({ recipient: controller.fundsRecipient(address(edition), 1), amount: TOKEN_PRICE });
+        emit EventsLib.Deposited({ recipient: controller.fundsRecipient(address(edition), 1), amount: TOKEN_PRICE });
 
-        // mint
         _mintToken(edition, 1, testMinter);
 
-        // check balance
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE);
     }
 
     function test__Mint_Fork() external {
-        // create fork
         (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
 
-        // approve fork
         _approveToken(address(forkEdition), testMinter);
 
-        // compute split
         (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE);
 
-        // expect deposit to be emitted
         vm.expectEmit({ emitter: address(controller) });
-        emit Deposited({ recipient: controller.fundsRecipient(address(forkEdition), 1), amount: childShare });
+        emit EventsLib.Deposited({ recipient: controller.fundsRecipient(address(forkEdition), 1), amount: childShare });
 
-        // expect pending to be emitted
         vm.expectEmit({ emitter: address(controller) });
-        emit PendingUpdated({
+        emit EventsLib.PendingUpdated({
             edition: address(forkEdition),
             tokenId: 1,
             parent: address(edition),
@@ -143,23 +123,18 @@ contract ControllerTest is BaseTest {
             amount: parentShare
         });
 
-        // mint
         _mintToken(forkEdition, tokenId, testMinter);
 
-        // check balance
         assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), 1)), childShare);
         assertEq(controller.pending(address(edition), 1), parentShare);
     }
 
     function test__Mint_Referral() external {
-        // compute referral fee
-        uint256 referralFee = (TOKEN_PRICE * controller.REFERRAL_FEE()) / 10_000;
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
 
-        // mint
         vm.prank(users.user_0);
         edition.mint({ to: users.user_0, id: 1, quantity: 1, extension: address(0), referrer: users.user_0, data: "" });
 
-        // check balance
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee);
         assertEq(controller.balance(users.user_0), referralFee);
     }
@@ -172,7 +147,7 @@ contract ControllerTest is BaseTest {
         _approveToken(address(forkEdition), testMinter);
 
         // compute referral fee
-        uint256 referralFee = (TOKEN_PRICE * controller.REFERRAL_FEE()) / 10_000;
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
 
         // mint with referral
         vm.prank(users.user_0);
@@ -207,7 +182,7 @@ contract ControllerTest is BaseTest {
         assertEq(controller.balance(users.user_1), TOKEN_PRICE);
     }
 
-    function test__DisbursePending_Fork_1() external {
+    function test__DistributePending_Fork_1() external {
         // create fork
         (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
 
@@ -221,7 +196,7 @@ contract ControllerTest is BaseTest {
         _mintToken(forkEdition, tokenId, testMinter);
 
         // disburse pending from original edition
-        controller.disbursePending(address(edition), tokenId);
+        controller.distributePending(address(edition), tokenId);
 
         // get funds recipient
         address fundsRecipient = controller.fundsRecipient(address(edition), 1);
@@ -231,32 +206,32 @@ contract ControllerTest is BaseTest {
         assertEq(controller.balance(fundsRecipient), parentShare);
     }
 
-    function test__DisbursePending_Fork_2() external {
-        _disburse_pending(2);
+    function test__DistributePending_Fork_2() external {
+        _distribute_pending(2);
     }
 
-    function test__DisbursePending_Fork_3() external {
-        _disburse_pending(3);
+    function test__DistributePending_Fork_3() external {
+        _distribute_pending(3);
     }
 
-    function test__DisbursePending_Fork_4() external {
-        _disburse_pending(4);
+    function test__DistributePending_Fork_4() external {
+        _distribute_pending(4);
     }
 
-    function test__DisbursePending_Fork_5() external {
-        _disburse_pending(5);
+    function test__DistributePending_Fork_5() external {
+        _distribute_pending(5);
     }
 
-    function test__DisbursePending_Fork_6() external {
-        _disburse_pending(6);
+    function test__DistributePending_Fork_6() external {
+        _distribute_pending(6);
     }
 
-    function test__DisbursePending_Fork_7() external {
-        _disburse_pending(7);
+    function test__DistributePending_Fork_7() external {
+        _distribute_pending(7);
     }
 
-    function test__DisbursePending_Fork_8() external {
-        _disburse_pending(8);
+    function test__DistributePending_Fork_8() external {
+        _distribute_pending(8);
     }
 
     function test__Mint_Fork_3() external {
@@ -285,7 +260,7 @@ contract ControllerTest is BaseTest {
         assertEq(controller.pending(address(editions[2]), 1), parentShareToFork2);
     }
 
-    function test__DisbursePendingBatch_Fork_3() external {
+    function test__DistributePendingBatch_Fork_3() external {
         // create original edition and 3 forks
         RouxEdition[] memory editions = _createForks(3);
 
@@ -325,8 +300,8 @@ contract ControllerTest is BaseTest {
         address edition0recipient = controller.fundsRecipient(address(editions[0]), 1);
         runningBalances[_getRecipientIndex(edition0recipient, creatorArray)] += parentShare0;
 
-        // call disbursePendingBatch
-        controller.disbursePendingBatch(editionAddresses, tokenIds);
+        // call distributePendingBatch
+        controller.distributePendingBatch(editionAddresses, tokenIds);
 
         // check balances and pending amounts
         for (uint256 i = 0; i < creatorArray.length; i++) {
@@ -384,7 +359,7 @@ contract ControllerTest is BaseTest {
         _mintToken(forkEdition, tokenId, testMinter);
 
         // disburse pending from original edition
-        controller.disbursePending(address(edition), tokenId);
+        controller.distributePending(address(edition), tokenId);
 
         // get funds recipient
         address fundsRecipient = controller.fundsRecipient(address(edition), 1);
@@ -406,7 +381,7 @@ contract ControllerTest is BaseTest {
         assertEq(mockUSDC.balanceOf(address(users.creator_1)), creator1StartingBalance + childShare);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_1() external {
+    function test__DistributePendingAndWithdraw_Fork_1() external {
         // cache starting balance
         uint256 creator0StartingBalance = mockUSDC.balanceOf(users.creator_0);
 
@@ -423,7 +398,7 @@ contract ControllerTest is BaseTest {
         _mintToken(forkEdition, tokenId, testMinter);
 
         // call disburse pending and withdraw
-        controller.disbursePendingAndWithdraw(address(edition), tokenId);
+        controller.distributePendingAndWithdraw(address(edition), tokenId);
 
         // get funds recipient
         address fundsRecipient = controller.fundsRecipient(address(edition), 1);
@@ -436,92 +411,77 @@ contract ControllerTest is BaseTest {
         assertEq(mockUSDC.balanceOf(users.creator_0), creator0StartingBalance + parentShare);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_2() external {
-        _disbursePendingAndWithdraw(2);
+    function test__DistributePendingAndWithdraw_Fork_2() external {
+        _distributePendingAndWithdraw(2);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_3() external {
-        _disbursePendingAndWithdraw(3);
+    function test__DistributePendingAndWithdraw_Fork_3() external {
+        _distributePendingAndWithdraw(3);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_4() external {
-        _disbursePendingAndWithdraw(4);
+    function test__DistributePendingAndWithdraw_Fork_4() external {
+        _distributePendingAndWithdraw(4);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_5() external {
-        _disbursePendingAndWithdraw(5);
+    function test__DistributePendingAndWithdraw_Fork_5() external {
+        _distributePendingAndWithdraw(5);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_6() external {
-        _disbursePendingAndWithdraw(6);
+    function test__DistributePendingAndWithdraw_Fork_6() external {
+        _distributePendingAndWithdraw(6);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_7() external {
-        _disbursePendingAndWithdraw(7);
+    function test__DistributePendingAndWithdraw_Fork_7() external {
+        _distributePendingAndWithdraw(7);
     }
 
-    function test__DisbursePendingAndWithdraw_Fork_8() external {
-        _disbursePendingAndWithdraw(8);
+    function test__DistributePendingAndWithdraw_Fork_8() external {
+        _distributePendingAndWithdraw(8);
     }
 
     function test__PlatformFee_RecordedOnMint() external {
-        // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
-        emit PlatformFeeUpdated({ enabled: true });
+        emit EventsLib.PlatformFeeUpdated({ enabled: true });
 
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        // mint
         _mintToken(edition, 1, testMinter);
 
-        // check balance
-        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * PLATFORM_FEE) / 10_000);
     }
 
     function test__DisablePlatformFee() external {
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        // mint
         _mintToken(edition, 1, testMinter);
 
-        // check balance
-        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000);
+        assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * PLATFORM_FEE) / 10_000);
 
-        // Expect the relevant event to be emitted.
         vm.expectEmit({ emitter: address(controller) });
-        emit PlatformFeeUpdated({ enabled: false });
+        emit EventsLib.PlatformFeeUpdated({ enabled: false });
 
-        // disable
         vm.prank(users.deployer);
         controller.enablePlatformFee(false);
     }
 
     function test__WithdrawPlatformFee() external {
-        // cache deployer starting balance
         uint256 startingBalance = mockUSDC.balanceOf(users.deployer);
 
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        // mint
         _mintToken(edition, 1, testMinter);
 
-        // expected admin fee
-        uint256 expectedPlatformFee = (TOKEN_PRICE * controller.PLATFORM_FEE()) / 10_000;
+        uint256 expectedPlatformFee = (TOKEN_PRICE * PLATFORM_FEE) / 10_000;
 
-        // check balance
         assertEq(controller.platformFeeBalance(), expectedPlatformFee);
 
-        // withdraw
         vm.prank(users.deployer);
         controller.withdrawPlatformFee(users.deployer);
 
-        // check balance
         assertEq(controller.platformFeeBalance(), 0);
-
-        // check deployer balance
         assertEq(mockUSDC.balanceOf(users.deployer), startingBalance + expectedPlatformFee);
     }
 
@@ -541,7 +501,7 @@ contract ControllerTest is BaseTest {
         return recipientIndex;
     }
 
-    function _disburse_pending(uint256 numForks) internal {
+    function _distribute_pending(uint256 numForks) internal {
         // create forks
         RouxEdition[] memory editions = _createForks(numForks);
 
@@ -592,7 +552,7 @@ contract ControllerTest is BaseTest {
                 assertApproxEqAbs(currentPending, remainingAmount, 1, "pending amount incorrect");
 
                 // call disburse pending (anyone can call)
-                controller.disbursePending(address(editions[i]), 1);
+                controller.distributePending(address(editions[i]), 1);
 
                 // calculate running balance if not root
                 if (i > 0) {
@@ -649,7 +609,7 @@ contract ControllerTest is BaseTest {
         assertEq(totalDistributed, TOKEN_PRICE, "total distributed not equal to token price");
     }
 
-    function _disbursePendingAndWithdraw(uint256 numForks) internal {
+    function _distributePendingAndWithdraw(uint256 numForks) internal {
         // create forks
         RouxEdition[] memory editions = _createForks(numForks);
 
@@ -720,7 +680,7 @@ contract ControllerTest is BaseTest {
                 assertApproxEqAbs(currentPending, remainingAmount, 1, "pending amount incorrect");
 
                 // call disburse pending and withdraw
-                controller.disbursePendingAndWithdraw(address(editions[i]), 1);
+                controller.distributePendingAndWithdraw(address(editions[i]), 1);
 
                 if (i > 0) {
                     // compute split

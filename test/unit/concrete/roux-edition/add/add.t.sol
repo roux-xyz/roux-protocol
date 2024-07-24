@@ -7,6 +7,9 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
 contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */
@@ -45,7 +48,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.maxSupply = 0;
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidParams.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
     }
 
@@ -55,7 +58,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.creator = address(0);
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidParams.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
     }
 
@@ -65,36 +68,8 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.parentEdition = address(edition);
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidParams.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
-    }
-
-    /// @dev cannot add token with valid parent token address and zero token id
-    function test__RevertWhen_AddToken_InvalidParentTokenId() external {
-        // create edition instance
-        IRouxEdition edition_ = _createEdition(users.creator_1);
-
-        // modify default add params
-        addParams.parentEdition = address(edition);
-        addParams.parentTokenId = 0;
-
-        vm.prank(users.creator_1);
-        vm.expectRevert(IRouxEdition.InvalidParams.selector);
-        edition_.add(addParams);
-    }
-
-    /// @dev cannot add token with zero parent token address and valid token id
-    function test__RevertWhen_AddToken_InvalidParentEdition() external {
-        // create edition instance
-        IRouxEdition edition_ = _createEdition(users.creator_1);
-
-        // modify default add params
-        addParams.parentEdition = address(0);
-        addParams.parentTokenId = 1;
-
-        vm.prank(users.creator_1);
-        vm.expectRevert(IRouxEdition.InvalidParams.selector);
-        edition_.add(addParams);
     }
 
     /// @dev invalid extension reverts - unsupported interface
@@ -106,13 +81,43 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.extension = address(edition_);
 
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidExtension.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.add(addParams);
     }
 
     /* -------------------------------------------- */
     /* writes                                       */
     /* -------------------------------------------- */
+
+    /// @dev max supply is max uint128
+    function test__AddToken_MaxSupplyIsMaxUint128() external {
+        addParams.maxSupply = type(uint128).max;
+
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertEq(edition.maxSupply(tokenId_), type(uint128).max);
+    }
+
+    /// @dev mint start is now
+    function test__AddToken_MintStartIsNow() external {
+        addParams.mintStart = uint40(block.timestamp);
+
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertEq(edition.defaultMintParams(tokenId_).mintStart, uint40(block.timestamp));
+    }
+
+    /// @dev mint end is far futurew
+    function test__AddToken_MintEndIsFarFuture() external {
+        addParams.mintEnd = type(uint40).max;
+
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertEq(edition.defaultMintParams(tokenId_).mintEnd, type(uint40).max);
+    }
 
     /// @dev token id is incremented after add
     function test__AddToken_TokenIdIsIncremented() external {
@@ -209,7 +214,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
 
         // expect emit
         vm.expectEmit({ emitter: address(edition_) });
-        emit TokenAdded(1);
+        emit EventsLib.TokenAdded(1);
 
         // add token
         vm.prank(users.creator_1);

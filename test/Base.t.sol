@@ -151,7 +151,11 @@ abstract contract BaseTest is Test, Events, Defaults {
         (erc6551Registry, accountImpl) = _deployTokenBoundContracts();
 
         // deploy roux edition impl
-        editionImpl = _deployEditionImpl({ controller_: address(controller), registry_: address(registry) });
+        editionImpl = _deployEditionImpl({
+            controller_: address(controller),
+            registry_: address(registry),
+            currency_: address(mockUSDC)
+        });
 
         // deploy roux edition beacon
         editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(editionImpl) });
@@ -198,9 +202,6 @@ abstract contract BaseTest is Test, Events, Defaults {
         factory.setCollectionFactory(address(collectionFactory));
 
         vm.stopPrank();
-
-        // allowlist users
-        _allowlistUsers();
 
         // deploy test edition
         edition = _deployEdition();
@@ -263,12 +264,13 @@ abstract contract BaseTest is Test, Events, Defaults {
     /// @dev deploy edition implementation
     function _deployEditionImpl(
         address controller_,
-        address registry_
+        address registry_,
+        address currency_
     )
         internal
         returns (RouxEdition rouxEditionImpl_)
     {
-        rouxEditionImpl_ = RouxEdition(new RouxEdition(controller_, registry_));
+        rouxEditionImpl_ = RouxEdition(new RouxEdition(controller_, registry_, currency_));
         vm.label({ account: address(rouxEditionImpl_), newLabel: "RouxEditionImpl" });
     }
 
@@ -396,26 +398,6 @@ abstract contract BaseTest is Test, Events, Defaults {
             extension: address(0),
             options: new bytes(0)
         });
-    }
-
-    /// @dev allowlist users
-    function _allowlistUsers() internal {
-        vm.startPrank(users.deployer);
-
-        // add editions to allowlist
-        address[] memory allowlist = new address[](2);
-        allowlist[0] = address(users.creator_0);
-        allowlist[1] = address(users.creator_1);
-        factory.addAllowlist(allowlist);
-
-        // add curators to curator allowlist
-        address[] memory curatorAllowlist = new address[](3);
-        curatorAllowlist[0] = address(users.creator_0);
-        curatorAllowlist[1] = address(users.creator_1);
-        curatorAllowlist[2] = address(users.curator_0);
-        collectionFactory.addAllowlist(curatorAllowlist);
-
-        vm.stopPrank();
     }
 
     /// @dev encode mint params
@@ -554,16 +536,6 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev create multiple forks
     function _createForks(uint256 forks) internal returns (RouxEdition[] memory) {
-        // allowlist any users not in the array
-        for (uint256 i = 0; i < creatorArray.length; i++) {
-            if (!factory.canCreate(creatorArray[i])) {
-                vm.prank(users.deployer);
-                address[] memory allowlist = new address[](1);
-                allowlist[0] = creatorArray[i];
-                factory.addAllowlist(allowlist);
-            }
-        }
-
         uint256 num = forks + 1;
         RouxEdition[] memory editions = new RouxEdition[](num);
         editions[0] = edition;
@@ -604,6 +576,8 @@ abstract contract BaseTest is Test, Events, Defaults {
 
             vm.stopPrank();
         }
+
+        assertEq(editions.length, forks + 1);
 
         return editions;
     }

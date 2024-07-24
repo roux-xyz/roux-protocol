@@ -1,88 +1,118 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
-
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
+
 import { CollectionData } from "src/types/DataTypes.sol";
 
-contract CollectionFactory is ICollectionFactory, Ownable {
-    using EnumerableSet for EnumerableSet.AddressSet;
+/**
+ * @title Collection Factory
+ * @custom:version 0.1
+ */
+contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
+    using LibBitmap for LibBitmap.Bitmap;
 
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
      * @notice CollectionFactory storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("erc7201:collectionFactory")) - 1)) & ~bytes32(uint256(0xff));
+     * @dev keccak256(abi.encode(uint256(keccak256("collectionFactory.collectionFactoryStorage")) - 1)) &
+     * ~bytes32(uint256(0xff));
      */
     bytes32 internal constant COLLECTION_FACTORY_STORAGE_SLOT =
-        0x3bee54bf8dcf3815b00f55fc51902a7f2123547f0c25caf07819e74a6fab0700;
+        0xfee14c31ff75da4316c29dbb9be5262c4ac5f24d7a6cf9c42a613a69199feb00;
 
-    /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* immutable state                                   */
+    /* ------------------------------------------------- */
 
-    struct CollectionFactoryStorage {
-        bool _initialized;
-        EnumerableSet.AddressSet _collections;
-        address _collectionImplementation;
-        mapping(address => bool) _allowlist;
-    }
-
-    /* -------------------------------------------- */
-    /* immutable state                              */
-    /* -------------------------------------------- */
-
+    /// @notice single edition collection beacon
     address internal immutable _singleEditionCollectionBeacon;
 
+    /// @notice multi edition collection beacon
     address internal immutable _multiEditionCollectionBeacon;
 
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
+    /**
+     * @notice CollectionFactory storage
+     * @custom:storage-location erc7201:collectionFactory.collectionFactoryStorage
+     * @param initialized whether the contract has been initialized
+     * @param collectionImplementation collection implementation
+     * @param collections set of collections
+     * @param allowlist allowlist of collections
+     * @param enableAllowlist whether to enable allowlist
+     */
+    struct CollectionFactoryStorage {
+        bool initialized;
+        address collectionImplementation;
+        LibBitmap.Bitmap collections;
+        mapping(address => bool) allowlist;
+        bool enableAllowlist;
+    }
+
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice constructor
+     * @param singleEditionCollectionBeacon single edition collection beacon
+     * @param multiEditionCollectionBeacon multi edition collection beacon
+     */
     constructor(address singleEditionCollectionBeacon, address multiEditionCollectionBeacon) {
         CollectionFactoryStorage storage $ = _storage();
 
-        /* disable initialization of implementation contract */
-        require(!$._initialized, "Already initialized");
-        $._initialized = true;
+        // disable initialization of implementation contract
+        require(!$.initialized, "Already initialized");
+        $.initialized = true;
 
+        // set single edition collection beacon
         _singleEditionCollectionBeacon = singleEditionCollectionBeacon;
+
+        // set multi edition collection beacon
         _multiEditionCollectionBeacon = multiEditionCollectionBeacon;
 
+        // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
         renounceOwnership();
     }
 
-    /* -------------------------------------------- */
-    /* initializer                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
 
-    /**
-     * @notice Initialize CollectionFactory
-     */
+    /// @notice initialize CollectionFactory
     function initialize() external {
         CollectionFactoryStorage storage $ = _storage();
 
-        require(!$._initialized, "Already initialized");
-        $._initialized = true;
+        require(!$.initialized, "Already initialized");
+        $.initialized = true;
 
         // set owner of proxy
         _initializeOwner(msg.sender);
+
+        // enable allowlist
+        $.enableAllowlist = true;
     }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice Get CollectionFactoryStorage storage location
@@ -94,68 +124,87 @@ contract CollectionFactory is ICollectionFactory, Ownable {
         }
     }
 
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
-    function isCollection(address token) external view returns (bool) {
-        CollectionFactoryStorage storage $ = _storage();
-
-        return $._collections.contains(token);
+    /// @inheritdoc ICollectionFactory
+    function isCollection(address collection) external view returns (bool) {
+        return _storage().collections.get(uint256(uint160(collection)));
     }
 
-    function getCollections() external view returns (address[] memory) {
-        CollectionFactoryStorage storage $ = _storage();
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
 
-        return $._collections.values();
-    }
-
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
-
+    /// @inheritdoc ICollectionFactory
     function create(CollectionData.CollectionType collectionType, bytes calldata params) external returns (address) {
         CollectionFactoryStorage storage $ = _storage();
 
+        // verify allowlist
+        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert ErrorsLib.CollectionFactory_OnlyAllowlist();
+
+        // set which collection beacon to create
         address beacon;
         if (collectionType == CollectionData.CollectionType.SingleEdition) {
             beacon = _singleEditionCollectionBeacon;
         } else if (collectionType == CollectionData.CollectionType.MultiEdition) {
             beacon = _multiEditionCollectionBeacon;
         } else {
-            revert InvalidCollectionType();
+            revert ErrorsLib.CollectionFactory_InvalidCollectionType();
         }
 
+        // create collection instance
         address collectionInstance =
             address(new BeaconProxy(beacon, abi.encodeWithSignature("initialize(bytes)", params)));
 
+        // transfer ownership to caller
         Ownable(collectionInstance).transferOwnership(msg.sender);
 
-        $._collections.add(collectionInstance);
+        // add to collections mapping
+        $.collections.set(uint256(uint160(collectionInstance)));
 
-        emit NewCollection(collectionType, collectionInstance);
+        // emit event
+        emit EventsLib.NewCollection(collectionType, collectionInstance);
 
         return collectionInstance;
     }
 
-    /* -------------------------------------------- */
-    /* Admin                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* Admin                                             */
+    /* ------------------------------------------------- */
 
-    // TODO: update create to use?
+    /**
+     * @notice set allowlist to enabled or disabled
+     * @param enable whether to enable allowlist
+     */
+    function setAllowlist(bool enable) external onlyOwner {
+        _storage().enableAllowlist = enable;
+    }
+
+    /**
+     * @notice add accounts to allowlist
+     * @param accounts accounts to add to allowlist
+     */
     function addAllowlist(address[] memory accounts) external onlyOwner {
         CollectionFactoryStorage storage $ = _storage();
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            $._allowlist[accounts[i]] = true;
+            $.allowlist[accounts[i]] = true;
         }
     }
 
+    /**
+     * @notice remove account from allowlist
+     * @param account  acuount to remove from allowlist
+     */
     function removeAllowlist(address account) external onlyOwner {
-        CollectionFactoryStorage storage $ = _storage();
-
-        $._allowlist[account] = false;
+        _storage().allowlist[account] = false;
     }
+
+    /* -------------------------------------------- */
+    /* proxy | danger zone                          */
+    /* -------------------------------------------- */
 
     /**
      * @notice get proxy implementation

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
+import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 
 contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
@@ -28,7 +31,6 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev only owner can disable extension
     function test__RevertWhen_OnlyOwner_DisableExtension() external {
-        // add extension to token
         vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, "");
 
@@ -40,14 +42,14 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev reverts when extension is zero address
     function test__RevertWhen_SetExtension_ZeroAddress() external {
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidExtension.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.setExtension(1, address(0), true, "");
     }
 
     /// @dev reverts when extension interface is not supported
     function test__RevertWhen_SetExtension_InvalidInterface() external {
         vm.prank(users.creator_0);
-        vm.expectRevert(IRouxEdition.InvalidExtension.selector);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.setExtension(1, address(edition), true, "");
     }
 
@@ -57,11 +59,9 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev successfully sets extension
     function test__SetExtension() external {
-        // event
         vm.expectEmit({ emitter: address(edition) });
-        emit ExtensionSet(address(mockExtension), 1, true);
+        emit EventsLib.ExtensionSet(address(mockExtension), 1, true);
 
-        // add extension to token
         vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, "");
 
@@ -70,17 +70,14 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev successfully disables extension
     function test__DisableExtension() external {
-        // add extension to token
         vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, "");
 
         assertTrue(edition.isExtension(1, address(mockExtension)));
 
-        // event
         vm.expectEmit({ emitter: address(edition) });
-        emit ExtensionSet(address(mockExtension), 1, false);
+        emit EventsLib.ExtensionSet(address(mockExtension), 1, false);
 
-        // disable extension
         vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), false, "");
 
@@ -89,9 +86,8 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev set extension with mint params
     function test__SetExtension_WithMintParams() external {
-        uint128 customPrice = 5 * 10 ** 5; // $0.50 USDC
+        uint128 customPrice = 5 * 10 ** 5;
 
-        // add extension to token
         vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
 

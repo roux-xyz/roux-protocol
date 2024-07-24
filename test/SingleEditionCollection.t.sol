@@ -2,7 +2,6 @@
 pragma solidity 0.8.26;
 
 import { BaseTest } from "./Base.t.sol";
-
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
@@ -10,38 +9,28 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-
 import { CollectionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 
 contract SingleEditionCollectionTest is BaseTest {
     uint256[] tokenIds;
     uint256[] quantities;
     uint256 collectionId;
     SingleEditionCollection collection;
-
-    // set test single edition collection minter
     address testMinter;
 
     function setUp() public virtual override {
         BaseTest.setUp();
 
-        // create collection
         (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
 
-        // set collection
         vm.prank(users.creator_0);
         edition.setCollection(tokenIds, address(collection), true);
 
-        // set test single edition collection minter
         testMinter = address(users.user_0);
-
-        // approve single edition collection to spend mock usdc
         _approveToken(address(collection), testMinter);
     }
-
-    /* -------------------------------------------- */
-    /* reverts                                      */
-    /* -------------------------------------------- */
 
     function test__RevertWhen_NonOwnerUpdateMintParams() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -54,7 +43,7 @@ contract SingleEditionCollectionTest is BaseTest {
         uint256[] memory invalidItemIds = new uint256[](1);
         invalidItemIds[0] = 1;
 
-        vm.expectRevert(ICollection.InvalidItems.selector);
+        vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
         _createCollectionWithParams(invalidItemTarget, invalidItemIds);
     }
 
@@ -62,7 +51,7 @@ contract SingleEditionCollectionTest is BaseTest {
         uint256[] memory invalidItemIds = new uint256[](1);
         invalidItemIds[0] = 0;
 
-        vm.expectRevert(ICollection.InvalidItems.selector);
+        vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
         _createCollectionWithParams(address(edition), invalidItemIds);
     }
 
@@ -70,13 +59,9 @@ contract SingleEditionCollectionTest is BaseTest {
         uint256[] memory invalidItemIds = new uint256[](1);
         invalidItemIds[0] = 999;
 
-        vm.expectRevert(ICollection.InvalidItems.selector);
+        vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
         _createCollectionWithParams(address(edition), invalidItemIds);
     }
-
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
 
     function test__Name() external {
         assertEq(collection.name(), COLLECTION_NAME, "collection name");
@@ -122,25 +107,11 @@ contract SingleEditionCollectionTest is BaseTest {
         assertEq(collection.totalSupply(), 1, "Total supply after mint");
     }
 
-    function test__Exists() external {
-        assertFalse(collection.exists(1), "Token should not exist initially");
-
-        vm.prank(users.user_0);
-        collection.mint(users.user_0, address(0), "");
-
-        assertTrue(collection.exists(1), "Token should exist after mint");
-        assertFalse(collection.exists(2), "Non-existent token should not exist");
-    }
-
     function test__SupportsInterface() external {
         assertTrue(collection.supportsInterface(type(ICollection).interfaceId), "Should support ICollection interface");
         assertTrue(collection.supportsInterface(type(IERC721).interfaceId), "Should support IERC721 interface");
         assertFalse(collection.supportsInterface(bytes4(0xffffffff)), "Should not support random interface");
     }
-
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
 
     function test__MintCollectionAndTransfer() external {
         vm.prank(users.user_0);
@@ -180,7 +151,6 @@ contract SingleEditionCollectionTest is BaseTest {
     }
 
     function test__MintCollection_AndTransferToken() external {
-        // get expected erc6551 account
         address erc6551account = erc6551Registry.account(
             address(accountImpl), keccak256("ROUX_SINGLE_EDITION_COLLECTION"), block.chainid, address(collection), 1
         );
@@ -214,7 +184,6 @@ contract SingleEditionCollectionTest is BaseTest {
     }
 
     function test__ValidateItems_Success() external {
-        // This test verifies that creation succeeds with valid parameters
         (uint256[] memory validItemIds,,) = _createSingleEditionCollection(edition, 1);
 
         (address[] memory itemTargets, uint256[] memory itemIds) = collection.collection();

@@ -6,110 +6,6 @@ import { EditionData } from "src/types/DataTypes.sol";
 
 interface IRouxEdition {
     /* -------------------------------------------- */
-    /* errors                                       */
-    /* -------------------------------------------- */
-    /**
-     * @notice invalid parameters
-     */
-    error InvalidParams();
-
-    /**
-     * @notice invalid token id
-     */
-    error InvalidTokenId();
-
-    /**
-     * @notice edition already set
-     */
-    error CreatorAlreadySet();
-
-    /**
-     * @notice invalid attribution
-     */
-    error InvalidAttribution();
-
-    /**
-     * @notice invalid caller
-     */
-    error InvalidCaller();
-
-    /**
-     * @notice invalid extension
-     */
-    error InvalidExtension();
-
-    /**
-     * @notice inactive mint
-     */
-    error InactiveMint();
-
-    /**
-     * @notice max supply exceeded
-     */
-    error MaxSupplyExceeded();
-
-    /**
-     * @notice gated mint
-     */
-    error GatedMint();
-
-    /**
-     * @notice invalid collection
-     */
-    error InvalidCollection();
-
-    /**
-     * @notice only allowlist
-     */
-    error OnlyAllowlist();
-
-    /* -------------------------------------------- */
-    /* events                                       */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice emitted when a token is added
-     * @param id token id
-     */
-    event TokenAdded(uint256 indexed id);
-
-    /**
-     * @notice emitted when an extension is added
-     * @param extension extension address
-     * @param id token id
-     * @param enable extension enabled or disabled
-     */
-    event ExtensionSet(address indexed extension, uint256 indexed id, bool enable);
-
-    /**
-     * @notice emitted when a collection is set
-     * @param collection collection address
-     * @param collectionId collection id
-     * @param enable enable or disable collection
-     */
-    event CollectionSet(address indexed collection, uint256 collectionId, bool enable);
-
-    /**
-     * @notice emitted when a contract uri is updated
-     * @param newContractUri new contract uri
-     */
-    event ContractURIUpdated(string newContractUri);
-
-    /**
-     * @notice emitted when the default price is updated
-     * @param id token id
-     * @param newDefaultPrice new default price
-     */
-    event DefaultPriceUpdated(uint256 indexed id, uint256 newDefaultPrice);
-
-    /**
-     * @notice emitted when the mint gate is updated
-     * @param id token id
-     * @param gate whether the token is gated or not
-     */
-    event MintGated(uint256 indexed id, bool gate);
-
-    /* -------------------------------------------- */
     /* view functions                               */
     /* -------------------------------------------- */
 
@@ -131,12 +27,6 @@ interface IRouxEdition {
      * @return currency address
      */
     function currency() external view returns (address);
-
-    /**
-     * @notice get implementation version
-     * @return implementation version
-     */
-    function IMPLEMENTATION_VERSION() external view returns (string memory);
 
     /**
      * @notice get total supply for a given token id

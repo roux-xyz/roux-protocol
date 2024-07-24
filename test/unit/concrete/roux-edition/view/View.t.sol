@@ -8,11 +8,6 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
         BaseTest.setUp();
     }
 
-    /// @dev returns correct implementation version
-    function test__Implementation() external view {
-        assertEq(edition.IMPLEMENTATION_VERSION(), "0.1");
-    }
-
     /// @dev returns correct owner
     function test__Owner() external view {
         assertEq(edition.owner(), users.creator_0);

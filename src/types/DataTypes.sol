@@ -95,16 +95,6 @@ library CollectionData {
     }
 
     /**
-     * @notice Collection storage
-     * @custom:storage-location erc7201:singleEditionCollection.singleEditionCollectionStorage
-     * @param fundsRecipient funds recipient address
-     * @param mintParams mint parameters
-     */
-    struct SingleEditionCollectionStorage {
-        SingleEditionMintParams mintParams;
-    }
-
-    /**
      * @notice single edition create params
      * @param name collection name
      * @param symbol collection symbol
@@ -138,17 +128,6 @@ library CollectionData {
     struct MultiEditionMintParams {
         uint40 mintStart;
         uint40 mintEnd;
-    }
-
-    /**
-     * @notice Collection storage
-     * @custom:storage-location erc7201:multiEditionCollection.multiEditionCollectionStorage
-     * @param fundsRecipient funds recipient address
-     * @param mintParams mint parameters
-     */
-    struct MultiEditionCollectionStorage {
-        MultiEditionMintParams mintParams;
-        address rewardsRecipient;
     }
 
     /**

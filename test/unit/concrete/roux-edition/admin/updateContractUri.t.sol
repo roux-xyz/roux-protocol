@@ -4,6 +4,9 @@ pragma solidity ^0.8.26;
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
 contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */
@@ -33,9 +36,8 @@ contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
         string memory currentUri = edition.contractURI();
         string memory newUri = "https://new.com";
 
-        // expect event to be emitted
         vm.expectEmit({ emitter: address(edition) });
-        emit ContractURIUpdated(newUri);
+        emit EventsLib.ContractURIUpdated(newUri);
 
         vm.prank(users.creator_0);
         edition.updateContractUri(newUri);
