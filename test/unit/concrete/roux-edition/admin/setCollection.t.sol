@@ -23,6 +23,9 @@ contract SetCollection_RouxEdition_Unit_Concrete_Test is BaseTest {
     function setUp() public override {
         BaseTest.setUp();
 
+        vm.prank(users.deployer);
+        collectionFactory.setAllowlist(false);
+
         (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
 
         collectionId = uint256(keccak256(abi.encode(tokenIds)));

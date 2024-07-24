@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
+import { BaseTest } from "./Base.t.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
-import { BaseTest } from "./Base.t.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
@@ -47,7 +48,7 @@ contract RouxEditionFactoryTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector, users.deployer);
 
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
 
         vm.stopPrank();
@@ -101,7 +102,9 @@ contract RouxEditionFactoryTest is BaseTest {
 
         bytes memory params = abi.encode(CONTRACT_URI);
         vm.startPrank(users.creator_2);
-        factory.create(params);
+        address newEdition = factory.create(params);
+
+        assertEq(factory.isEdition(newEdition), true);
 
         vm.stopPrank();
     }

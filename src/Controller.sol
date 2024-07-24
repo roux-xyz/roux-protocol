@@ -10,10 +10,11 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
+import { Initializable } from "solady/utils/Initializable.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { BASIS_POINT_SCALE } from "src/libraries/ConstantsLib.sol";
 import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
@@ -23,7 +24,7 @@ import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
  * @author maks pazuniak (@maks-p)
  * @custom:version 0.1
  */
-contract Controller is IController, OwnableRoles, ReentrancyGuard {
+contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -74,7 +75,6 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
      * @param balance balance
      */
     struct ControllerStorage {
-        bool initialized;
         bool platformFeeEnabled;
         uint192 platformFeeBalance;
         mapping(address edition => mapping(uint256 tokenId => TokenConfig)) tokenConfig;
@@ -93,7 +93,7 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
      */
     constructor(address registry, address currency_) {
         // disable initialization of implementation contract
-        _storage().initialized = true;
+        _disableInitializers();
 
         // set registry
         _registry = IRegistry(registry);
@@ -111,11 +111,7 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     /* ------------------------------------------------- */
 
     /// @notice initialize
-    function initialize() external nonReentrant {
-        // initialize
-        require(!_storage().initialized, "Already initialized");
-        _storage().initialized = true;
-
+    function initialize() external initializer nonReentrant {
         // set owner of the proxy
         _initializeOwner(msg.sender);
     }

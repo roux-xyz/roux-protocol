@@ -12,12 +12,13 @@ import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
 /**
  * @title RouxEdition Factory
  * @custom:version 0.1
  */
-contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
+contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
 
     /* -------------------------------------------- */
@@ -39,7 +40,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /**
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
-     * @param initialized whether the contract has been initialized
      * @param editions set of editions
      * @param owner owner of the contract
      * @param collectionFactory collection factory
@@ -47,7 +47,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      * @param allowlist allowlist of editions
      */
     struct RouxEditionFactoryStorage {
-        bool initialized;
         LibBitmap.Bitmap editions;
         address owner;
         address collectionFactory;
@@ -71,11 +70,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
      * @param editionBeacon edition beacon
      */
     constructor(address editionBeacon) {
-        RouxEditionFactoryStorage storage $ = _storage();
-
         // disable initialization of implementation contract
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
+        _disableInitializers();
 
         // set edition beacon
         _editionBeacon = editionBeacon;
@@ -90,12 +86,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Ownable, ReentrancyGuard {
     /* -------------------------------------------- */
 
     /// @notice initialize RouxEditionFactory
-    function initialize() external {
-        RouxEditionFactoryStorage storage $ = _storage();
-
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
-
+    function initialize() external initializer {
         // set owner of proxy
         _initializeOwner(msg.sender);
     }

@@ -3,9 +3,10 @@ pragma solidity 0.8.26;
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 
+import { Initializable } from "solady/utils/Initializable.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -15,7 +16,7 @@ import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
  * @title Registry
  * @custom:version 0.1
  */
-contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
+contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */
     /* constants                                    */
     /* -------------------------------------------- */
@@ -46,7 +47,6 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
      * @custom:storage-location erc7201:rouxRegistry.rouxRegistryStorage
      */
     struct RouxRegistryStorage {
-        bool initialized;
         mapping(address edition => mapping(uint256 tokenId => RegistryData)) registryData;
     }
 
@@ -56,7 +56,7 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
 
     constructor() {
         // disable initialization of implementation contract
-        _storage().initialized = true;
+        _disableInitializers();
 
         // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
@@ -67,11 +67,7 @@ contract Registry is IRegistry, OwnableRoles, ReentrancyGuard {
     /* initializer                                  */
     /* -------------------------------------------- */
 
-    function initialize() external nonReentrant {
-        // initialize
-        require(!_storage().initialized, "Already initialized");
-        _storage().initialized = true;
-
+    function initialize() external initializer nonReentrant {
         // set owner of the proxy
         _initializeOwner(msg.sender);
     }

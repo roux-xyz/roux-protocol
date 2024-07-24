@@ -13,13 +13,14 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
 import { EditionData } from "src/types/DataTypes.sol";
 
@@ -28,7 +29,7 @@ import { EditionData } from "src/types/DataTypes.sol";
  * @author maks pazuniak (@maks-p)
  * @custom:version 0.1
  */
-contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyGuard {
+contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
 
@@ -67,7 +68,6 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
     /**
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxEdition.rouxEditionStorages
-     * @param initialized whether the contract has been initialized
      * @param tokenId current token id
      * @param contractURI contract uri
      * @param editionFactory edition factory
@@ -76,7 +76,6 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
      * @param tokens mapping of token id to token data
      */
     struct RouxEditionStorage {
-        bool initialized;
         uint256 tokenId;
         string contractURI;
         IRouxEditionFactory editionFactory;
@@ -96,8 +95,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
      * @param currency_ currency
      */
     constructor(address controller, address registry, address currency_) {
-        // disable initialization of implementation contract
-        _storage().initialized = true;
+        // disable initializers
+        _disableInitializers();
 
         // set owner
         _initializeOwner(msg.sender);
@@ -123,12 +122,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
      * @notice initialize RouxEdition
      * @param params encoded parameters
      */
-    function initialize(bytes calldata params) external nonReentrant {
+    function initialize(bytes calldata params) external initializer nonReentrant {
         RouxEditionStorage storage $ = _storage();
-
-        // initialize
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
 
         // editionFactory transfers ownership to caller after initialization
         _initializeOwner(msg.sender);
@@ -302,13 +297,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
         uint256 derivedPrice = totalAmount / ids.length;
         uint256 currentValue = totalAmount;
         for (uint256 i = 0; i < ids.length; i++) {
+            // cache id
             uint256 id = ids[i];
 
-            // validate mint
-            _validateMint(id, 1);
-
             // update total supply
-            _storage().tokens[id].totalSupply++;
+            $.tokens[id].totalSupply++;
 
             // calculate funds disbursement
             uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
@@ -341,21 +334,18 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
     {
         RouxEditionStorage storage $ = _storage();
 
-        // validate mint
-        _validateMint(id, 1);
+        // validate caller is a multi-edition collection
+        if (!$.collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         // gated mints are ineligible for multiEditionCollection mints
         if ($.tokens[id].mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
-
-        // validate caller is a multi-edition collection
-        if (!$.collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         // mint
         _mintWithTransfers(to, id, 1, amount, address(0), data);
     }
 
     /* ------------------------------------------------- */
-    /* admin | onlyOwner                                 */
+    /* admin             ```````                         */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IRouxEdition
@@ -371,12 +361,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
         }
 
         // set mint params
-        d.mintParams = EditionData.MintParams({
-            defaultPrice: p.defaultPrice.toUint128(),
-            mintStart: p.mintStart,
-            mintEnd: p.mintEnd,
-            gate: false
-        });
+        d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: false });
 
         // set token data
         d.uri = p.tokenUri;
@@ -658,11 +643,6 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, OwnableRoles, ReentrancyG
         // validate max supply
         if (quantity + d.totalSupply > d.maxSupply) {
             revert ErrorsLib.RouxEdition_MaxSupplyExceeded();
-        }
-
-        // validate minting period
-        if (block.timestamp < d.mintParams.mintStart || block.timestamp > d.mintParams.mintEnd) {
-            revert ErrorsLib.RouxEdition_InactiveMint();
         }
     }
 

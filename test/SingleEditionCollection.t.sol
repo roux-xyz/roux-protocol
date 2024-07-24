@@ -23,6 +23,9 @@ contract SingleEditionCollectionTest is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
 
+        vm.prank(users.deployer);
+        collectionFactory.setAllowlist(false);
+
         (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
 
         vm.prank(users.creator_0);

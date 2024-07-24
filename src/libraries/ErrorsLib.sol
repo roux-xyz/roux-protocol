@@ -15,9 +15,6 @@ library ErrorsLib {
     /// @notice max supply exceeded
     error RouxEdition_MaxSupplyExceeded();
 
-    /// @notice inactive mint
-    error RouxEdition_InactiveMint();
-
     /// @notice invalid currency
     error RouxEdition_InvalidCurrency();
 

@@ -99,26 +99,6 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         assertEq(edition.maxSupply(tokenId_), type(uint128).max);
     }
 
-    /// @dev mint start is now
-    function test__AddToken_MintStartIsNow() external {
-        addParams.mintStart = uint40(block.timestamp);
-
-        vm.prank(users.creator_0);
-        uint256 tokenId_ = edition.add(addParams);
-
-        assertEq(edition.defaultMintParams(tokenId_).mintStart, uint40(block.timestamp));
-    }
-
-    /// @dev mint end is far futurew
-    function test__AddToken_MintEndIsFarFuture() external {
-        addParams.mintEnd = type(uint40).max;
-
-        vm.prank(users.creator_0);
-        uint256 tokenId_ = edition.add(addParams);
-
-        assertEq(edition.defaultMintParams(tokenId_).mintEnd, type(uint40).max);
-    }
-
     /// @dev token id is incremented after add
     function test__AddToken_TokenIdIsIncremented() external {
         // cache starting token id
@@ -149,8 +129,6 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.defaultMintParams(tokenId_).defaultPrice, addParams.defaultPrice);
-        assertEq(edition.defaultMintParams(tokenId_).mintStart, addParams.mintStart);
-        assertEq(edition.defaultMintParams(tokenId_).mintEnd, addParams.mintEnd);
         assertEq(edition.defaultMintParams(tokenId_).gate, false);
     }
 

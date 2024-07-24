@@ -5,6 +5,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { BaseTest } from "./Base.t.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EditionData } from "src/types/DataTypes.sol";
@@ -42,7 +43,7 @@ contract ControllerTest is BaseTest {
     }
 
     function test__RevertWhen_SetController_ProfitShareTooHigh() external {
-        _createEdition(users.creator_0);
+        RouxEdition edition_ = _createEdition(users.creator_0);
 
         defaultAddParams.profitShare = 10_001;
         defaultAddParams.parentEdition = address(edition);
@@ -50,7 +51,7 @@ contract ControllerTest is BaseTest {
 
         vm.prank(users.creator_0);
         vm.expectRevert(ErrorsLib.Controller_InvalidProfitShare.selector);
-        edition.add(defaultAddParams);
+        edition_.add(defaultAddParams);
     }
 
     function test__RevertWhen_EnablePlatformFee_OnlyOwner() external {
@@ -66,7 +67,7 @@ contract ControllerTest is BaseTest {
     }
 
     function test__RevertWhen_AlreadyInitialized() external {
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         controller.initialize();
     }
 

@@ -6,8 +6,10 @@ import { BaseTest } from "./Base.t.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable as SoladyOwnable } from "solady/auth/Ownable.sol";
+
+import { Ownable as OpenZeppelinOwnable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
 import { Controller } from "src/Controller.sol";
 import { Registry } from "src/Registry.sol";
@@ -26,7 +28,7 @@ contract UpgradeTest is BaseTest {
         IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // revert when not owner
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, users.user_0));
+        vm.expectRevert(abi.encodeWithSelector(OpenZeppelinOwnable.OwnableUnauthorizedAccount.selector, users.user_0));
         vm.prank(users.user_0);
         editionBeacon.upgradeTo(address(newEditionImpl));
     }
@@ -39,7 +41,7 @@ contract UpgradeTest is BaseTest {
         Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
         vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         controller.upgradeToAndCall(address(newControllerImpl), "");
     }
 
@@ -52,7 +54,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(Controller.initialize.selector, address(registry));
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         controller.upgradeToAndCall(address(newControllerImpl), initData);
     }
 
@@ -64,7 +66,7 @@ contract UpgradeTest is BaseTest {
         Registry newRegistryImpl = new Registry();
 
         vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         registry.upgradeToAndCall(address(newRegistryImpl), "");
     }
 
@@ -77,7 +79,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(Registry.initialize.selector);
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         registry.upgradeToAndCall(address(newRegistryImpl), initData);
     }
 
@@ -89,7 +91,7 @@ contract UpgradeTest is BaseTest {
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
         vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), "");
     }
 
@@ -102,7 +104,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector, users.deployer);
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
     }
 

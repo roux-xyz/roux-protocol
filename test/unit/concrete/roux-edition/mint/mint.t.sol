@@ -68,30 +68,6 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
         edition.mint(users.user_0, tokenId_, 1, address(0), address(0), "");
     }
 
-    /// @dev reverts when mint attempted before mint start
-    function test__RevertWhen_Mint_MintNotStarted() external {
-        addParams.mintStart = uint40(block.timestamp + 1 days);
-
-        vm.prank(users.creator_0);
-        uint256 tokenId_ = edition.add(addParams);
-
-        vm.prank(users.user_0);
-        vm.expectRevert(ErrorsLib.RouxEdition_InactiveMint.selector);
-        edition.mint(users.user_0, tokenId_, 1, address(0), address(0), "");
-    }
-
-    /// @dev reverts when mint attempted after mint end
-    function test__RevertWhen_Mint_MintEnded() external {
-        vm.warp(addParams.mintEnd + 1);
-
-        vm.prank(users.creator_0);
-        uint256 tokenId_ = edition.add(addParams);
-
-        vm.prank(users.user_0);
-        vm.expectRevert(ErrorsLib.RouxEdition_InactiveMint.selector);
-        edition.mint(users.user_0, tokenId_, 1, address(0), address(0), "");
-    }
-
     /// @dev reverts when included extension is not registered
     function test__RevertWhen_Mint_InvalidExtension() external {
         vm.prank(users.user_0);

@@ -11,14 +11,10 @@ library EditionData {
     /**
      * @notice mint params
      * @param defaultPrice default price
-     * @param mintStart mint start
-     * @param mintEnd mint end
      * @param gate whether to gate minting
      */
     struct MintParams {
         uint128 defaultPrice;
-        uint40 mintStart;
-        uint40 mintEnd;
         bool gate;
     }
 
@@ -47,8 +43,6 @@ library EditionData {
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param defaultPrice base price - typically overriden by extension
-     * @param mintStart mint start
-     * @param mintEnd mint end
      * @param profitShare profit share
      * @param parentEdition parent edition - address(0) if root
      * @param parentTokenId parent token id - 0 if root
@@ -61,8 +55,6 @@ library EditionData {
         uint256 maxSupply;
         address fundsRecipient;
         uint256 defaultPrice;
-        uint40 mintStart;
-        uint40 mintEnd;
         uint256 profitShare;
         address parentEdition;
         uint256 parentTokenId;
