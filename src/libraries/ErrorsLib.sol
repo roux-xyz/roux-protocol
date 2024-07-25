@@ -36,6 +36,9 @@ library ErrorsLib {
     /// @notice invalid extension
     error RouxEdition_InvalidExtension();
 
+    /// @notice uri is frozen
+    error RouxEdition_UriFrozen();
+
     /* ------------------------------------------------- */
     /* Controller                                        */
     /* ------------------------------------------------- */

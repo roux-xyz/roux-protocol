@@ -174,7 +174,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     /* ------------------------------------------------- */
 
     /// @inheritdoc IController
-    function disburse(uint256 tokenId, uint256 amount, address referrer) external payable nonReentrant {
+    function disburse(uint256 id, uint256 amount, address referrer) external payable nonReentrant {
         // transfer payment
         _transferPayment(msg.sender, amount);
 
@@ -193,7 +193,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         }
 
         // disburse
-        _disburse(msg.sender, tokenId, amount - fee - referralFee);
+        _disburse(msg.sender, id, amount - fee - referralFee);
     }
 
     /// @inheritdoc IController

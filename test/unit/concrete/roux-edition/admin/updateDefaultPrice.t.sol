@@ -32,14 +32,13 @@ contract UpdateDefaultPrice_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates default price
-    function test__UpdateDefaultPrice() external {
+    function test__UpdateDefaultPrice() external useEditionAdmin(edition) {
         uint128 currentPrice = edition.defaultPrice(1);
         uint128 newPrice = 5 * 10 ** 5;
 
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.DefaultPriceUpdated(1, newPrice);
 
-        vm.prank(users.creator_0);
         edition.updateDefaultPrice(1, newPrice);
 
         assertEq(edition.defaultPrice(1), newPrice);

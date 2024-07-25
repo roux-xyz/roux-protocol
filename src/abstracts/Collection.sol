@@ -9,6 +9,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 import { IController } from "src/interfaces/IController.sol";
 import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
@@ -47,6 +48,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
 
     /// @notice edition factory
     IRouxEditionFactory immutable _editionFactory;
+
+    /// @notice controller
+    IController immutable _controller;
 
     /* ------------------------------------------------- */
     /* structures                                        */
@@ -90,8 +94,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
      * @param erc6551registry registry
      * @param accountImplementation erc6551 account implementation
      * @param editionFactory roux edition factory
+     * @param controller controller
      */
-    constructor(address erc6551registry, address accountImplementation, address editionFactory) {
+    constructor(address erc6551registry, address accountImplementation, address editionFactory, address controller) {
         // disable initialization of implementation contract
         _collectionStorage().initialized = true;
 
@@ -103,6 +108,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
 
         // set roux edition factory
         _editionFactory = IRouxEditionFactory(editionFactory);
+
+        // set controller
+        _controller = IController(controller);
     }
 
     /* ------------------------------------------------- */
@@ -124,6 +132,9 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
 
         // initialize collection
         _createCollection(params);
+
+        // approve controller to spend funds
+        IERC20($.currency).approve(address(_controller), type(uint256).max);
     }
 
     /* ------------------------------------------------- */
@@ -256,12 +267,6 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
     function gateMint(bool gate) external onlyOwner {
         _collectionStorage().gate = gate;
     }
-
-    /**
-     * @dev Updates the minting parameters for this collection.
-     * @param mintParams Encoded parameters for updating mint settings.
-     */
-    function updateMintParams(bytes calldata mintParams) external virtual;
 
     /* ------------------------------------------------- */
     /* erc165 interface                                */

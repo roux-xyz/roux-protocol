@@ -2,16 +2,13 @@
 pragma solidity ^0.8.26;
 
 import { BaseTest } from "test/Base.t.sol";
-
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-
 import { MockExtension } from "test/mocks/MockExtension.sol";
 
 contract Mint_RouxEdition_Integration_Concrete_Test is BaseTest {
@@ -123,17 +120,28 @@ contract Mint_RouxEdition_Integration_Concrete_Test is BaseTest {
     /// @dev mint gated mint with extension
     function test__Mint_WithExtension_GatedMint() external {
         uint128 customPrice = 5 * 10 ** 5;
-
         uint256 startingBalance = mockUSDC.balanceOf(users.user_0);
 
-        vm.prank(users.creator_0);
-        edition.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
+        // gate token on add
+        addParams.gate = true;
 
-        vm.prank(users.creator_0);
-        edition.gateMint(1, true);
+        // create edition instance
+        RouxEdition edition_ = _createEdition(users.creator_1);
 
-        vm.prank(users.user_0);
-        edition.mint({
+        vm.startPrank(users.creator_1);
+        edition_.add(addParams);
+        edition_.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
+        vm.stopPrank();
+
+        // verify gate is set
+        assertEq(edition_.isGated(1), true);
+
+        // approve edition
+        vm.startPrank(users.user_0);
+        mockUSDC.approve(address(edition_), type(uint256).max);
+
+        // mint
+        edition_.mint({
             to: users.user_0,
             id: 1,
             quantity: 1,
@@ -141,9 +149,10 @@ contract Mint_RouxEdition_Integration_Concrete_Test is BaseTest {
             referrer: users.user_0,
             data: ""
         });
+        vm.stopPrank();
 
-        assertEq(edition.balanceOf(users.user_0, 1), 1);
-        assertEq(edition.totalSupply(1), 2);
+        assertEq(edition_.balanceOf(users.user_0, 1), 1);
+        assertEq(edition_.totalSupply(1), 2);
 
         assertEq(mockUSDC.balanceOf(users.user_0), startingBalance - customPrice);
     }

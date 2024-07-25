@@ -29,8 +29,7 @@ contract Owner_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully transfers ownership
-    function test__TransferOwnership() external {
-        vm.prank(users.creator_0);
+    function test__TransferOwnership() external useEditionAdmin(edition) {
         edition.transferOwnership(users.creator_1);
         assertEq(edition.owner(), users.creator_1);
     }

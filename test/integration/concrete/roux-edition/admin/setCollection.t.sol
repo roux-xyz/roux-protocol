@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import { BaseTest } from "test/Base.t.sol";
+import { CollectionBase } from "test/shared/CollectionBase.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
 import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
@@ -10,25 +10,13 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-contract SetCollection_RouxEdition_Unit_Concrete_Test is BaseTest {
+contract SetCollection_RouxEdition_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
 
-    uint256[] tokenIds;
-    uint256[] quantities;
-    uint256 collectionId;
-    SingleEditionCollection collection;
-
     function setUp() public override {
-        BaseTest.setUp();
-
-        vm.prank(users.deployer);
-        collectionFactory.setAllowlist(false);
-
-        (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
-
-        collectionId = uint256(keccak256(abi.encode(tokenIds)));
+        CollectionBase.setUp();
     }
 
     /* -------------------------------------------- */
@@ -39,21 +27,28 @@ contract SetCollection_RouxEdition_Unit_Concrete_Test is BaseTest {
     function test__RevertWhen_OnlyOwner_SetCollection() external {
         vm.prank(users.user_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        edition.setCollection(tokenIds, address(collection), true);
+        edition.setCollection(collectionId, address(singleEditionCollection), true);
+    }
+
+    /// @dev reverts when setting invalid collection id - zero
+    function test__RevertWhen_SetInvalidCollectionId_Zero() external {
+        vm.prank(users.creator_0);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
+        edition.setCollection(0, address(singleEditionCollection), true);
     }
 
     /// @dev reverts when setting invalid collection - zero address
     function test__RevertWhen_SetInvalidCollection_ZeroAddress() external {
         vm.prank(users.creator_0);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCollection.selector);
-        edition.setCollection(tokenIds, address(0), true);
+        edition.setCollection(collectionId, address(0), true);
     }
 
     /// @dev reverts when setting invalid collection - unsupported interface
     function test__RevertWhen_SetInvalidCollection_UnsupportedInterface() external {
         vm.prank(users.creator_0);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCollection.selector);
-        edition.setCollection(tokenIds, address(edition), true);
+        edition.setCollection(collectionId, address(edition), true);
     }
 
     /* -------------------------------------------- */
@@ -61,30 +56,27 @@ contract SetCollection_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev set collection
-    function test__SetCollection() external {
+    function test__SetCollection() external useEditionAdmin(edition) {
         vm.expectEmit({ emitter: address(edition) });
-        emit EventsLib.CollectionSet(address(collection), collectionId, true);
+        emit EventsLib.CollectionSet(address(singleEditionCollection), collectionId, true);
 
-        vm.prank(users.creator_0);
-        uint256 collectionId_ = edition.setCollection(tokenIds, address(collection), true);
+        uint256 collectionId_ = edition.setCollection(collectionId, address(singleEditionCollection), true);
 
-        assertTrue(edition.isCollection(collectionId, address(collection)));
+        assertTrue(edition.isCollection(collectionId, address(singleEditionCollection)));
         assertEq(collectionId_, collectionId);
     }
 
     /// @dev set collection - disable
-    function test__SetCollection_Disable() external {
-        vm.prank(users.creator_0);
-        edition.setCollection(tokenIds, address(collection), true);
+    function test__SetCollection_Disable() external useEditionAdmin(edition) {
+        edition.setCollection(collectionId, address(singleEditionCollection), true);
 
-        assertTrue(edition.isCollection(collectionId, address(collection)));
+        assertTrue(edition.isCollection(collectionId, address(singleEditionCollection)));
 
         vm.expectEmit({ emitter: address(edition) });
-        emit EventsLib.CollectionSet(address(collection), collectionId, false);
+        emit EventsLib.CollectionSet(address(singleEditionCollection), collectionId, false);
 
-        vm.prank(users.creator_0);
-        edition.setCollection(tokenIds, address(collection), false);
+        edition.setCollection(collectionId, address(singleEditionCollection), false);
 
-        assertFalse(edition.isCollection(collectionId, address(collection)));
+        assertFalse(edition.isCollection(collectionId, address(singleEditionCollection)));
     }
 }

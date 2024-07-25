@@ -45,8 +45,11 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     /**
      * @notice roux registry storage
      * @custom:storage-location erc7201:rouxRegistry.rouxRegistryStorage
+     * @param hasChild whether the edition has a child
+     * @param registryData edition to token id to registry data
      */
     struct RouxRegistryStorage {
+        mapping(address edition => mapping(uint256 tokenId => bool hasChild)) hasChild;
         mapping(address edition => mapping(uint256 tokenId => RegistryData)) registryData;
     }
 
@@ -106,12 +109,19 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         return _root(edition, tokenId, 0);
     }
 
+    /// @inheritdoc IRegistry
+    function hasChild(address edition, uint256 tokenId) external view returns (bool) {
+        return _storage().hasChild[edition][tokenId];
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
     /// @inheritdoc IRegistry
     function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external nonReentrant {
+        RouxRegistryStorage storage $ = _storage();
+
         // get current depth of parent edition and tokenId
         (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 
@@ -119,10 +129,12 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         if (depth + 1 > MAX_NUM_FORKS) revert ErrorsLib.Registry_MaxDepthExceeded();
 
         // set administrator data for edition + token id
-        RegistryData storage d = _storage().registryData[msg.sender][tokenId];
+        RegistryData storage d = $.registryData[msg.sender][tokenId];
 
         d.parentEdition = parentEdition;
         d.parentTokenId = parentTokenId;
+
+        $.hasChild[parentEdition][parentTokenId] = true;
 
         // emit event
         emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);

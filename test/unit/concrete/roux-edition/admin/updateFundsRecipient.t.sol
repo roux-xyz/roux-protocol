@@ -3,11 +3,9 @@ pragma solidity ^0.8.26;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
+contract UpdateFundsRecipient_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
@@ -21,27 +19,27 @@ contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev reverts when not owner
-    function test__RevertWhen_UpdateContractUri_NotOwner() external {
+    function test__RevertWhen_UpdateFundsRecipient_NotOwner() external {
         vm.prank(users.user_0);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        edition.updateContractUri("https://new.com");
+        edition.updateFundsRecipient(1, users.user_1);
     }
 
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
-    /// @dev successfully updates uri
-    function test__UpdateContractUri() external useEditionAdmin(edition) {
-        string memory currentUri = edition.contractURI();
-        string memory newUri = "https://new.com";
+    /// @dev successfully updates funds recipient
+    function test__UpdateFundsRecipient() external useEditionAdmin(edition) {
+        address originalRecipient = controller.fundsRecipient(address(edition), 1);
+        address newRecipient = users.user_1;
 
-        vm.expectEmit({ emitter: address(edition) });
-        emit EventsLib.ContractURIUpdated(newUri);
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.FundsRecipientUpdated(address(edition), 1, newRecipient);
 
-        edition.updateContractUri(newUri);
+        edition.updateFundsRecipient(1, newRecipient);
 
-        assertEq(edition.contractURI(), newUri);
-        assertNotEq(edition.contractURI(), currentUri);
+        assertEq(controller.fundsRecipient(address(edition), 1), newRecipient);
+        assertNotEq(controller.fundsRecipient(address(edition), 1), originalRecipient);
     }
 }

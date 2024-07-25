@@ -9,7 +9,7 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
+contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
@@ -58,19 +58,17 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully sets extension
-    function test__SetExtension() external {
+    function test__SetExtension() external useEditionAdmin(edition) {
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.ExtensionSet(address(mockExtension), 1, true);
 
-        vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, "");
 
         assertTrue(edition.isExtension(1, address(mockExtension)));
     }
 
     /// @dev successfully disables extension
-    function test__DisableExtension() external {
-        vm.prank(users.creator_0);
+    function test__DisableExtension() external useEditionAdmin(edition) {
         edition.setExtension(1, address(mockExtension), true, "");
 
         assertTrue(edition.isExtension(1, address(mockExtension)));
@@ -78,17 +76,15 @@ contract SetExtension_RouxEdition_Unit_Concrete_Test is BaseTest {
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.ExtensionSet(address(mockExtension), 1, false);
 
-        vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), false, "");
 
         assertFalse(edition.isExtension(1, address(mockExtension)));
     }
 
     /// @dev set extension with mint params
-    function test__SetExtension_WithMintParams() external {
+    function test__SetExtension_WithMintParams() external useEditionAdmin(edition) {
         uint128 customPrice = 5 * 10 ** 5;
 
-        vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
 
         assertEq(mockExtension.price(address(edition), 1), customPrice);

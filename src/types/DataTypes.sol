@@ -47,6 +47,7 @@ library EditionData {
      * @param parentEdition parent edition - address(0) if root
      * @param parentTokenId parent token id - 0 if root
      * @param extension extension - must be previously set to add token
+     * @param gate whether to gate minting - must be set on `add`
      * @param options additional options
      */
     struct AddParams {
@@ -59,6 +60,7 @@ library EditionData {
         address parentEdition;
         uint256 parentTokenId;
         address extension;
+        bool gate;
         bytes options;
     }
 }

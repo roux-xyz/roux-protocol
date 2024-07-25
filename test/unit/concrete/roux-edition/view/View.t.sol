@@ -59,14 +59,6 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
         assertEq(edition.exists(0), false);
     }
 
-    /// @dev returns whether token is gated - when true
-    function test__IsGated_True() external {
-        vm.prank(users.creator_0);
-        edition.gateMint(1, true);
-
-        assertTrue(edition.isGated(1));
-    }
-
     /// @dev returns whether token is gated - when false
     function test__IsGated_False() external view {
         assertFalse(edition.isGated(1));

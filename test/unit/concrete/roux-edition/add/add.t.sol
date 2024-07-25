@@ -132,6 +132,26 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         assertEq(edition.defaultMintParams(tokenId_).gate, false);
     }
 
+    /// @dev gate is set after add - false default
+    function test__AddToken_GateIsSet_FalseDefault() external {
+        // add token
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertEq(edition.isGated(tokenId_), false);
+    }
+
+    /// @dev gate is set after add - false
+    function test__AddToken_GateIsSet_True() external {
+        addParams.gate = true;
+
+        // add token
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertEq(edition.isGated(tokenId_), true);
+    }
+
     /// @dev token uri is set after add
     function test__AddToken_UriIsSet() external {
         string memory newUri = "https://test.uri.com";
@@ -159,6 +179,16 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         uint256 tokenId_ = edition_.add(addParams);
 
         assertEq(edition_.creator(tokenId_), users.creator_1);
+    }
+
+    /// @dev extension is set on add
+    function test__AddToken_ExtensionIsSet() external {
+        addParams.extension = address(mockExtension);
+
+        vm.prank(users.creator_0);
+        uint256 tokenId_ = edition.add(addParams);
+
+        assertTrue(edition.isExtension(tokenId_, address(mockExtension)));
     }
 
     /// @dev token max supply is set after add

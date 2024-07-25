@@ -46,9 +46,8 @@ library EventsLib {
     /**
      * @notice emitted when the mint gate is updated
      * @param id token id
-     * @param gate whether the token is gated or not
      */
-    event MintGated(uint256 indexed id, bool gate);
+    event GateDisabled(uint256 indexed id);
 
     /* ------------------------------------------------- */
     /* Controller                                        */

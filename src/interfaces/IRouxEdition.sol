@@ -99,6 +99,15 @@ interface IRouxEdition {
      */
     function defaultMintParams(uint256 id) external view returns (EditionData.MintParams memory);
 
+    /**
+     * @notice check if token can be minted as part of a multi collection
+     * @param id token id
+     * @param currency_ collection currency
+     * @return true if token can be minted as part of a multi collection
+     * @dev used by MultiEditionCollection to confirm token eligibility for multi collection inclusion
+     */
+    function multiCollectionMintEligible(uint256 id, address currency_) external view returns (bool);
+
     /* -------------------------------------------- */
     /* write functions                              */
     /* -------------------------------------------- */
@@ -136,6 +145,12 @@ interface IRouxEdition {
      * @param ids array of token ids
      * @param totalAmount total amount to pay
      * @param data additional data
+     *
+     * @dev used by SingleEditionCollection to batch mint tokens to token bound account
+     *      - edition owner must register the collection using `setCollection`
+     *      - bypasses validation that token is ungated, which enables tokens that can
+     *        only be minted as part of a collection
+     *      - bypasses validation that token exists
      */
     function collectionSingleMint(
         address to,

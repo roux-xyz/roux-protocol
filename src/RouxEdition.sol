@@ -8,6 +8,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -229,6 +230,13 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         return _storage().tokens[id].mintParams;
     }
 
+    /// @inheritdoc IRouxEdition
+    function multiCollectionMintEligible(uint256 id, address currency_) external view returns (bool) {
+        EditionData.TokenData storage d = _storage().tokens[id];
+
+        return _exists(id) && !d.mintParams.gate && currency_ == _currency;
+    }
+
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
@@ -308,7 +316,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             currentValue -= allocatedValue;
 
             // send funds to controller
-            if (allocatedValue > 0) _controller.disburse(id, allocatedValue, address(0));
+            if (allocatedValue > 0) {
+                _controller.disburse({ id: id, amount: allocatedValue, referrer: address(0) });
+            }
         }
 
         // set quantities array
@@ -345,7 +355,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /* ------------------------------------------------- */
-    /* admin             ```````                         */
+    /* admin                                             */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IRouxEdition
@@ -361,7 +371,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         }
 
         // set mint params
-        d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: false });
+        d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: p.gate });
 
         // set token data
         d.uri = p.tokenUri;
@@ -395,6 +405,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param newUri new uri
      */
     function updateUri(uint256 id, string memory newUri) external onlyOwner {
+        // verify fork has not been created
+        if (_registry.hasChild(address(this), id)) revert ErrorsLib.RouxEdition_UriFrozen();
+
         _storage().tokens[id].uri = newUri;
 
         emit URI(newUri, id);
@@ -451,12 +464,15 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /**
      * @notice set collection
-     * @param ids array of ids
+     * @param collectionId encoded collection id
      * @param collection collection address
      * @param enable enable or disable collection
+     *
+     * @dev bypases validation that token is ungated and exists; frontends should
+     *      validate that token exists before calling this function
      */
     function setCollection(
-        uint256[] memory ids,
+        uint256 collectionId,
         address collection,
         bool enable
     )
@@ -465,11 +481,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         nonReentrant
         returns (uint256)
     {
+        // validate collection id
+        if (collectionId == 0) revert ErrorsLib.RouxEdition_InvalidParams();
+
         // validate collection
         if (enable) _validateCollection(collection);
-
-        // encode collection ids
-        uint256 collectionId = _encodeCollectionId(ids);
 
         // enable or disable collection
         _storage().collections[collectionId][collection] = enable;
@@ -512,12 +528,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /**
      * @notice gate mint
      * @param id token id
-     * @param gate whether to gate minting
      */
-    function gateMint(uint256 id, bool gate) external onlyOwner {
-        _storage().tokens[id].mintParams.gate = gate;
+    function disableGate(uint256 id) external onlyOwner {
+        _storage().tokens[id].mintParams.gate = false;
 
-        emit EventsLib.MintGated(id, gate);
+        emit EventsLib.GateDisabled(id);
     }
 
     /* ------------------------------------------------- */
@@ -526,7 +541,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC165) returns (bool) {
-        return interfaceId == type(IRouxEdition).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IRouxEdition).interfaceId || interfaceId == type(IERC1155).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /* ------------------------------------------------- */
@@ -576,9 +592,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      */
     function _mint(address to, uint256 id, uint256 quantity, bytes memory data) internal override {
         // increment supply
-        unchecked {
-            _storage().tokens[id].totalSupply += quantity.toUint128();
-        }
+        _storage().tokens[id].totalSupply += quantity.toUint128();
 
         // call erc1155 mint
         super._mint(to, id, quantity, data);

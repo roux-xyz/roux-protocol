@@ -59,13 +59,15 @@ contract SingleEditionCollection is Collection {
      * @param erc6551registry registry
      * @param accountImplementation initial erc6551 account implementation
      * @param rouxEditionFactory roux edition factory
+     * @param controller controller
      */
     constructor(
         address erc6551registry,
         address accountImplementation,
-        address rouxEditionFactory
+        address rouxEditionFactory,
+        address controller
     )
-        Collection(erc6551registry, accountImplementation, rouxEditionFactory)
+        Collection(erc6551registry, accountImplementation, rouxEditionFactory, controller)
     { }
 
     /* ------------------------------------------------- */
@@ -121,22 +123,6 @@ contract SingleEditionCollection is Collection {
         }
 
         return _mint_(to, cost);
-    }
-
-    /* ------------------------------------------------- */
-    /* admin                                             */
-    /* ------------------------------------------------- */
-
-    /// @dev see {Collection-updateMintParams}
-    function updateMintParams(bytes calldata mintParams) external override onlyOwner {
-        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
-
-        // decode mint params
-        CollectionData.SingleEditionMintParams memory p =
-            abi.decode(mintParams, (CollectionData.SingleEditionMintParams));
-
-        // set mint params
-        $$.mintParams = p;
     }
 
     /* ------------------------------------------------- */

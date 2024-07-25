@@ -57,11 +57,10 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when mint is gated and extension not provided
     function test__RevertWhen_Mint_GatedAndNoExtension() external {
-        vm.prank(users.creator_0);
-        uint256 tokenId_ = edition.add(addParams);
+        addParams.gate = true;
 
         vm.prank(users.creator_0);
-        edition.gateMint(tokenId_, true);
+        uint256 tokenId_ = edition.add(addParams);
 
         vm.prank(users.user_0);
         vm.expectRevert(ErrorsLib.RouxEdition_GatedMint.selector);

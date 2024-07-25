@@ -56,9 +56,6 @@ contract MultiEditionCollection is Collection {
         address rewardsRecipient;
     }
 
-    /// @notice controller
-    IController internal immutable _controller;
-
     /* ------------------------------------------------- */
     /* constructor                                       */
     /* ------------------------------------------------- */
@@ -76,10 +73,8 @@ contract MultiEditionCollection is Collection {
         address rouxEditionFactory,
         address controller
     )
-        Collection(erc6551registry, accountImplementation, rouxEditionFactory)
-    {
-        _controller = IController(controller);
-    }
+        Collection(erc6551registry, accountImplementation, rouxEditionFactory, controller)
+    { }
 
     /* ------------------------------------------------- */
     /* storage                                           */
@@ -133,20 +128,6 @@ contract MultiEditionCollection is Collection {
     }
 
     /* ------------------------------------------------- */
-    /* admin                                             */
-    /* ------------------------------------------------- */
-
-    /// @dev see {Collection-updateMintParams}
-    function updateMintParams(bytes calldata mintParams) external override onlyOwner {
-        // decode mint params
-        (CollectionData.MultiEditionMintParams memory p) =
-            abi.decode(mintParams, (CollectionData.MultiEditionMintParams));
-
-        // set mint params
-        _multiEditionCollectionStorage().mintParams = p;
-    }
-
-    /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
 
@@ -159,35 +140,48 @@ contract MultiEditionCollection is Collection {
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         // decode params
-        (CollectionData.MultiEditionCreateParams memory p) =
-            abi.decode(params, (CollectionData.MultiEditionCreateParams));
+        (
+            string memory name,
+            string memory symbol,
+            address curator,
+            address rewardsRecipient,
+            string memory uri,
+            address currency,
+            uint40 mintStart,
+            uint40 mintEnd,
+            address[] memory itemTargets,
+            uint256[] memory itemIds
+        ) = abi.decode(
+            params, (string, string, address, address, string, address, uint40, uint40, address[], uint256[])
+        );
 
         // validate length
-        if (p.itemTargets.length != p.itemIds.length) revert ErrorsLib.Collection_InvalidItems();
+        if (itemTargets.length != itemIds.length) revert ErrorsLib.Collection_InvalidItems();
 
-        // validate items, targets, minters
-        for (uint256 i = 0; i < p.itemIds.length; i++) {
-            if (!_editionFactory.isEdition(p.itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
-            if (p.itemIds[i] == 0 || !IRouxEdition(p.itemTargets[i]).exists(p.itemIds[i])) {
+        for (uint256 i = 0; i < itemIds.length; i++) {
+            // verify editions
+            if (!_editionFactory.isEdition(itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
+
+            // verify items
+            if (!IRouxEdition(itemTargets[i]).multiCollectionMintEligible(itemIds[i], currency)) {
                 revert ErrorsLib.Collection_InvalidItems();
             }
-            if (IRouxEdition(p.itemTargets[i]).currency() != p.currency) revert ErrorsLib.Collection_InvalidItems();
         }
 
         // set mintParams
-        $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: p.mintStart, mintEnd: p.mintEnd });
+        $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: mintStart, mintEnd: mintEnd });
 
         //$set rewards recipient
-        $$.rewardsRecipient = p.rewardsRecipient;
+        $$.rewardsRecipient = rewardsRecipient;
 
         // set state vars
-        $.name = p.name;
-        $.symbol = p.symbol;
-        $.curator = p.curator;
-        $.uri = p.uri;
-        $.currency = p.currency;
-        $.itemTargets = p.itemTargets;
-        $.itemIds = p.itemIds;
+        $.name = name;
+        $.symbol = symbol;
+        $.curator = curator;
+        $.uri = uri;
+        $.currency = currency;
+        $.itemTargets = itemTargets;
+        $.itemIds = itemIds;
         $.gate = false;
     }
 
@@ -243,6 +237,9 @@ contract MultiEditionCollection is Collection {
 
             // increment total referral rewards
             totalReferralRewards += referralReward;
+
+            // approve erc20 transfer
+            IERC20($.currency).approve(address($.itemTargets[i]), cost);
 
             // mint addition to token bound account
             IRouxEdition($.itemTargets[i]).collectionMultiMint(account, $.itemIds[i], cost - referralReward, "");

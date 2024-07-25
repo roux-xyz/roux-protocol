@@ -31,11 +31,10 @@ contract UpdateExtensionParams_RouxEdition_Integration_Concrete_Test is BaseTest
     /* -------------------------------------------- */
 
     /// @dev successfully updates extension params
-    function test__UpdateExtensionParams() external {
+    function test__UpdateExtensionParams() external useEditionAdmin(edition) {
         uint128 customPrice = 5 * 10 ** 5; // $0.50 USDC
 
         // add extension to token
-        vm.prank(users.creator_0);
         edition.setExtension(1, address(mockExtension), true, "");
 
         // expect event to be emitted
@@ -43,7 +42,6 @@ contract UpdateExtensionParams_RouxEdition_Integration_Concrete_Test is BaseTest
         emit MintParamsUpdated(address(edition), 1, abi.encode(customPrice));
 
         // update extension params
-        vm.prank(users.creator_0);
         edition.updateExtensionParams(1, address(mockExtension), abi.encode(customPrice));
 
         assertEq(mockExtension.price(address(edition), 1), customPrice);

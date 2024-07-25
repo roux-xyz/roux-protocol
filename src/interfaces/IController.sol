@@ -61,11 +61,11 @@ interface IController {
 
     /**
      * @notice disburse funds for a token
-     * @param tokenId token ID
+     * @param id token id
      * @param amount amount to disburse
      * @param referrer address of the referrer
      */
-    function disburse(uint256 tokenId, uint256 amount, address referrer) external payable;
+    function disburse(uint256 id, uint256 amount, address referrer) external payable;
 
     /**
      * @notice record funds for a recipient

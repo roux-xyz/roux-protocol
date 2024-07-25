@@ -23,17 +23,16 @@ import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
 import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 
-import { Events } from "./utils/Events.sol";
-import { Defaults } from "./utils/Defaults.sol";
+import { Events } from "test/utils/Events.sol";
+import { Defaults } from "test/utils/Defaults.sol";
 
 import { EditionData, CollectionData } from "src/types/DataTypes.sol";
 
-import { MockUSDC } from "./mocks/MockUSDC.sol";
-import { MockExtension } from "./mocks/MockExtension.sol";
+import { MockUSDC } from "test/mocks/MockUSDC.sol";
+import { MockExtension } from "test/mocks/MockExtension.sol";
 
 /**
  * @title Base test
- * @author Roux
  */
 abstract contract BaseTest is Test, Events, Defaults {
     /* -------------------------------------------- */
@@ -73,6 +72,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     // edition
     RouxEdition internal editionImpl;
+    UpgradeableBeacon internal editionBeacon;
     RouxEdition internal edition;
     RouxEditionFactory internal factoryImpl;
     RouxEditionFactory internal factory;
@@ -85,13 +85,8 @@ abstract contract BaseTest is Test, Events, Defaults {
     CollectionFactory internal collectionFactoryImpl;
     CollectionFactory internal collectionFactory;
     SingleEditionCollection internal singleEditionCollectionImpl;
-    SingleEditionCollection internal singleEditionCollection;
-    MultiEditionCollection internal multiEditionCollectionImpl;
-    MultiEditionCollection internal multiEditionCollection;
-
-    // proxy
-    UpgradeableBeacon internal editionBeacon;
     UpgradeableBeacon internal singleEditionCollectionBeacon;
+    MultiEditionCollection internal multiEditionCollectionImpl;
     UpgradeableBeacon internal multiEditionCollectionBeacon;
 
     // users
@@ -170,7 +165,8 @@ abstract contract BaseTest is Test, Events, Defaults {
         singleEditionCollectionImpl = _deploySingleEditionCollectionImpl({
             erc6551registry_: address(erc6551Registry),
             accountImpl_: address(accountImpl),
-            rouxEditionFactory_: address(factory)
+            rouxEditionFactory_: address(factory),
+            controller_: address(controller)
         });
 
         // deploy single edition collection beacon
@@ -301,12 +297,14 @@ abstract contract BaseTest is Test, Events, Defaults {
     function _deploySingleEditionCollectionImpl(
         address erc6551registry_,
         address accountImpl_,
-        address rouxEditionFactory_
+        address rouxEditionFactory_,
+        address controller_
     )
         internal
         returns (SingleEditionCollection singleEditionCollectionImpl_)
     {
-        singleEditionCollectionImpl_ = new SingleEditionCollection(erc6551registry_, accountImpl_, rouxEditionFactory_);
+        singleEditionCollectionImpl_ =
+            new SingleEditionCollection(erc6551registry_, accountImpl_, rouxEditionFactory_, controller_);
         vm.label({ account: address(singleEditionCollectionImpl_), newLabel: "SingleEditionCollectionImpl" });
     }
 
@@ -394,6 +392,7 @@ abstract contract BaseTest is Test, Events, Defaults {
             parentEdition: address(0),
             parentTokenId: 0,
             extension: address(0),
+            gate: false,
             options: new bytes(0)
         });
     }
@@ -449,10 +448,10 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev approve token
-    function _approveToken(address edition_, address user) internal {
+    function _approveToken(address spender, address user) internal {
         // approve edition
         vm.prank(user);
-        mockUSDC.approve(address(edition_), type(uint256).max);
+        mockUSDC.approve(address(spender), type(uint256).max);
     }
 
     /// @dev mint token
@@ -523,6 +522,7 @@ abstract contract BaseTest is Test, Events, Defaults {
                 parentEdition: address(parentEdition),
                 parentTokenId: parentTokenId,
                 extension: address(0),
+                gate: false,
                 options: new bytes(0)
             })
         );
@@ -562,6 +562,7 @@ abstract contract BaseTest is Test, Events, Defaults {
                 parentEdition: address(editions[i - 1]),
                 parentTokenId: 1,
                 extension: address(0),
+                gate: false,
                 options: new bytes(0)
             });
 
@@ -603,55 +604,15 @@ abstract contract BaseTest is Test, Events, Defaults {
         return (parentShare, childShare);
     }
 
-    /// @dev create single edition collection
-    function _createSingleEditionCollection(
-        RouxEdition edition_,
-        uint256 num
-    )
-        internal
-        returns (uint256[] memory tokenIds, uint256[] memory quantities, SingleEditionCollection collection)
-    {
-        // 1st already created
-        _addMultipleTokens(edition_, num - 1);
+    /* -------------------------------------------- */
+    /* modifiers                                    */
+    /* -------------------------------------------- */
 
-        tokenIds = new uint256[](num);
-        quantities = new uint256[](num);
+    modifier useEditionAdmin(RouxEdition edition_) {
+        address admin = Ownable(address(edition_)).owner();
 
-        for (uint256 i = 0; i < num; i++) {
-            tokenIds[i] = i + 1;
-            quantities[i] = 1;
-        }
-
-        // deploy collection
-        collection = _createCollectionWithParams(address(edition), tokenIds);
-    }
-
-    /// @dev create collection with params
-    function _createCollectionWithParams(
-        address itemTarget,
-        uint256[] memory itemIds
-    )
-        internal
-        returns (SingleEditionCollection)
-    {
-        // create params
-        bytes memory params = abi.encode(
-            COLLECTION_NAME,
-            COLLECTION_SYMBOL,
-            address(users.creator_0),
-            COLLECTION_URI,
-            SINGLE_EDITION_COLLECTION_PRICE,
-            address(mockUSDC),
-            uint40(block.timestamp),
-            uint40(block.timestamp + MINT_DURATION),
-            address(itemTarget),
-            itemIds
-        );
-
-        vm.prank(users.creator_0);
-        SingleEditionCollection collectionInstance =
-            SingleEditionCollection((collectionFactory.create(CollectionData.CollectionType.SingleEdition, params)));
-
-        return collectionInstance;
+        vm.startPrank(admin);
+        _;
+        vm.stopPrank();
     }
 }

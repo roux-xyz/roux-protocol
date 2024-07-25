@@ -23,6 +23,13 @@ interface IRegistry {
      */
     function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256);
 
+    /**
+     * @notice check if edition has a child
+     * @param edition edition
+     * @param tokenId token id
+     */
+    function hasChild(address edition, uint256 tokenId) external view returns (bool);
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
