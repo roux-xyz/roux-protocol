@@ -14,14 +14,18 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams = defaultAddParams;
     }
 
+    /* -------------------------------------------- */
+    /* view                                         */
+    /* -------------------------------------------- */
+
     /// @dev returns correct owner
     function test__Owner() external view {
-        assertEq(edition.owner(), users.creator_0);
+        assertEq(edition.owner(), creator);
     }
 
     /// @dev returns correct creator
     function test__Creator() external view {
-        assertEq(edition.creator(1), users.creator_0);
+        assertEq(edition.creator(1), creator);
     }
 
     /// @dev returns correct current token id
@@ -73,7 +77,7 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev returns whether extension is set - when true
     function test__IsExtension() external {
         // add extension to token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition.setExtension(1, address(mockExtension), true, "");
 
         assertTrue(edition.isExtension(1, address(mockExtension)));

@@ -28,16 +28,16 @@
 
 //         (tokenIds, quantities, collection) = _createSingleEditionCollection(edition, 5);
 
-//         vm.prank(users.creator_0);
+//         vm.prank(creator);
 //         edition.setCollection(tokenIds, address(collection), true);
 
-//         testMinter = address(users.user_0);
+//         testMinter = address(user);
 //         _approveToken(address(collection), testMinter);
 //     }
 
 //     function test__RevertWhen_NonOwnerUpdateMintParams() external {
 //         vm.expectRevert(Ownable.Unauthorized.selector);
-//         vm.prank(users.user_0);
+//         vm.prank(user);
 //         collection.updateMintParams("");
 //     }
 
@@ -75,11 +75,11 @@
 //     }
 
 //     function test__Owner() external {
-//         assertEq(collection.owner(), address(users.creator_0), "collection owner");
+//         assertEq(collection.owner(), address(creator), "collection owner");
 //     }
 
 //     function test__Curator() external {
-//         assertEq(collection.curator(), address(users.creator_0), "collection curator");
+//         assertEq(collection.curator(), address(creator), "collection curator");
 //     }
 
 //     function test__CollectionPrice() external {
@@ -104,8 +104,8 @@
 //     function test__TotalSupply() external {
 //         assertEq(collection.totalSupply(), 0, "Initial total supply");
 
-//         vm.prank(users.user_0);
-//         collection.mint(users.user_0, address(0), "");
+//         vm.prank(user);
+//         collection.mint(user, address(0), "");
 
 //         assertEq(collection.totalSupply(), 1, "Total supply after mint");
 //     }
@@ -118,21 +118,21 @@
 //     }
 
 //     function test__MintCollectionAndTransfer() external {
-//         vm.prank(users.user_0);
-//         collection.mint(users.user_0, address(0), "");
-//         assertEq(collection.ownerOf(1), users.user_0);
+//         vm.prank(user);
+//         collection.mint(user, address(0), "");
+//         assertEq(collection.ownerOf(1), user);
 
-//         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
+//         assertEq(collection.balanceOf(user), 1, "collection balanceOf");
 
-//         vm.prank(users.user_0);
-//         collection.transferFrom(users.user_0, users.user_1, 1);
+//         vm.prank(user);
+//         collection.transferFrom(user, users.user_1, 1);
 
 //         assertEq(collection.ownerOf(1), users.user_1, "collection ownerOf");
-//         assertEq(collection.balanceOf(users.user_0), 0, "collection balanceOf user_0");
+//         assertEq(collection.balanceOf(user), 0, "collection balanceOf user_0");
 //     }
 
 //     function test__MintMultipleTokens() external {
-//         vm.startPrank(users.user_0);
+//         vm.startPrank(user);
 //         collection.mint(users.user_1, address(0), "");
 //         collection.mint(users.user_2, address(0), "");
 //         vm.stopPrank();
@@ -142,7 +142,7 @@
 //     }
 
 //     function test__MintAndVerifyERC6551Account() external {
-//         vm.prank(users.user_0);
+//         vm.prank(user);
 //         collection.mint(users.user_1, address(0), "");
 
 //         address expectedERC6551Account = erc6551Registry.account(
@@ -159,11 +159,11 @@
 //             address(accountImpl), keccak256("ROUX_SINGLE_EDITION_COLLECTION"), block.chainid, address(collection), 1
 //         );
 
-//         vm.prank(users.user_0);
-//         collection.mint(users.user_0, address(0), "");
+//         vm.prank(user);
+//         collection.mint(user, address(0), "");
 
-//         assertEq(collection.balanceOf(users.user_0), 1, "collection balanceOf");
-//         assertEq(collection.ownerOf(1), users.user_0, "collection ownerOf");
+//         assertEq(collection.balanceOf(user), 1, "collection balanceOf");
+//         assertEq(collection.ownerOf(1), user, "collection ownerOf");
 
 //         assertEq(edition.balanceOf(erc6551account, 1), 1, "1155 balanceOf prior to transfer");
 
@@ -171,7 +171,7 @@
 //             "safeTransferFrom(address,address,uint256,uint256,bytes)", erc6551account, users.user_1, 1, 1, ""
 //         );
 
-//         vm.prank(users.user_0);
+//         vm.prank(user);
 //         ERC6551Account(payable(erc6551account)).execute(address(edition), 0, data, ERC6551Account.Operation.Call);
 
 //         assertEq(edition.balanceOf(erc6551account, 1), 0, "1155 balanceOf account post transfer");
@@ -182,7 +182,7 @@
 //         bytes memory newMintParams = abi.encode(0.3 ether, uint40(block.timestamp), uint40(block.timestamp + 2
 // days));
 
-//         vm.prank(users.creator_0);
+//         vm.prank(creator);
 //         collection.updateMintParams(newMintParams);
 
 //         assertEq(collection.price(), 0.3 ether, "Updated collection price");

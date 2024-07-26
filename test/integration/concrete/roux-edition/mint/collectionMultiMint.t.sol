@@ -35,7 +35,7 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
 
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCaller.selector);
-        maliciousCollection.mint({ to: user, extension: address(0), data: "" });
+        maliciousCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
     }
 
     /* -------------------------------------------- */
@@ -48,7 +48,7 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
         address erc6551account = _getERC6551AccountMultiEdition(address(multiEditionCollection), 1);
 
         vm.prank(user);
-        multiEditionCollection.mint({ to: user, extension: address(0), data: "" });
+        multiEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
 
         // assert owner
         assertEq(multiEditionCollection.ownerOf(1), user);

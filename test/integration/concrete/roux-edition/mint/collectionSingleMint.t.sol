@@ -39,7 +39,7 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
         // attempt to mint
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCaller.selector);
-        singleEditionCollection.mint({ to: user, extension: address(0), data: "" });
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
     }
 
     /* -------------------------------------------- */
@@ -63,7 +63,7 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
 
         // mint
         vm.prank(user);
-        singleEditionCollection.mint({ to: user, extension: address(0), data: "" });
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
 
         // assert owner
         assertEq(singleEditionCollection.ownerOf(1), user);
@@ -116,7 +116,7 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
         _approveToken(address(gatedSingleEditionCollection), user);
 
         vm.prank(user);
-        gatedSingleEditionCollection.mint({ to: user, extension: address(0), data: "" });
+        gatedSingleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
 
         // assert owner
         assertEq(gatedSingleEditionCollection.ownerOf(1), user);

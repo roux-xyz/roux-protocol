@@ -19,4 +19,7 @@ contract Events {
 
     /// @dev see {IERC1155}
     event URI(string value, uint256 indexed id);
+
+    /// @dev see {IERC721}
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }

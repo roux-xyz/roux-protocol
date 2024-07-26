@@ -16,6 +16,14 @@ interface ICollection is IERC165 {
     function collection() external view returns (address[] memory itemTargets, uint256[] memory itemIds);
 
     /**
+     * @notice get contract uri
+     * @return contract uri
+     *
+     * @dev tokenURI and contractURI are the same
+     */
+    function contractURI() external view returns (string memory);
+
+    /**
      * @notice get curator address for this collection
      * @return curator address
      */
@@ -54,8 +62,9 @@ interface ICollection is IERC165 {
      * @notice mint a new token in the collection
      * @param to address that will receive the minted token
      * @param extension address of the extension to use for minting
+     * @param referrer referrer address
      * @param data additional data to pass to the extension
      * @return ID of the newly minted token
      */
-    function mint(address to, address extension, bytes calldata data) external returns (uint256);
+    function mint(address to, address extension, address referrer, bytes calldata data) external returns (uint256);
 }

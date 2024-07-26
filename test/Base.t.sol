@@ -96,6 +96,10 @@ abstract contract BaseTest is Test, Events, Defaults {
     // default add params
     EditionData.AddParams internal defaultAddParams;
 
+    // default users
+    address internal user;
+    address internal creator;
+
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -122,8 +126,12 @@ abstract contract BaseTest is Test, Events, Defaults {
             split: _createUser("split")
         });
 
+        // set default users
+        user = users.user_0;
+        creator = users.creator_0;
+
         // set creator array
-        creatorArray[0] = users.creator_0;
+        creatorArray[0] = creator;
         creatorArray[1] = users.creator_1;
         creatorArray[2] = users.creator_2;
 
@@ -365,7 +373,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev deploy edition
     function _deployEdition() internal returns (RouxEdition edition_) {
-        vm.startPrank(users.creator_0);
+        vm.startPrank(creator);
 
         bytes memory params = abi.encode(CONTRACT_URI);
         edition_ = RouxEdition(factory.create(params));
@@ -381,9 +389,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     function _setDefaultAddParams() internal {
         defaultAddParams = EditionData.AddParams({
             tokenUri: TOKEN_URI,
-            creator: users.creator_0,
+            creator: creator,
             maxSupply: MAX_SUPPLY,
-            fundsRecipient: users.creator_0,
+            fundsRecipient: creator,
             defaultPrice: TOKEN_PRICE,
             profitShare: PROFIT_SHARE,
             parentEdition: address(0),
@@ -418,6 +426,18 @@ abstract contract BaseTest is Test, Events, Defaults {
         mockUSDC.mint(addr, 100 * 10 ** 6);
     }
 
+    /// @dev create edition
+    function _createEdition(address user) internal returns (RouxEdition) {
+        vm.prank(user);
+
+        // create edition instance
+        bytes memory params = abi.encode(CONTRACT_URI);
+        RouxEdition edition_ = RouxEdition(factory.create(params));
+        vm.label({ account: address(edition), newLabel: "New Edition" });
+
+        return edition_;
+    }
+
     /// @dev add token
     function _addToken(RouxEdition edition_) internal returns (address, uint256) {
         // get owner
@@ -432,18 +452,6 @@ abstract contract BaseTest is Test, Events, Defaults {
         return (owner, tokenId);
     }
 
-    /// @dev create edition
-    function _createEdition(address user) internal returns (RouxEdition) {
-        vm.prank(user);
-
-        // create edition instance
-        bytes memory params = abi.encode(CONTRACT_URI);
-        RouxEdition edition_ = RouxEdition(factory.create(params));
-        vm.label({ account: address(edition), newLabel: "New Edition" });
-
-        return edition_;
-    }
-
     /// @dev approve token
     function _approveToken(address spender, address user) internal {
         // approve edition
@@ -455,14 +463,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     function _mintToken(IRouxEdition edition_, uint256 tokenId, address user) internal {
         // mint
         vm.prank(user);
-        edition_.mint({
-            to: users.user_0,
-            id: tokenId,
-            quantity: 1,
-            extension: address(0),
-            referrer: address(0),
-            data: ""
-        });
+        edition_.mint({ to: user, id: tokenId, quantity: 1, extension: address(0), referrer: address(0), data: "" });
     }
 
     /// @dev create fork with new edition
@@ -535,7 +536,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
         // address array
         address[] memory utilizedUsers = new address[](num);
-        utilizedUsers[0] = users.creator_0;
+        utilizedUsers[0] = creator;
 
         for (uint256 i = 1; i < num; i++) {
             address user = creatorArray[i % creatorArray.length];
@@ -599,6 +600,11 @@ abstract contract BaseTest is Test, Events, Defaults {
         uint256 childShare = amount - parentShare;
 
         return (parentShare, childShare);
+    }
+
+    // @dev get user balance in controller
+    function _getUserControllerBalance(address user) internal view returns (uint256) {
+        return controller.balance(user);
     }
 
     /* -------------------------------------------- */

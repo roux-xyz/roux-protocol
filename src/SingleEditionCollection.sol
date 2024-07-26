@@ -11,6 +11,7 @@ import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ROUX_SINGLE_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
+import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -143,6 +144,7 @@ contract SingleEditionCollection is Collection {
     function mint(
         address to,
         address extension,
+        address referrer,
         bytes calldata data
     )
         external
@@ -164,12 +166,8 @@ contract SingleEditionCollection is Collection {
             cost = _singleEditionCollectionStorage().mintParams.price;
         }
 
-        return _mint_(to, cost);
+        return _mint(to, referrer, cost);
     }
-
-    /* ------------------------------------------------- */
-    /* admin                                             */
-    /* ------------------------------------------------- */
 
     /* ------------------------------------------------- */
     /* internal                                          */
@@ -178,10 +176,11 @@ contract SingleEditionCollection is Collection {
     /**
      * @notice internal function mint collection nft
      * @param to address to mint to
+     * @param referrer referrer
      * @param cost cost
      * @return collection token id
      */
-    function _mint_(address to, uint256 cost) internal returns (uint256) {
+    function _mint(address to, address referrer, uint256 cost) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
 
         // increment token id
@@ -198,11 +197,17 @@ contract SingleEditionCollection is Collection {
         // transfer payment
         IERC20($.currency).safeTransferFrom(msg.sender, address(this), cost);
 
+        // calculate referral reward
+        uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;
+
         // approve edition to spend funds
         IERC20($.currency).approve(address($.itemTargets[0]), cost);
 
         // mint to collection nft token bound account
-        IRouxEdition($.itemTargets[0]).collectionSingleMint(account, $.itemIds, cost, "");
+        IRouxEdition($.itemTargets[0]).collectionSingleMint(account, $.itemIds, cost - referralReward, "");
+
+        // record referral reward
+        if (referralReward > 0) _controller.recordFunds(referrer, referralReward);
 
         return collectionTokenId;
     }

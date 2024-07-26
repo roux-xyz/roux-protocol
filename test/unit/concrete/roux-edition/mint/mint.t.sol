@@ -9,6 +9,7 @@ import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
 contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
@@ -21,7 +22,7 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
         BaseTest.setUp();
         addParams = defaultAddParams;
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         mockUSDC.approve(address(edition), type(uint256).max);
     }
 
@@ -31,47 +32,47 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when token id is 0
     function test__RevertWhen_Mint_TokenIdIsZero() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidTokenId.selector);
-        edition.mint(users.user_0, 0, 1, address(0), address(0), "");
+        edition.mint(user, 0, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when token id does not exist
     function test__RevertWhen_Mint_TokenIdDoesNotExist() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidTokenId.selector);
-        edition.mint(users.user_0, 2, 1, address(0), address(0), "");
+        edition.mint(user, 2, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when max supply is already minted
     function test__RevertWhen_Mint_MaxSupplyIsAlreadyMinted() external {
         addParams.maxSupply = 1;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_MaxSupplyExceeded.selector);
-        edition.mint(users.user_0, tokenId_, 1, address(0), address(0), "");
+        edition.mint(user, tokenId_, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when mint is gated and extension not provided
     function test__RevertWhen_Mint_GatedAndNoExtension() external {
         addParams.gate = true;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_GatedMint.selector);
-        edition.mint(users.user_0, tokenId_, 1, address(0), address(0), "");
+        edition.mint(user, tokenId_, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when included extension is not registered
     function test__RevertWhen_Mint_InvalidExtension() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
-        edition.mint(users.user_0, 1, 1, address(mockExtension), address(0), "");
+        edition.mint(user, 1, 1, address(mockExtension), address(0), "");
     }
 
     /* -------------------------------------------- */
@@ -80,40 +81,89 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev mints token
     function test__Mint() external {
-        vm.prank(users.user_0);
-        edition.mint(users.user_0, 1, 1, address(0), address(0), "");
+        // cache starting user balance
+        uint256 startingUserBalance = mockUSDC.balanceOf(user);
+        uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
 
-        assertEq(edition.balanceOf(users.user_0, 1), 1);
+        vm.prank(user);
+        edition.mint(user, 1, 1, address(0), address(0), "");
+
+        assertEq(edition.balanceOf(user, 1), 1);
         assertEq(edition.totalSupply(1), 2);
+
+        // verify user balance
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
+        assertEq(_getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice);
+    }
+
+    // @dev mint with platform fee
+    function test__Mint_WithPlatformFee() external {
+        // cache starting user balance
+        uint256 startingUserBalance = mockUSDC.balanceOf(user);
+        uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
+        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
+
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        // calculate platform fee
+        uint256 platformFee = (TOKEN_PRICE * PLATFORM_FEE) / 10_000;
+
+        // mint
+        vm.prank(user);
+        edition.mint(user, 1, 1, address(0), address(0), "");
+
+        // verify user balance
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
+        assertEq(
+            _getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice - platformFee
+        );
+        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
     }
 
     /// @dev mints token with referral
     function test__Mint_WithReferral() external {
-        vm.prank(users.user_0);
-        edition.mint({ to: users.user_0, id: 1, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
+        // cache starting user balance
+        uint256 startingUserBalance = mockUSDC.balanceOf(user);
+        uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
+        uint256 startingCreatorControllerBalanceReferral = _getUserControllerBalance(users.user_1);
 
-        assertEq(edition.balanceOf(users.user_0, 1), 1);
+        // calculate referral fee
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
+
+        vm.prank(user);
+        edition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
+
+        assertEq(edition.balanceOf(user, 1), 1);
         assertEq(edition.totalSupply(1), 2);
+
+        // verify user balance
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
+        assertEq(
+            _getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice - referralFee
+        );
+        assertEq(_getUserControllerBalance(users.user_1), startingCreatorControllerBalanceReferral + referralFee);
     }
 
     /// @dev mints multiple quantity of tokens
     function test__Mint_MultipleTokens() external {
-        vm.prank(users.user_0);
-        edition.mint(users.user_0, 1, 2, address(0), address(0), "");
+        vm.prank(user);
+        edition.mint(user, 1, 2, address(0), address(0), "");
 
-        assertEq(edition.balanceOf(users.user_0, 1), 2);
+        assertEq(edition.balanceOf(user, 1), 2);
         assertEq(edition.totalSupply(1), 3);
     }
 
     /// @dev mint event is emitted
     function test__Mint_EventEmits() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         mockUSDC.approve(address(edition), type(uint256).max);
 
         vm.expectEmit({ emitter: address(edition) });
-        emit TransferSingle({ operator: users.user_0, from: address(0), to: users.user_0, id: 1, amount: 1 });
+        emit TransferSingle({ operator: user, from: address(0), to: user, id: 1, amount: 1 });
 
-        vm.prank(users.user_0);
-        edition.mint(users.user_0, 1, 1, address(0), address(0), "");
+        vm.prank(user);
+        edition.mint(user, 1, 1, address(0), address(0), "");
     }
 }

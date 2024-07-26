@@ -24,31 +24,31 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
 
     /// @dev only owner can set extension
     function test__RevertWhen_OnlyOwner_SetExtension() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.setExtension(1, address(mockExtension), true, "");
     }
 
     /// @dev only owner can disable extension
     function test__RevertWhen_OnlyOwner_DisableExtension() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition.setExtension(1, address(mockExtension), true, "");
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.setExtension(1, address(0), false, "");
     }
 
     /// @dev reverts when extension is zero address
     function test__RevertWhen_SetExtension_ZeroAddress() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.setExtension(1, address(0), true, "");
     }
 
     /// @dev reverts when extension interface is not supported
     function test__RevertWhen_SetExtension_InvalidInterface() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.setExtension(1, address(edition), true, "");
     }

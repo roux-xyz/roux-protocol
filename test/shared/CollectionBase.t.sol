@@ -27,7 +27,6 @@ abstract contract CollectionBase is BaseTest {
     uint256 constant NUM_TOKENS_IN_COLLECTION = 5;
 
     // users
-    address user;
     address collectionAdmin;
 
     // single edition collection
@@ -35,6 +34,9 @@ abstract contract CollectionBase is BaseTest {
     uint256[] singleEditionCollectionQuantities;
     uint256 collectionId;
     SingleEditionCollection singleEditionCollection;
+
+    // single edition collection create params
+    CollectionData.SingleEditionCreateParams singleEditionCollectionParams;
 
     // multi edition collection
     RouxEdition[] multiEditionItemTargets = new RouxEdition[](3);
@@ -49,11 +51,24 @@ abstract contract CollectionBase is BaseTest {
         BaseTest.setUp();
 
         // set agents
-        user = address(users.user_0);
-        collectionAdmin = address(users.creator_0);
+        collectionAdmin = address(creator);
 
         vm.prank(users.deployer);
         collectionFactory.setAllowlist(false);
+
+        // set single edition collection params
+        singleEditionCollectionParams = CollectionData.SingleEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            curator: address(collectionAdmin),
+            uri: COLLECTION_URI,
+            price: SINGLE_EDITION_COLLECTION_PRICE,
+            currency: address(mockUSDC),
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTarget: address(edition),
+            itemIds: singleEditionCollectionIds
+        });
 
         // create single edition collection
         (singleEditionCollectionIds, singleEditionCollectionQuantities, singleEditionCollection) =
@@ -67,7 +82,7 @@ abstract contract CollectionBase is BaseTest {
         _approveToken(address(singleEditionCollection), user);
 
         // create multi edition collection
-        multiEditionItemTargets[0] = _createEdition(users.creator_0);
+        multiEditionItemTargets[0] = _createEdition(creator);
         multiEditionItemTargets[1] = _createEdition(users.creator_1);
         multiEditionItemTargets[2] = _createEdition(users.creator_2);
 
@@ -123,18 +138,9 @@ abstract contract CollectionBase is BaseTest {
         internal
         returns (SingleEditionCollection)
     {
-        CollectionData.SingleEditionCreateParams memory params = CollectionData.SingleEditionCreateParams({
-            name: COLLECTION_NAME,
-            symbol: COLLECTION_SYMBOL,
-            curator: address(collectionAdmin),
-            uri: COLLECTION_URI,
-            price: SINGLE_EDITION_COLLECTION_PRICE,
-            currency: address(mockUSDC),
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp + MINT_DURATION),
-            itemTarget: itemTarget,
-            itemIds: itemIds
-        });
+        CollectionData.SingleEditionCreateParams memory params = singleEditionCollectionParams;
+        params.itemTarget = itemTarget;
+        params.itemIds = itemIds;
 
         vm.prank(collectionAdmin);
         SingleEditionCollection collectionInstance = SingleEditionCollection(

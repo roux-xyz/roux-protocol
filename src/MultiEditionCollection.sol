@@ -10,7 +10,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { REFERRAL_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
 import { ROUX_MULTI_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -160,6 +160,7 @@ contract MultiEditionCollection is Collection {
     function mint(
         address to,
         address extension,
+        address referrer,
         bytes calldata data
     )
         external
@@ -177,7 +178,7 @@ contract MultiEditionCollection is Collection {
             if ($.gate) revert ErrorsLib.Collection_GatedMint();
         }
 
-        return _mint_(to);
+        return _mint(to, referrer);
     }
 
     /* ------------------------------------------------- */
@@ -203,7 +204,7 @@ contract MultiEditionCollection is Collection {
      * @notice internal function mint collection nft
      * @param to address to mint to
      */
-    function _mint_(address to) internal returns (uint256) {
+    function _mint(address to, address referrer) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
 
         // increment token id
@@ -223,29 +224,35 @@ contract MultiEditionCollection is Collection {
         // transfer payment
         IERC20($.currency).safeTransferFrom(msg.sender, address(this), totalPrice);
 
-        // initialize referral rewards variable
-        uint256 totalReferralRewards;
+        // initialize rewards variables
+        uint256 totalCollectionReward;
+        uint256 totalReferralReward;
 
         // mint
         for (uint256 i = 0; i < $.itemTargets.length; i++) {
             // get token price
             uint256 cost = IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
 
-            // compute referral reward
-            uint256 referralReward = cost * COLLECTION_FEE / 10_000;
+            // compute rewards
+            uint256 collectionReward = cost * COLLECTION_FEE / 10_000;
+            uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;
 
-            // increment total referral rewards
-            totalReferralRewards += referralReward;
+            // increment total rewards
+            totalCollectionReward += collectionReward;
+            totalReferralReward += referralReward;
 
             // approve erc20 transfer
             IERC20($.currency).approve(address($.itemTargets[i]), cost);
 
             // mint addition to token bound account
-            IRouxEdition($.itemTargets[i]).collectionMultiMint(account, $.itemIds[i], cost - referralReward, "");
+            IRouxEdition($.itemTargets[i]).collectionMultiMint(
+                account, $.itemIds[i], cost - collectionReward - referralReward, ""
+            );
         }
 
-        // record referral rewards for collection
-        _controller.recordFunds(_multiEditionCollectionStorage().rewardsRecipient, totalReferralRewards);
+        // record rewards
+        _controller.recordFunds(_multiEditionCollectionStorage().rewardsRecipient, totalCollectionReward);
+        if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
 
         return collectionTokenId;
     }

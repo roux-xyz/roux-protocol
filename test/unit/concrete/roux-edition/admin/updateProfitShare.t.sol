@@ -20,7 +20,7 @@ contract UpdateProfitShare_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateProfitShare_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.updateProfitShare(1, PROFIT_SHARE + 1);
     }

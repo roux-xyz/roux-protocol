@@ -24,7 +24,7 @@ contract ControllerTest is BaseTest {
         BaseTest.setUp();
 
         // set test edition minter
-        testMinter = address(users.user_0);
+        testMinter = address(user);
 
         // approve test edition to spend mock usdc
         _approveToken(address(edition), testMinter);
@@ -37,31 +37,31 @@ contract ControllerTest is BaseTest {
     function test__RevertWhen_SetController_FundsRecipientIsZero() external {
         defaultAddParams.fundsRecipient = address(0);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
         edition.add(defaultAddParams);
     }
 
     function test__RevertWhen_SetController_ProfitShareTooHigh() external {
-        RouxEdition edition_ = _createEdition(users.creator_0);
+        RouxEdition edition_ = _createEdition(creator);
 
         defaultAddParams.profitShare = 10_001;
         defaultAddParams.parentEdition = address(edition);
         defaultAddParams.parentTokenId = 1;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.Controller_InvalidProfitShare.selector);
         edition_.add(defaultAddParams);
     }
 
     function test__RevertWhen_EnablePlatformFee_OnlyOwner() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.enablePlatformFee(true);
     }
 
     function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.upgradeToAndCall(address(edition), "");
     }
@@ -85,7 +85,7 @@ contract ControllerTest is BaseTest {
     }
 
     function test__FundsRecipient() external {
-        assertEq(controller.fundsRecipient(address(edition), 1), users.creator_0);
+        assertEq(controller.fundsRecipient(address(edition), 1), creator);
     }
 
     function test__AddToken_SetControllerData() external {
@@ -133,11 +133,11 @@ contract ControllerTest is BaseTest {
     function test__Mint_Referral() external {
         uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
 
-        vm.prank(users.user_0);
-        edition.mint({ to: users.user_0, id: 1, quantity: 1, extension: address(0), referrer: users.user_0, data: "" });
+        vm.prank(user);
+        edition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: user, data: "" });
 
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee);
-        assertEq(controller.balance(users.user_0), referralFee);
+        assertEq(controller.balance(user), referralFee);
     }
 
     function test__Mint_Fork_Referral() external {
@@ -151,15 +151,8 @@ contract ControllerTest is BaseTest {
         uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
 
         // mint with referral
-        vm.prank(users.user_0);
-        forkEdition.mint({
-            to: users.user_0,
-            id: tokenId,
-            quantity: 1,
-            extension: address(0),
-            referrer: users.user_1,
-            data: ""
-        });
+        vm.prank(user);
+        forkEdition.mint({ to: user, id: tokenId, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
 
         // compute split
         (uint256 parentShare, uint256 childShare) = _computeSplit(edition, tokenId, TOKEN_PRICE - referralFee);
@@ -172,11 +165,11 @@ contract ControllerTest is BaseTest {
 
     function test__RecordFunds() external {
         // approve
-        vm.prank(users.user_0);
+        vm.prank(user);
         mockUSDC.approve(address(controller), type(uint256).max);
 
         // record funds
-        vm.prank(users.user_0);
+        vm.prank(user);
         controller.recordFunds(users.user_1, TOKEN_PRICE);
 
         // check balance
@@ -344,7 +337,7 @@ contract ControllerTest is BaseTest {
 
     function test__Withdraw_Fork_1() external {
         // cache starting balance
-        uint256 creator0StartingBalance = mockUSDC.balanceOf(users.creator_0);
+        uint256 creator0StartingBalance = mockUSDC.balanceOf(creator);
         uint256 creator1StartingBalance = mockUSDC.balanceOf(users.creator_1);
 
         // create fork
@@ -374,17 +367,17 @@ contract ControllerTest is BaseTest {
         controller.withdraw(controller.fundsRecipient(address(forkEdition), 1));
 
         // withdraw - original
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         controller.withdraw(controller.fundsRecipient(address(edition), 1));
 
         // check balances
-        assertEq(mockUSDC.balanceOf(address(users.creator_0)), creator0StartingBalance + parentShare);
+        assertEq(mockUSDC.balanceOf(address(creator)), creator0StartingBalance + parentShare);
         assertEq(mockUSDC.balanceOf(address(users.creator_1)), creator1StartingBalance + childShare);
     }
 
     function test__DistributePendingAndWithdraw_Fork_1() external {
         // cache starting balance
-        uint256 creator0StartingBalance = mockUSDC.balanceOf(users.creator_0);
+        uint256 creator0StartingBalance = mockUSDC.balanceOf(creator);
 
         // create fork
         (RouxEdition forkEdition, uint256 tokenId) = _createFork(edition, 1, users.creator_1);
@@ -409,7 +402,7 @@ contract ControllerTest is BaseTest {
         assertEq(controller.balance(fundsRecipient), 0);
 
         // check balances
-        assertEq(mockUSDC.balanceOf(users.creator_0), creator0StartingBalance + parentShare);
+        assertEq(mockUSDC.balanceOf(creator), creator0StartingBalance + parentShare);
     }
 
     function test__DistributePendingAndWithdraw_Fork_2() external {

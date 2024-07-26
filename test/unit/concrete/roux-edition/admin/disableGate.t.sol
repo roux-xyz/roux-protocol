@@ -24,7 +24,7 @@ contract DisableGate_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams = defaultAddParams;
 
         // approve mock usdc
-        vm.prank(users.user_0);
+        vm.prank(user);
         mockUSDC.approve(address(edition), type(uint256).max);
     }
 
@@ -34,7 +34,7 @@ contract DisableGate_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_DisableGate_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.disableGate(1);
     }
@@ -46,27 +46,27 @@ contract DisableGate_RouxEdition_Unit_Concrete_Test is BaseTest {
     // @dev successfully ungates mint
     function test__DisableGate() external {
         addParams.gate = true;
-        RouxEdition edition_ = _createEdition(users.creator_0);
+        RouxEdition edition_ = _createEdition(creator);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition_.add(addParams);
 
         // verify gate is set
         assertEq(edition_.isGated(1), true);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition_.disableGate(1);
 
         // verify gate is unset
         assertEq(edition_.isGated(1), false);
 
         // cache starting token balance
-        uint256 startingBalance = edition.balanceOf(users.user_0, 1);
+        uint256 startingBalance = edition.balanceOf(user, 1);
 
         // successful mint
-        vm.prank(users.user_0);
-        edition.mint({ to: users.user_0, id: 1, quantity: 1, extension: address(0), referrer: users.user_0, data: "" });
+        vm.prank(user);
+        edition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: user, data: "" });
 
-        assertEq(edition.balanceOf(users.user_0, 1), startingBalance + 1);
+        assertEq(edition.balanceOf(user, 1), startingBalance + 1);
     }
 }

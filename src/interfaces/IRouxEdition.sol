@@ -89,6 +89,11 @@ interface IRouxEdition {
      * @notice check if a token is gated
      * @param id token id
      * @return true if token is gated
+     *
+     * @dev a token can be gated on `add`, and then disabled using `disableGate`, but cannot
+     *      be gated once added - this is to prevent an ungated token from being included in
+     *      a multi edition collection, and then gated, which would make the entire
+     *      collection unmintable as it would fail the `multiCollectionMintEligible` check
      */
     function isGated(uint256 id) external view returns (bool);
 
@@ -167,6 +172,12 @@ interface IRouxEdition {
      * @param id token id
      * @param amount amount to pay
      * @param data additional data
+     *
+     * @dev used by MultiEditionCollection to mint single edition token to token bound account
+     *      - validates that collection was created by `CollectionFactory`
+     *      - validates that token is ungated
+     *      - validates that token exists
+     *      - validates currency is consistent
      */
     function collectionMultiMint(address to, uint256 id, uint256 amount, bytes calldata data) external payable;
 }

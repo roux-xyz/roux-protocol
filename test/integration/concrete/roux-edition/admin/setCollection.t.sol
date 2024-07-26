@@ -25,28 +25,28 @@ contract SetCollection_RouxEdition_Integration_Concrete_Test is CollectionBase {
 
     /// @dev only owner can set collection
     function test__RevertWhen_OnlyOwner_SetCollection() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.setCollection(collectionId, address(singleEditionCollection), true);
     }
 
     /// @dev reverts when setting invalid collection id - zero
     function test__RevertWhen_SetInvalidCollectionId_Zero() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.setCollection(0, address(singleEditionCollection), true);
     }
 
     /// @dev reverts when setting invalid collection - zero address
     function test__RevertWhen_SetInvalidCollection_ZeroAddress() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCollection.selector);
         edition.setCollection(collectionId, address(0), true);
     }
 
     /// @dev reverts when setting invalid collection - unsupported interface
     function test__RevertWhen_SetInvalidCollection_UnsupportedInterface() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCollection.selector);
         edition.setCollection(collectionId, address(edition), true);
     }

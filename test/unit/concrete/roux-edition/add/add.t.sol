@@ -30,14 +30,14 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev only edition owner can add token
     function test__RevertWhen_OnlyOwner_AddToken() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.add(addParams);
     }
 
     /// @dev only edition owner can set extension
     function test__RevertWhen_OnlyOwner_SetExtension() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.setExtension(1, address(mockExtension), true, "");
     }
@@ -47,7 +47,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         // modify default add params
         addParams.maxSupply = 0;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
     }
@@ -57,7 +57,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         // modify default add params
         addParams.creator = address(0);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
     }
@@ -67,7 +67,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         // modify default add params
         addParams.parentEdition = address(edition);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
         edition.add(addParams);
     }
@@ -80,7 +80,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         // modify default add params
         addParams.extension = address(edition_);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
         edition.add(addParams);
     }
@@ -93,7 +93,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     function test__AddToken_MaxSupplyIsMaxUint128() external {
         addParams.maxSupply = type(uint128).max;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.maxSupply(tokenId_), type(uint128).max);
@@ -105,7 +105,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         uint256 currentTokenId = edition.currentToken();
 
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition.add(addParams);
 
         // token id is incremented
@@ -115,7 +115,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev default price is set after add
     function test__AddToken_DefaultPriceIsSet() external {
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         // default price is set
@@ -125,7 +125,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev default mint params are set after add
     function test__AddToken_DefaultMintParamsAreSet() external {
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.defaultMintParams(tokenId_).defaultPrice, addParams.defaultPrice);
@@ -135,7 +135,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev gate is set after add - false default
     function test__AddToken_GateIsSet_FalseDefault() external {
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.isGated(tokenId_), false);
@@ -146,7 +146,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.gate = true;
 
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.isGated(tokenId_), true);
@@ -160,7 +160,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.tokenUri = newUri;
 
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.uri(tokenId_), newUri);
@@ -185,7 +185,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     function test__AddToken_ExtensionIsSet() external {
         addParams.extension = address(mockExtension);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertTrue(edition.isExtension(tokenId_, address(mockExtension)));
@@ -199,7 +199,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         addParams.maxSupply = maxSupply;
 
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
         assertEq(edition.maxSupply(tokenId_), maxSupply);
@@ -208,10 +208,10 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev token is minted to creator after add
     function test__AddToken_TokenIsMintedToCreator() external {
         // add token
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
-        assertEq(edition.balanceOf(users.creator_0, tokenId_), 1);
+        assertEq(edition.balanceOf(creator, tokenId_), 1);
         assertEq(edition.totalSupply(tokenId_), 1);
     }
 

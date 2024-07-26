@@ -21,7 +21,7 @@ contract UpdateExtensionParams_RouxEdition_Integration_Concrete_Test is BaseTest
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateExtensionParams_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.updateExtensionParams(1, address(mockExtension), abi.encode(1));
     }

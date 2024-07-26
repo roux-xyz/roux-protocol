@@ -127,28 +127,23 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     /* view                                              */
     /* ------------------------------------------------- */
 
-    /**
-     * @notice Get collection name
-     * @return collection name
-     */
+    /// @dev see {ERC721-name}
     function name() public view override returns (string memory) {
         return _collectionStorage().name;
     }
 
-    /**
-     * @notice Get collection symbol
-     * @return collection symbol
-     */
+    /// @dev see {ERC721-symbol}
     function symbol() public view override returns (string memory) {
         return _collectionStorage().symbol;
     }
 
-    /**
-     * @notice Get token URI
-     * @param id token id
-     * @return token URI
-     */
-    function tokenURI(uint256 id) public view override returns (string memory) {
+    /// @dev see {ERC721-tokenURI}
+    function tokenURI(uint256 /* id */ ) public view override returns (string memory) {
+        return _collectionStorage().uri;
+    }
+
+    /// @inheritdoc ICollection
+    function contractURI() external view override returns (string memory) {
         return _collectionStorage().uri;
     }
 
@@ -188,7 +183,15 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     /* ------------------------------------------------- */
 
     /// @inheritdoc ICollection
-    function mint(address to, address extension, bytes calldata data) external virtual returns (uint256);
+    function mint(
+        address to,
+        address extension,
+        address referrer,
+        bytes calldata data
+    )
+        external
+        virtual
+        returns (uint256);
 
     /* ------------------------------------------------- */
     /* admin                                             */

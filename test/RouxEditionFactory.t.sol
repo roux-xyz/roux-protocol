@@ -23,7 +23,7 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.deployer);
         factory.setAllowlist(true);
 
-        vm.startPrank(users.user_0);
+        vm.startPrank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_OnlyAllowlist.selector);
         RouxEdition edition_ = RouxEdition(factory.create(params));
 
@@ -36,7 +36,7 @@ contract RouxEditionFactoryTest is BaseTest {
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_1;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         factory.addAllowlist(allowlist);
     }
 
@@ -62,7 +62,7 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.prank(users.deployer);
         factory.setAllowlist(false);
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
@@ -71,9 +71,9 @@ contract RouxEditionFactoryTest is BaseTest {
 
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
-        factory.transferOwnership(users.creator_0);
+        factory.transferOwnership(creator);
 
-        assertEq(factory.owner(), address(users.creator_0));
+        assertEq(factory.owner(), address(creator));
     }
 
     function test__AddAllowlist() external {
@@ -110,7 +110,7 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__Create() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
 
         bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
@@ -119,7 +119,7 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__IsEdition_True() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
@@ -127,7 +127,7 @@ contract RouxEditionFactoryTest is BaseTest {
     }
 
     function test__IsEdition_False() external {
-        assertFalse(factory.isEdition(address(users.creator_0)));
+        assertFalse(factory.isEdition(address(creator)));
     }
 
     function test__getEditions() external {
@@ -141,7 +141,7 @@ contract RouxEditionFactoryTest is BaseTest {
         address[] memory editions = new address[](3);
         bytes memory params = abi.encode(CONTRACT_URI);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         editions[0] = factory.create(params);
 
         vm.prank(users.creator_1);

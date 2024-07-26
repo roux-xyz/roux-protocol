@@ -315,7 +315,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
             currentValue -= allocatedValue;
 
-            // send funds to controller
+            // send funds to controller - referrer was handled in collection `mint` function
             if (allocatedValue > 0) {
                 _controller.disburse({ id: id, amount: allocatedValue, referrer: address(0) });
             }

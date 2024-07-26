@@ -28,8 +28,8 @@ contract UpgradeTest is BaseTest {
         IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // revert when not owner
-        vm.expectRevert(abi.encodeWithSelector(OpenZeppelinOwnable.OwnableUnauthorizedAccount.selector, users.user_0));
-        vm.prank(users.user_0);
+        vm.expectRevert(abi.encodeWithSelector(OpenZeppelinOwnable.OwnableUnauthorizedAccount.selector, user));
+        vm.prank(user);
         editionBeacon.upgradeTo(address(newEditionImpl));
     }
 
@@ -40,7 +40,7 @@ contract UpgradeTest is BaseTest {
         // deploy new controller implementation
         Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         controller.upgradeToAndCall(address(newControllerImpl), "");
     }
@@ -65,7 +65,7 @@ contract UpgradeTest is BaseTest {
         // deploy new registry implementation
         Registry newRegistryImpl = new Registry();
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         registry.upgradeToAndCall(address(newRegistryImpl), "");
     }
@@ -90,7 +90,7 @@ contract UpgradeTest is BaseTest {
         // deploy new roux edition factory implementation
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), "");
     }
@@ -126,7 +126,7 @@ contract UpgradeTest is BaseTest {
         assertNotEq(address(newEditionImpl), address(editionImpl));
 
         // add new token
-        vm.startPrank(users.creator_0);
+        vm.startPrank(creator);
 
         // create instance
         bytes memory params = abi.encode(CONTRACT_URI, "");

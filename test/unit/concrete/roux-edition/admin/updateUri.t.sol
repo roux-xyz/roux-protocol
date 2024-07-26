@@ -19,7 +19,7 @@ contract UpdateUri_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateUri_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.updateUri(1, "https://new.com");
     }
@@ -36,7 +36,7 @@ contract UpdateUri_RouxEdition_Unit_Concrete_Test is BaseTest {
         vm.expectEmit({ emitter: address(edition) });
         emit URI(newUri, 1);
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         edition.updateUri(1, newUri);
 
         assertEq(edition.uri(1), newUri);

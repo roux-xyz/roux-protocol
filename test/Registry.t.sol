@@ -23,13 +23,13 @@ contract RegistryTest is BaseTest {
         modifiedAddParams.parentEdition = address(editions[MAX_NUM_FORKS]);
         modifiedAddParams.parentTokenId = 1;
 
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(ErrorsLib.Registry_MaxDepthExceeded.selector);
         edition.add(modifiedAddParams);
     }
 
     function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
-        vm.prank(users.creator_0);
+        vm.prank(creator);
         vm.expectRevert(Ownable.Unauthorized.selector);
         registry.upgradeToAndCall(address(edition), "");
     }

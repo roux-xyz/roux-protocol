@@ -22,7 +22,7 @@ contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateContractUri_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.updateContractUri("https://new.com");
     }

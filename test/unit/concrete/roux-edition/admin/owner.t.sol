@@ -20,7 +20,7 @@ contract Owner_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev only owner can transfer ownership
     function test__RevertWhen_TransferOwnership_NotOwner() external {
         vm.expectRevert(Ownable.Unauthorized.selector);
-        vm.prank(users.user_0);
+        vm.prank(user);
         edition.transferOwnership(users.user_1);
     }
 

@@ -22,7 +22,7 @@ contract UpdateDefaultPrice_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateDefaultPrice_NotOwner() external {
-        vm.prank(users.user_0);
+        vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         edition.updateDefaultPrice(1, 5 * 10 ** 5);
     }
