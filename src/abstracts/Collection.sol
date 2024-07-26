@@ -10,21 +10,19 @@ import { IController } from "src/interfaces/IController.sol";
 import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-
 import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-
+import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
  * @title Collection
  * @custom:version 0.1
  */
-abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGuard {
+abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles, ReentrancyGuard {
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -59,7 +57,6 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
     /**
      * @notice collection storage
      * @custom:storage-location erc7201:collection.collectionStorage
-     * @param initialized whether the contract has been initialized
      * @param curator curator address
      * @param name collection name
      * @param symbol collection symbol
@@ -72,7 +69,6 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
      * @param extensions mapping of extension addresses to their enabled status
      */
     struct CollectionStorage {
-        bool initialized;
         address curator;
         string name;
         string symbol;
@@ -98,7 +94,7 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
      */
     constructor(address erc6551registry, address accountImplementation, address editionFactory, address controller) {
         // disable initialization of implementation contract
-        _collectionStorage().initialized = true;
+        _disableInitializers();
 
         // set erc6551 registry
         _erc6551Registry = IERC6551Registry(erc6551registry);
@@ -111,30 +107,6 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
 
         // set controller
         _controller = IController(controller);
-    }
-
-    /* ------------------------------------------------- */
-    /* initializer                                       */
-    /* ------------------------------------------------- */
-
-    /**
-     * @notice initialize collection
-     * @param params encoded parameters
-     */
-    function initialize(bytes calldata params) external nonReentrant {
-        CollectionStorage storage $ = _collectionStorage();
-
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
-
-        // factory will transfer ownership to its caller
-        _initializeOwner(msg.sender);
-
-        // initialize collection
-        _createCollection(params);
-
-        // approve controller to spend funds
-        IERC20($.currency).approve(address(_controller), type(uint256).max);
     }
 
     /* ------------------------------------------------- */
@@ -278,14 +250,4 @@ abstract contract Collection is ICollection, ERC721, OwnableRoles, ReentrancyGua
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
         return interfaceId == type(ICollection).interfaceId || super.supportsInterface(interfaceId);
     }
-
-    /* ------------------------------------------------- */
-    /* internal functions                                */
-    /* ------------------------------------------------- */
-
-    /**
-     * @notice initialize collection
-     * @param params encoded parameters
-     */
-    function _createCollection(bytes calldata params) internal virtual;
 }

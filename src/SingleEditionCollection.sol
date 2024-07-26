@@ -71,6 +71,48 @@ contract SingleEditionCollection is Collection {
     { }
 
     /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice initialize collection
+     * @param params encoded parameters
+     *
+     * @dev single edition collections creation is unvalidated because the collection must be
+     *      registered by the underlying edition via `setCollection` before a token can be minted
+     */
+    function initialize(bytes calldata params) external initializer {
+        CollectionStorage storage $ = _collectionStorage();
+
+        // factory will transfer ownership to its caller
+        _initializeOwner(msg.sender);
+
+        // decode params
+        (CollectionData.SingleEditionCreateParams memory p) =
+            abi.decode(params, (CollectionData.SingleEditionCreateParams));
+
+        // set mintParams
+        _singleEditionCollectionStorage().mintParams =
+            CollectionData.SingleEditionMintParams({ price: p.price, mintStart: p.mintStart, mintEnd: p.mintEnd });
+
+        // set item target
+        $.itemTargets = new address[](1);
+        $.itemTargets[0] = p.itemTarget;
+
+        // set collection state vars
+        $.name = p.name;
+        $.symbol = p.symbol;
+        $.curator = p.curator;
+        $.uri = p.uri;
+        $.currency = p.currency;
+        $.itemIds = p.itemIds;
+        $.gate = false;
+
+        // approve controller to spend funds
+        IERC20($.currency).approve(address(_controller), type(uint256).max);
+    }
+
+    /* ------------------------------------------------- */
     /* storage                                           */
     /* ------------------------------------------------- */
 
@@ -126,60 +168,12 @@ contract SingleEditionCollection is Collection {
     }
 
     /* ------------------------------------------------- */
-    /* internal                                          */
+    /* admin                                             */
     /* ------------------------------------------------- */
 
-    /**
-     * @notice intialize SingleEditionCollection
-     * @param params encoded parameters
-     */
-    function _createCollection(bytes calldata params) internal override {
-        CollectionStorage storage $ = _collectionStorage();
-        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
-
-        // decode params
-        (
-            string memory name,
-            string memory symbol,
-            address curator,
-            string memory uri,
-            uint128 price_,
-            address currency,
-            uint40 mintStart,
-            uint40 mintEnd,
-            address itemTarget,
-            uint256[] memory itemIds
-        ) = abi.decode(params, (string, string, address, string, uint128, address, uint40, uint40, address, uint256[]));
-
-        // validate item target is roux edition
-        if (!_editionFactory.isEdition(itemTarget)) revert ErrorsLib.Collection_InvalidItems();
-
-        // validate items exist + same currency
-        for (uint256 i = 0; i < itemIds.length; i++) {
-            if (itemIds[i] == 0 || !IRouxEdition(itemTarget).exists(itemIds[i])) {
-                revert ErrorsLib.Collection_InvalidItems();
-            }
-
-            if (IRouxEdition(itemTarget).currency() != currency) revert ErrorsLib.Collection_InvalidItems();
-        }
-
-        // set mintParams
-        $$.mintParams =
-            CollectionData.SingleEditionMintParams({ price: price_, mintStart: mintStart, mintEnd: mintEnd });
-
-        // store item target
-        $.itemTargets = new address[](1);
-        $.itemTargets[0] = itemTarget;
-
-        // set state vars
-        $.name = name;
-        $.symbol = symbol;
-        $.curator = curator;
-        $.uri = uri;
-        $.currency = currency;
-        $.itemIds = itemIds;
-        $.gate = false;
-    }
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
 
     /**
      * @notice internal function mint collection nft

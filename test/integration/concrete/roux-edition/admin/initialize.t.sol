@@ -7,7 +7,7 @@ import { RouxEdition } from "src/RouxEdition.sol";
 
 contract Initialize_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
-    /* setup                                       */
+    /* setup                                        */
     /* -------------------------------------------- */
 
     function setUp() public override {

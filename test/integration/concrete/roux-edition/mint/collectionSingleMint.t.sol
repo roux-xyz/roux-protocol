@@ -57,8 +57,8 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
             operator: address(singleEditionCollection),
             from: address(0),
             to: erc6551account,
-            ids: tokenIds,
-            amounts: quantities
+            ids: singleEditionCollectionIds,
+            amounts: singleEditionCollectionQuantities
         });
 
         // mint

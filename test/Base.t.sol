@@ -96,9 +96,6 @@ abstract contract BaseTest is Test, Events, Defaults {
     // default add params
     EditionData.AddParams internal defaultAddParams;
 
-    // default single edition collection add params
-    CollectionData.SingleEditionCreateParams internal defaultSingleEditionCollectionCreateParams;
-
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */

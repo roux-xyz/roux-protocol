@@ -31,8 +31,8 @@ abstract contract CollectionBase is BaseTest {
     address collectionAdmin;
 
     // single edition collection
-    uint256[] tokenIds;
-    uint256[] quantities;
+    uint256[] singleEditionCollectionIds;
+    uint256[] singleEditionCollectionQuantities;
     uint256 collectionId;
     SingleEditionCollection singleEditionCollection;
 
@@ -56,10 +56,10 @@ abstract contract CollectionBase is BaseTest {
         collectionFactory.setAllowlist(false);
 
         // create single edition collection
-        (tokenIds, quantities, singleEditionCollection) =
+        (singleEditionCollectionIds, singleEditionCollectionQuantities, singleEditionCollection) =
             _createSingleEditionCollection(edition, NUM_TOKENS_IN_COLLECTION);
 
-        collectionId = _encodeCollectionId(tokenIds);
+        collectionId = _encodeCollectionId(singleEditionCollectionIds);
 
         vm.prank(collectionAdmin);
         edition.setCollection(collectionId, address(singleEditionCollection), true);
@@ -94,48 +94,81 @@ abstract contract CollectionBase is BaseTest {
         uint256 num
     )
         internal
-        returns (uint256[] memory tokenIds_, uint256[] memory quantities_, SingleEditionCollection collection_)
+        returns (
+            uint256[] memory singleEditionCollectionIds_,
+            uint256[] memory quantities_,
+            SingleEditionCollection collection_
+        )
     {
         // 1st already created
         _addMultipleTokens(edition_, num - 1);
 
-        tokenIds_ = new uint256[](num);
+        singleEditionCollectionIds_ = new uint256[](num);
         quantities_ = new uint256[](num);
 
         for (uint256 i = 0; i < num; i++) {
-            tokenIds_[i] = i + 1;
+            singleEditionCollectionIds_[i] = i + 1;
             quantities_[i] = 1;
         }
 
         // deploy collection
-        collection_ = _createSingleEditionCollectionWithParams(address(edition_), tokenIds_);
+        collection_ = _createSingleEditionCollectionWithParams(address(edition_), singleEditionCollectionIds_);
     }
 
-    /// @dev create collection with params
+    /// @dev create single edition collection with params
     function _createSingleEditionCollectionWithParams(
         address itemTarget,
-        uint256[] memory multiEditionItemIds_
+        uint256[] memory itemIds
     )
         internal
         returns (SingleEditionCollection)
     {
-        // create params
-        bytes memory params = abi.encode(
-            COLLECTION_NAME,
-            COLLECTION_SYMBOL,
-            address(collectionAdmin),
-            COLLECTION_URI,
-            SINGLE_EDITION_COLLECTION_PRICE,
-            address(mockUSDC),
-            uint40(block.timestamp),
-            uint40(block.timestamp + MINT_DURATION),
-            address(itemTarget),
-            multiEditionItemIds_
-        );
+        CollectionData.SingleEditionCreateParams memory params = CollectionData.SingleEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            curator: address(collectionAdmin),
+            uri: COLLECTION_URI,
+            price: SINGLE_EDITION_COLLECTION_PRICE,
+            currency: address(mockUSDC),
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTarget: itemTarget,
+            itemIds: itemIds
+        });
 
         vm.prank(collectionAdmin);
-        SingleEditionCollection collectionInstance =
-            SingleEditionCollection((collectionFactory.create(CollectionData.CollectionType.SingleEdition, params)));
+        SingleEditionCollection collectionInstance = SingleEditionCollection(
+            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
+        );
+
+        return collectionInstance;
+    }
+
+    /// @dev create multi edition collection with params
+    function _createMultiEditionCollection(
+        RouxEdition[] memory itemTargets,
+        uint256[] memory itemIds
+    )
+        internal
+        returns (MultiEditionCollection)
+    {
+        CollectionData.MultiEditionCreateParams memory params = CollectionData.MultiEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            curator: address(collectionAdmin),
+            rewardsRecipient: address(collectionAdmin),
+            uri: COLLECTION_URI,
+            currency: address(mockUSDC),
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTargets: _convertToAddressArray(itemTargets),
+            itemIds: itemIds
+        });
+
+        vm.prank(collectionAdmin);
+        MultiEditionCollection collectionInstance = MultiEditionCollection(
+            collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params))
+        );
 
         return collectionInstance;
     }
@@ -167,32 +200,12 @@ abstract contract CollectionBase is BaseTest {
         );
     }
 
-    /// @dev create multi edition collection with params
-    function _createMultiEditionCollection(
-        RouxEdition[] memory multiEditionItemTargets_,
-        uint256[] memory multiEditionItemIds_
-    )
-        internal
-        returns (MultiEditionCollection)
-    {
-        // create params
-        bytes memory params = abi.encode(
-            COLLECTION_NAME,
-            COLLECTION_SYMBOL,
-            address(collectionAdmin),
-            address(collectionAdmin),
-            COLLECTION_URI,
-            address(mockUSDC),
-            uint40(block.timestamp),
-            uint40(block.timestamp + MINT_DURATION),
-            multiEditionItemTargets_,
-            multiEditionItemIds_
-        );
-
-        vm.prank(collectionAdmin);
-        MultiEditionCollection collectionInstance =
-            MultiEditionCollection((collectionFactory.create(CollectionData.CollectionType.MultiEdition, params)));
-
-        return collectionInstance;
+    /// @dev convert RouxEdition array to address array
+    function _convertToAddressArray(RouxEdition[] memory editions) internal pure returns (address[] memory) {
+        address[] memory addresses = new address[](editions.length);
+        for (uint256 i = 0; i < editions.length; i++) {
+            addresses[i] = address(editions[i]);
+        }
+        return addresses;
     }
 }

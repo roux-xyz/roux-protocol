@@ -2,10 +2,16 @@
 pragma solidity ^0.8.26;
 
 import { BaseTest } from "test/Base.t.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
+import { EditionData } from "src/types/DataTypes.sol";
 
 contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
+    EditionData.AddParams addParams;
+
     function setUp() public override {
         BaseTest.setUp();
+
+        addParams = defaultAddParams;
     }
 
     /// @dev returns correct owner
@@ -76,5 +82,36 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
     /// @dev returns whether extension is set - when false
     function test__IsExtension_False() external view {
         assertFalse(edition.isExtension(1, address(mockExtension)));
+    }
+
+    /// @dev returns whether token is multi edition collection mint eligible - when true
+    function test__IsMultiEditionCollectionMintEligible_True() external view {
+        assertTrue(edition.multiCollectionMintEligible(1, address(mockUSDC)));
+    }
+
+    /// @dev returns whether token is multi edition collection mint eligible - when false - token does not exist
+    function test__IsMultiEditionCollectionMintEligible_False_TokenDoesNotExist() external view {
+        assertFalse(edition.multiCollectionMintEligible(0, address(mockUSDC)));
+        assertFalse(edition.multiCollectionMintEligible(2, address(mockUSDC)));
+    }
+
+    /// @dev returns whether token is multi edition collection mint eligible - when false - token is gated
+    function test__IsMultiEditionCollectionMintEligible_False_WithGate() external {
+        // update default add params
+        addParams.gate = true;
+
+        // create edition instance
+        RouxEdition edition_ = _createEdition(users.creator_1);
+
+        // add token
+        vm.prank(users.creator_1);
+        uint256 tokenId_ = edition_.add(addParams);
+
+        assertFalse(edition_.multiCollectionMintEligible(tokenId_, address(mockUSDC)));
+    }
+
+    /// @dev returns whether token is multi edition collection mint eligible - when false - currency
+    function test__IsMultiEditionCollectionMintEligible_False_WithCurrency() external view {
+        assertFalse(edition.multiCollectionMintEligible(1, address(0)));
     }
 }

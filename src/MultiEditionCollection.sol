@@ -77,6 +77,59 @@ contract MultiEditionCollection is Collection {
     { }
 
     /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice initialize collection
+     * @param params encoded parameters
+     *
+     */
+    function initialize(bytes calldata params) external initializer {
+        CollectionStorage storage $ = _collectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        // decode params
+        (CollectionData.MultiEditionCreateParams memory p) =
+            abi.decode(params, (CollectionData.MultiEditionCreateParams));
+
+        // factory will transfer ownership to its caller
+        _initializeOwner(msg.sender);
+
+        // validate length
+        if (p.itemTargets.length != p.itemIds.length) revert ErrorsLib.Collection_InvalidItems();
+
+        for (uint256 i = 0; i < p.itemIds.length; i++) {
+            // verify editions
+            if (!_editionFactory.isEdition(p.itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
+
+            // verify items
+            if (!IRouxEdition(p.itemTargets[i]).multiCollectionMintEligible(p.itemIds[i], p.currency)) {
+                revert ErrorsLib.Collection_InvalidItems();
+            }
+        }
+
+        // set mintParams
+        $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: p.mintStart, mintEnd: p.mintEnd });
+
+        //$set rewards recipient
+        $$.rewardsRecipient = p.rewardsRecipient;
+
+        // set state vars
+        $.name = p.name;
+        $.symbol = p.symbol;
+        $.curator = p.curator;
+        $.uri = p.uri;
+        $.currency = p.currency;
+        $.itemTargets = p.itemTargets;
+        $.itemIds = p.itemIds;
+        $.gate = false;
+
+        // approve controller to spend funds
+        IERC20($.currency).approve(address(_controller), type(uint256).max);
+    }
+
+    /* ------------------------------------------------- */
     /* storage                                           */
     /* ------------------------------------------------- */
 
@@ -130,60 +183,6 @@ contract MultiEditionCollection is Collection {
     /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
-
-    /**
-     * @notice intialize SingleEditionCollection
-     * @param params encoded parameters
-     */
-    function _createCollection(bytes calldata params) internal override {
-        CollectionStorage storage $ = _collectionStorage();
-        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
-
-        // decode params
-        (
-            string memory name,
-            string memory symbol,
-            address curator,
-            address rewardsRecipient,
-            string memory uri,
-            address currency,
-            uint40 mintStart,
-            uint40 mintEnd,
-            address[] memory itemTargets,
-            uint256[] memory itemIds
-        ) = abi.decode(
-            params, (string, string, address, address, string, address, uint40, uint40, address[], uint256[])
-        );
-
-        // validate length
-        if (itemTargets.length != itemIds.length) revert ErrorsLib.Collection_InvalidItems();
-
-        for (uint256 i = 0; i < itemIds.length; i++) {
-            // verify editions
-            if (!_editionFactory.isEdition(itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
-
-            // verify items
-            if (!IRouxEdition(itemTargets[i]).multiCollectionMintEligible(itemIds[i], currency)) {
-                revert ErrorsLib.Collection_InvalidItems();
-            }
-        }
-
-        // set mintParams
-        $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: mintStart, mintEnd: mintEnd });
-
-        //$set rewards recipient
-        $$.rewardsRecipient = rewardsRecipient;
-
-        // set state vars
-        $.name = name;
-        $.symbol = symbol;
-        $.curator = curator;
-        $.uri = uri;
-        $.currency = currency;
-        $.itemTargets = itemTargets;
-        $.itemIds = itemIds;
-        $.gate = false;
-    }
 
     /**
      * @notice get price for collection

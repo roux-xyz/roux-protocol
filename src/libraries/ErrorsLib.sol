@@ -65,6 +65,9 @@ library ErrorsLib {
     /// @notice gated mint
     error Collection_GatedMint();
 
+    /// @notice invalid edition
+    error Collection_InvalidEdition();
+
     /// @notice invalid items
     error Collection_InvalidItems();
 

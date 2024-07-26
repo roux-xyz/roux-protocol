@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+    // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
@@ -6,7 +6,7 @@ import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { EditionData } from "src/types/DataTypes.sol";
+import { EditionData, CollectionData } from "src/types/DataTypes.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -15,9 +15,13 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
+    MultiEditionCollection maliciousCollection;
 
     function setUp() public override {
         CollectionBase.setUp();
+
+        // create malicious collection params
+        maliciousCollection = _createMaliciousCollection();
     }
 
     /* -------------------------------------------- */
@@ -26,56 +30,12 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
 
     /// @dev reverts when unregistered collection is caller
     function test__RevertWhen_NotCollection() external {
-        // create editions and tokens
-        RouxEdition edition1 = _createEdition(users.creator_1);
-        _addToken(edition1);
-
-        RouxEdition edition2 = _createEdition(users.creator_2);
-        _addToken(edition2);
-
-        // create array of item targets
-        address[] memory itemTargets = new address[](2);
-        itemTargets[0] = address(edition1);
-        itemTargets[1] = address(edition2);
-
-        // create array of item ids
-        uint256[] memory itemIds = new uint256[](2);
-        itemIds[0] = 1;
-        itemIds[1] = 1;
-
-        // create params for malicious collection
-        bytes memory params = abi.encode(
-            COLLECTION_NAME,
-            COLLECTION_SYMBOL,
-            address(collectionAdmin),
-            address(collectionAdmin),
-            COLLECTION_URI,
-            address(mockUSDC),
-            uint40(block.timestamp),
-            uint40(block.timestamp + MINT_DURATION),
-            itemTargets,
-            itemIds
-        );
-
-        // create malicious collection
-        MultiEditionCollection maliciousCollectionImpl = new MultiEditionCollection(
-            address(erc6551Registry), address(accountImpl), address(factory), address(controller)
-        );
-
-        // create malicious collection proxy
-        MultiEditionCollection maliciousCollectionProxy = MultiEditionCollection(
-            address(
-                new ERC1967Proxy(address(maliciousCollectionImpl), abi.encodeWithSignature("initialize(bytes)", params))
-            )
-        );
-
         // approve malicious collection
-        _approveToken(address(maliciousCollectionProxy), user);
+        _approveToken(address(maliciousCollection), user);
 
-        // expect revert because malicious collection was not created by collection factory
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidCaller.selector);
-        maliciousCollectionProxy.mint({ to: user, extension: address(0), data: "" });
+        maliciousCollection.mint({ to: user, extension: address(0), data: "" });
     }
 
     /* -------------------------------------------- */
@@ -108,5 +68,68 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
         assertEq(multiEditionItemTargets[0].totalSupply(1), 2);
         assertEq(multiEditionItemTargets[1].totalSupply(1), 2);
         assertEq(multiEditionItemTargets[2].totalSupply(1), 2);
+    }
+
+    /* -------------------------------------------- */
+    /* utility                                      */
+    /* -------------------------------------------- */
+
+    /// @dev create malicious collection
+    function _createMaliciousCollection() internal returns (MultiEditionCollection) {
+        RouxEdition edition1;
+        RouxEdition edition2;
+        address[] memory itemTargets;
+        uint256[] memory itemIds;
+        CollectionData.MultiEditionCreateParams memory maliciousParams;
+
+        {
+            // create editions and tokens
+            edition1 = _createEdition(users.creator_1);
+            _addToken(edition1);
+
+            edition2 = _createEdition(users.creator_2);
+            _addToken(edition2);
+
+            // create array of item targets
+            itemTargets = new address[](2);
+            itemTargets[0] = address(edition1);
+            itemTargets[1] = address(edition2);
+
+            // create array of item ids
+            itemIds = new uint256[](2);
+            itemIds[0] = 1;
+            itemIds[1] = 1;
+
+            // create params for malicious collection
+            maliciousParams = CollectionData.MultiEditionCreateParams({
+                name: COLLECTION_NAME,
+                symbol: COLLECTION_SYMBOL,
+                curator: address(collectionAdmin),
+                rewardsRecipient: address(collectionAdmin),
+                uri: COLLECTION_URI,
+                currency: address(mockUSDC),
+                mintStart: uint40(block.timestamp),
+                mintEnd: uint40(block.timestamp + MINT_DURATION),
+                itemTargets: itemTargets,
+                itemIds: itemIds
+            });
+        }
+
+        // create malicious collection
+        MultiEditionCollection maliciousCollectionImpl = new MultiEditionCollection(
+            address(erc6551Registry), address(accountImpl), address(factory), address(controller)
+        );
+
+        // create malicious collection proxy
+        MultiEditionCollection maliciousCollectionProxy = MultiEditionCollection(
+            address(
+                new ERC1967Proxy(
+                    address(maliciousCollectionImpl),
+                    abi.encodeWithSignature("initialize(bytes)", abi.encode(maliciousParams))
+                )
+            )
+        );
+
+        return maliciousCollectionProxy;
     }
 }
