@@ -112,6 +112,26 @@ library EventsLib {
      */
     event ExtensionSet(address indexed extension, bool enable);
 
+    /**
+     * @notice emitted when a collection extension mint params are updated
+     * @param extension extension
+     * @param mintParams mint params
+     */
+    event ExtensionMintParamsUpdated(address indexed extension, bytes mintParams);
+
+    /**
+     * @notice emitted when a collection price is updated
+     * @param collection collection address
+     * @param newPrice new collection price
+     */
+    event CollectionPriceUpdated(address indexed collection, uint256 newPrice);
+
+    /**
+     * @notice emitted when a collection uri is updated
+     * @param newUri new uri
+     */
+    event UriUpdated(string newUri);
+
     /* ------------------------------------------------- */
     /* Registry                                          */
     /* ------------------------------------------------- */

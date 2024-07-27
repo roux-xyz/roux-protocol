@@ -75,24 +75,4 @@ interface ICollectionExtension {
      * @dev must be called via edition
      */
     function setCollectionMintParams(bytes calldata params) external;
-
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
-    /**
-     * @notice get proxy implementation
-     * @return implementation address
-     *
-     * @dev do not remove this function
-     */
-    function getImplementation() external view returns (address);
-
-    /**
-     * @notice upgrade proxy
-     * @param newImplementation new implementation contract
-     * @param data optional calldata
-     *
-     * @dev do not remove this function
-     */
-    function upgradeToAndCall(address newImplementation, bytes calldata data) external;
 }

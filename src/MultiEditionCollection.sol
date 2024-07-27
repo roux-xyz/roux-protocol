@@ -18,7 +18,7 @@ import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
@@ -27,7 +27,7 @@ import { CollectionData } from "src/types/DataTypes.sol";
  * @custom:version 0.1
  */
 contract MultiEditionCollection is Collection {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for address;
 
     /* ------------------------------------------------- */
     /* constants                                         */
@@ -49,11 +49,11 @@ contract MultiEditionCollection is Collection {
      * @notice Collection storage
      * @custom:storage-location erc7201:multiEditionCollection.multiEditionCollectionStorage
      * @param mintParams mint parameters
-     * @param rewardsRecipient rewards recipient address
+     * @param collectionFeeRecipient rewards recipient address
      */
     struct MultiEditionCollectionStorage {
         CollectionData.MultiEditionMintParams mintParams;
-        address rewardsRecipient;
+        address collectionFeeRecipient;
     }
 
     /* ------------------------------------------------- */
@@ -83,7 +83,6 @@ contract MultiEditionCollection is Collection {
     /**
      * @notice initialize collection
      * @param params encoded parameters
-     *
      */
     function initialize(bytes calldata params) external initializer {
         CollectionStorage storage $ = _collectionStorage();
@@ -113,7 +112,7 @@ contract MultiEditionCollection is Collection {
         $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: p.mintStart, mintEnd: p.mintEnd });
 
         //$set rewards recipient
-        $$.rewardsRecipient = p.rewardsRecipient;
+        $$.collectionFeeRecipient = p.collectionFeeRecipient;
 
         // set state vars
         $.name = p.name;
@@ -222,7 +221,7 @@ contract MultiEditionCollection is Collection {
         uint256 totalPrice = _price();
 
         // transfer payment
-        IERC20($.currency).safeTransferFrom(msg.sender, address(this), totalPrice);
+        $.currency.safeTransferFrom(msg.sender, address(this), totalPrice);
 
         // initialize rewards variables
         uint256 totalCollectionReward;
@@ -251,7 +250,7 @@ contract MultiEditionCollection is Collection {
         }
 
         // record rewards
-        _controller.recordFunds(_multiEditionCollectionStorage().rewardsRecipient, totalCollectionReward);
+        _controller.recordFunds(_multiEditionCollectionStorage().collectionFeeRecipient, totalCollectionReward);
         if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
 
         return collectionTokenId;

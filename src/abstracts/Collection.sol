@@ -178,6 +178,11 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         return _collectionStorage().extensions[extension_];
     }
 
+    /// @inheritdoc ICollection
+    function isGated() external view returns (bool) {
+        return _collectionStorage().gate;
+    }
+
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
@@ -231,8 +236,21 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @param params updated extension mint params
      */
     function updateExtensionParams(address extension, bytes calldata params) external onlyOwner {
+        // validate extension is registered
+        if (!_collectionStorage().extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
+
         // call extension with updated params
         ICollectionExtension(extension).setCollectionMintParams(params);
+    }
+
+    /**
+     * @notice update uri
+     * @param newUri new uri
+     */
+    function updateUri(string calldata newUri) external onlyOwner {
+        _collectionStorage().uri = newUri;
+
+        emit EventsLib.UriUpdated(newUri);
     }
 
     /**

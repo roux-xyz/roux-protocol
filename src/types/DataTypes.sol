@@ -129,7 +129,7 @@ library CollectionData {
      * @param name collection name
      * @param symbol collection symbol
      * @param curator curator address
-     * @param rewardsRecipient rewards recipient address
+     * @param collectionFeeRecipient rewards recipient address
      * @param uri collection URI
      * @param currency currency
      * @param mintStart mint start
@@ -141,7 +141,7 @@ library CollectionData {
         string name;
         string symbol;
         address curator;
-        address rewardsRecipient;
+        address collectionFeeRecipient;
         string uri;
         address currency;
         uint40 mintStart;

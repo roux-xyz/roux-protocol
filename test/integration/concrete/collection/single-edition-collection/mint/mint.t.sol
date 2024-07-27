@@ -8,6 +8,7 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
 contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -49,13 +50,8 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         vm.prank(user);
         singleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
 
-        // assert owner
         assertEq(singleEditionCollection.ownerOf(1), user);
-
-        // assert total supply
         assertEq(singleEditionCollection.totalSupply(), 1);
-
-        // assert balance
         assertEq(singleEditionCollection.balanceOf(user), 1);
 
         // assert balance - tba
@@ -74,5 +70,117 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         assertEq(
             _getUserControllerBalance(collectionAdmin), startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE
         );
+    }
+
+    /// @dev successfully mints collection with platform fee
+    function test__Mint_SingleEditionCollection_WithPlatformFee() external {
+        // cache starting balances
+        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
+        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
+
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        // calculate platform fee
+        uint256 platformFee = (SINGLE_EDITION_COLLECTION_PRICE * PLATFORM_FEE) / 10_000;
+
+        // mint
+        vm.prank(user);
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+
+        assertEq(singleEditionCollection.ownerOf(1), user);
+        assertEq(singleEditionCollection.totalSupply(), 1);
+        assertEq(singleEditionCollection.balanceOf(user), 1);
+
+        // verify balances
+        assertEq(
+            _getUserControllerBalance(collectionAdmin),
+            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - platformFee
+        );
+        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
+    }
+
+    /// @dev successfully mints collection with referral
+    function test__Mint_SingleEditionCollection_WithReferral() external {
+        // cache starting balances
+        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
+        uint256 startingControllerBalanceReferral = _getUserControllerBalance(users.user_1);
+
+        // calculate referral fee
+        uint256 referralFee = (SINGLE_EDITION_COLLECTION_PRICE * REFERRAL_FEE) / 10_000;
+
+        // mint
+        vm.prank(user);
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: users.user_1, data: "" });
+
+        // verify balances
+        assertEq(
+            _getUserControllerBalance(collectionAdmin),
+            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - referralFee
+        );
+        assertEq(_getUserControllerBalance(users.user_1), startingControllerBalanceReferral + referralFee);
+    }
+
+    /// @dev successfully mints collection with referral and platform fee
+    function test__Mint_SingleEditionCollection_WithReferralAndPlatformFee() external {
+        // cache starting balances
+        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
+        uint256 startingControllerBalanceReferral = _getUserControllerBalance(users.user_1);
+        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
+
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        // calculate referral fee
+        uint256 referralFee = (SINGLE_EDITION_COLLECTION_PRICE * REFERRAL_FEE) / 10_000;
+
+        // calculate platform fee
+        uint256 platformFee = ((SINGLE_EDITION_COLLECTION_PRICE - referralFee) * PLATFORM_FEE) / 10_000;
+
+        // mint
+        vm.prank(user);
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: users.user_1, data: "" });
+
+        // verify balances
+        assertEq(
+            _getUserControllerBalance(collectionAdmin),
+            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - referralFee - platformFee
+        );
+        assertEq(_getUserControllerBalance(users.user_1), startingControllerBalanceReferral + referralFee);
+        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
+    }
+
+    /// @dev successfully mints using extension
+    function test__Mint_SingleEditionCollection_WithExtension() external {
+        // setup extension
+        uint128 customPrice = 8 * 10 ** 5;
+        bytes memory extensionParams =
+            abi.encode(customPrice, uint40(block.timestamp), uint40(block.timestamp + 2 days));
+
+        vm.prank(collectionAdmin);
+        singleEditionCollection.setExtension(address(mockCollectionExtension), true, extensionParams);
+
+        // cache starting balances
+        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
+        uint256 startingUserBalance = mockUSDC.balanceOf(user);
+
+        // mint
+        vm.prank(user);
+        singleEditionCollection.mint({
+            to: user,
+            extension: address(mockCollectionExtension),
+            referrer: address(0),
+            data: ""
+        });
+
+        assertEq(singleEditionCollection.ownerOf(1), user);
+        assertEq(singleEditionCollection.totalSupply(), 1);
+        assertEq(singleEditionCollection.balanceOf(user), 1);
+
+        // verify balances
+        assertEq(_getUserControllerBalance(collectionAdmin), startingControllerBalance + customPrice);
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - customPrice);
     }
 }

@@ -15,7 +15,8 @@ import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
@@ -24,7 +25,8 @@ import { CollectionData } from "src/types/DataTypes.sol";
  * @custom:version 0.1
  */
 contract SingleEditionCollection is Collection {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for address;
+    using SafeCastLib for uint256;
 
     /* ------------------------------------------------- */
     /* constants                                         */
@@ -170,6 +172,20 @@ contract SingleEditionCollection is Collection {
     }
 
     /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice update collection price
+     * @param newPrice new price
+     */
+    function updateCollectionPrice(uint256 newPrice) external onlyOwner {
+        _singleEditionCollectionStorage().mintParams.price = newPrice.toUint128();
+
+        emit EventsLib.CollectionPriceUpdated(address(this), newPrice);
+    }
+
+    /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
 
@@ -195,7 +211,7 @@ contract SingleEditionCollection is Collection {
         );
 
         // transfer payment
-        IERC20($.currency).safeTransferFrom(msg.sender, address(this), cost);
+        $.currency.safeTransferFrom(msg.sender, address(this), cost);
 
         // calculate referral reward
         uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;

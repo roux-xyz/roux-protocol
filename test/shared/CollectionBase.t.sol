@@ -15,6 +15,7 @@ import { Events } from "test/utils/Events.sol";
 import { Defaults } from "test/utils/Defaults.sol";
 import { EditionData, CollectionData } from "src/types/DataTypes.sol";
 import { MockUSDC } from "test/mocks/MockUSDC.sol";
+import { MockCollectionExtension } from "test/mocks/MockCollectionExtension.sol";
 
 /**
  * @title CollectionBase test
@@ -42,6 +43,9 @@ abstract contract CollectionBase is BaseTest {
     RouxEdition[] multiEditionItemTargets = new RouxEdition[](3);
     uint256[] multiEditionItemIds = new uint256[](3);
     MultiEditionCollection multiEditionCollection;
+
+    // mock collection extension
+    MockCollectionExtension mockCollectionExtension;
 
     /* -------------------------------------------- */
     /* setup                                        */
@@ -95,6 +99,8 @@ abstract contract CollectionBase is BaseTest {
         multiEditionItemIds[2] = 1;
 
         multiEditionCollection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
+
+        mockCollectionExtension = new MockCollectionExtension();
 
         _approveToken(address(multiEditionCollection), user);
     }
@@ -162,7 +168,7 @@ abstract contract CollectionBase is BaseTest {
             name: COLLECTION_NAME,
             symbol: COLLECTION_SYMBOL,
             curator: address(collectionAdmin),
-            rewardsRecipient: address(collectionAdmin),
+            collectionFeeRecipient: address(collectionAdmin),
             uri: COLLECTION_URI,
             currency: address(mockUSDC),
             mintStart: uint40(block.timestamp),

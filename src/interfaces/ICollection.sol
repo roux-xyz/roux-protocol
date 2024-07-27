@@ -54,6 +54,12 @@ interface ICollection is IERC165 {
      */
     function isExtension(address extension) external view returns (bool);
 
+    /**
+     * @notice check if collection is gated
+     * @return true if collection is gated
+     */
+    function isGated() external view returns (bool);
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -65,6 +71,10 @@ interface ICollection is IERC165 {
      * @param referrer referrer address
      * @param data additional data to pass to the extension
      * @return ID of the newly minted token
+     *
+     * @dev while multi edition collections can use extensions, note that the derived price from the constiuent
+     *      tokens will be used and so price parameters should not be set on the extension (will just result in
+     *      reverts if insufficient funds are provided)
      */
     function mint(address to, address extension, address referrer, bytes calldata data) external returns (uint256);
 }

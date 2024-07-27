@@ -105,7 +105,7 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
                 name: COLLECTION_NAME,
                 symbol: COLLECTION_SYMBOL,
                 curator: address(collectionAdmin),
-                rewardsRecipient: address(collectionAdmin),
+                collectionFeeRecipient: address(collectionAdmin),
                 uri: COLLECTION_URI,
                 currency: address(mockUSDC),
                 mintStart: uint40(block.timestamp),

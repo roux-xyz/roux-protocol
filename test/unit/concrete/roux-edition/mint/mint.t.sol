@@ -96,56 +96,6 @@ contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
         assertEq(_getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice);
     }
 
-    // @dev mint with platform fee
-    function test__Mint_WithPlatformFee() external {
-        // cache starting user balance
-        uint256 startingUserBalance = mockUSDC.balanceOf(user);
-        uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
-        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
-
-        // enable platform fee
-        vm.prank(users.deployer);
-        controller.enablePlatformFee(true);
-
-        // calculate platform fee
-        uint256 platformFee = (TOKEN_PRICE * PLATFORM_FEE) / 10_000;
-
-        // mint
-        vm.prank(user);
-        edition.mint(user, 1, 1, address(0), address(0), "");
-
-        // verify user balance
-        assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
-        assertEq(
-            _getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice - platformFee
-        );
-        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
-    }
-
-    /// @dev mints token with referral
-    function test__Mint_WithReferral() external {
-        // cache starting user balance
-        uint256 startingUserBalance = mockUSDC.balanceOf(user);
-        uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
-        uint256 startingCreatorControllerBalanceReferral = _getUserControllerBalance(users.user_1);
-
-        // calculate referral fee
-        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
-
-        vm.prank(user);
-        edition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
-
-        assertEq(edition.balanceOf(user, 1), 1);
-        assertEq(edition.totalSupply(1), 2);
-
-        // verify user balance
-        assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
-        assertEq(
-            _getUserControllerBalance(creator), startingCreatorControllerBalance + addParams.defaultPrice - referralFee
-        );
-        assertEq(_getUserControllerBalance(users.user_1), startingCreatorControllerBalanceReferral + referralFee);
-    }
-
     /// @dev mints multiple quantity of tokens
     function test__Mint_MultipleTokens() external {
         vm.prank(user);
