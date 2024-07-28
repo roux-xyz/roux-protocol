@@ -369,6 +369,9 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;
 
+        // ensure recipient has been set so funds don't get locked
+        if (recipient == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
+
         // if root, increment recipient's balance
         if (parentEdition == address(0)) {
             // increment recipient's balance

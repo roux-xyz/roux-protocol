@@ -366,7 +366,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         EditionData.TokenData storage d = $.tokens[id];
 
-        if (p.creator == address(0) || p.maxSupply == 0 || p.parentEdition == address(this)) {
+        if (p.creator == address(0) || p.maxSupply == 0) {
             revert ErrorsLib.RouxEdition_InvalidParams();
         }
 
@@ -605,8 +605,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param parentTokenId parent token id
      */
     function _setRegistryData(uint256 id, address parentEdition, uint256 parentTokenId) internal {
-        // revert if not an edition or not a valid token
-        if (!_storage().editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)) {
+        // revert if not an edition or not a valid token, or edition is self
+        if (
+            !_storage().editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
+                || parentEdition == address(this)
+        ) {
             revert ErrorsLib.RouxEdition_InvalidAttribution();
         }
 

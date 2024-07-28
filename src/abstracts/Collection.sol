@@ -262,6 +262,24 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     }
 
     /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice mint tba
+     * @param to address to mint to
+     * @param id token id
+     * @param salt erc6551 salt
+     */
+    function _mintTba(address to, uint256 id, bytes32 salt) internal returns (address) {
+        // mint collection nft
+        super._mint(to, id);
+
+        // create erc6551 token bound account
+        return _erc6551Registry.createAccount(_accountImplementation, salt, block.chainid, address(this), id);
+    }
+
+    /* ------------------------------------------------- */
     /* erc165 interface                                */
     /* ------------------------------------------------- */
 

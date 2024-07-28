@@ -82,7 +82,8 @@ contract SingleEditionCollection is Collection {
      * @param params encoded parameters
      *
      * @dev single edition collections creation is unvalidated because the collection must be
-     *      registered by the underlying edition via `setCollection` before a token can be minted
+     *      registered by the underlying edition via `setCollection` before a token can be minted.
+     *      edition owners should not register malicious or invalid collections.
      */
     function initialize(bytes calldata params) external initializer {
         CollectionStorage storage $ = _collectionStorage();
@@ -202,13 +203,8 @@ contract SingleEditionCollection is Collection {
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;
 
-        // mint collection nft
-        _mint(to, collectionTokenId);
-
-        // erc 6551
-        address account = _erc6551Registry.createAccount(
-            _accountImplementation, ROUX_SINGLE_EDITION_COLLECTION_SALT, block.chainid, address(this), collectionTokenId
-        );
+        // mint tba
+        address account = _mintTba(to, collectionTokenId, ROUX_SINGLE_EDITION_COLLECTION_SALT);
 
         // transfer payment
         $.currency.safeTransferFrom(msg.sender, address(this), cost);

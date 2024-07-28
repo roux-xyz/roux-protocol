@@ -209,13 +209,8 @@ contract MultiEditionCollection is Collection {
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;
 
-        // mint collection nft
-        _mint(to, collectionTokenId);
-
-        // erc 6551
-        address account = _erc6551Registry.createAccount(
-            _accountImplementation, ROUX_MULTI_EDITION_COLLECTION_SALT, block.chainid, address(this), collectionTokenId
-        );
+        // mint token bound account
+        address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
 
         // total price
         uint256 totalPrice = _price();

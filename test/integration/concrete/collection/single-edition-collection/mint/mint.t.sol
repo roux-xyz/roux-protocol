@@ -12,11 +12,29 @@ import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
 contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
+    /* state                                        */
+    /* -------------------------------------------- */
+
+    address referrer;
+    uint256 startingUserBalance;
+    uint256 startingControllerBalanceCollectionAdmin;
+    uint256 startingControllerBalanceReferrer;
+    uint256 startingPlatformFeeBalance;
+
+    /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
 
     function setUp() public virtual override {
         CollectionBase.setUp();
+
+        referrer = users.user_1;
+
+        // cache starting balances
+        startingUserBalance = mockUSDC.balanceOf(user);
+        startingControllerBalanceCollectionAdmin = _getUserControllerBalance(collectionAdmin);
+        startingControllerBalanceReferrer = _getUserControllerBalance(referrer);
+        startingPlatformFeeBalance = controller.platformFeeBalance();
     }
 
     /* -------------------------------------------- */
@@ -24,11 +42,7 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
     /* -------------------------------------------- */
 
     /// @dev successfully mints collection
-    function test__Mint_SingleEditionCollection() external {
-        // cache starting user balance
-        uint256 startingUserBalance = mockUSDC.balanceOf(user);
-        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
-
+    function test__Mint_SingleEditionCollection_TokensMintedToCollection() external {
         // get erc6551 account
         address erc6551account = _getERC6551AccountSingleEdition(address(singleEditionCollection), 1);
 
@@ -68,16 +82,13 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         // verify user balance
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - SINGLE_EDITION_COLLECTION_PRICE);
         assertEq(
-            _getUserControllerBalance(collectionAdmin), startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE
+            _getUserControllerBalance(collectionAdmin),
+            startingControllerBalanceCollectionAdmin + SINGLE_EDITION_COLLECTION_PRICE
         );
     }
 
     /// @dev successfully mints collection with platform fee
     function test__Mint_SingleEditionCollection_WithPlatformFee() external {
-        // cache starting balances
-        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
-        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
-
         // enable platform fee
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
@@ -96,39 +107,30 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         // verify balances
         assertEq(
             _getUserControllerBalance(collectionAdmin),
-            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - platformFee
+            startingControllerBalanceCollectionAdmin + SINGLE_EDITION_COLLECTION_PRICE - platformFee
         );
         assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
     }
 
     /// @dev successfully mints collection with referral
     function test__Mint_SingleEditionCollection_WithReferral() external {
-        // cache starting balances
-        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
-        uint256 startingControllerBalanceReferral = _getUserControllerBalance(users.user_1);
-
         // calculate referral fee
         uint256 referralFee = (SINGLE_EDITION_COLLECTION_PRICE * REFERRAL_FEE) / 10_000;
 
         // mint
         vm.prank(user);
-        singleEditionCollection.mint({ to: user, extension: address(0), referrer: users.user_1, data: "" });
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: referrer, data: "" });
 
         // verify balances
         assertEq(
             _getUserControllerBalance(collectionAdmin),
-            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - referralFee
+            startingControllerBalanceCollectionAdmin + SINGLE_EDITION_COLLECTION_PRICE - referralFee
         );
-        assertEq(_getUserControllerBalance(users.user_1), startingControllerBalanceReferral + referralFee);
+        assertEq(_getUserControllerBalance(referrer), startingControllerBalanceReferrer + referralFee);
     }
 
     /// @dev successfully mints collection with referral and platform fee
     function test__Mint_SingleEditionCollection_WithReferralAndPlatformFee() external {
-        // cache starting balances
-        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
-        uint256 startingControllerBalanceReferral = _getUserControllerBalance(users.user_1);
-        uint256 startingPlatformFeeBalance = controller.platformFeeBalance();
-
         // enable platform fee
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
@@ -141,14 +143,14 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
 
         // mint
         vm.prank(user);
-        singleEditionCollection.mint({ to: user, extension: address(0), referrer: users.user_1, data: "" });
+        singleEditionCollection.mint({ to: user, extension: address(0), referrer: referrer, data: "" });
 
         // verify balances
         assertEq(
             _getUserControllerBalance(collectionAdmin),
-            startingControllerBalance + SINGLE_EDITION_COLLECTION_PRICE - referralFee - platformFee
+            startingControllerBalanceCollectionAdmin + SINGLE_EDITION_COLLECTION_PRICE - referralFee - platformFee
         );
-        assertEq(_getUserControllerBalance(users.user_1), startingControllerBalanceReferral + referralFee);
+        assertEq(_getUserControllerBalance(referrer), startingControllerBalanceReferrer + referralFee);
         assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
     }
 
@@ -161,10 +163,6 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
 
         vm.prank(collectionAdmin);
         singleEditionCollection.setExtension(address(mockCollectionExtension), true, extensionParams);
-
-        // cache starting balances
-        uint256 startingControllerBalance = _getUserControllerBalance(collectionAdmin);
-        uint256 startingUserBalance = mockUSDC.balanceOf(user);
 
         // mint
         vm.prank(user);
@@ -180,7 +178,7 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         assertEq(singleEditionCollection.balanceOf(user), 1);
 
         // verify balances
-        assertEq(_getUserControllerBalance(collectionAdmin), startingControllerBalance + customPrice);
+        assertEq(_getUserControllerBalance(collectionAdmin), startingControllerBalanceCollectionAdmin + customPrice);
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - customPrice);
     }
 }

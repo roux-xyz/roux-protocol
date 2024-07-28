@@ -121,6 +121,9 @@ interface IRouxEdition {
      * @notice add a new token
      * @param p AddParams struct containing token parameters
      * @return new token id
+     *
+     * @dev parent attributes must include a valid edtion and token id - if one or both are zero, the registry
+     *      will not be updated ~ the call does not revert if one or the other is set and the other is zero
      */
     function add(EditionData.AddParams calldata p) external returns (uint256);
 
