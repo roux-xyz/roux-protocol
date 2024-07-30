@@ -204,17 +204,18 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // record funds
         _storage().balance[recipient] += amount;
 
-        emit EventsLib.Deposited(recipient, amount);
+        // from, to, amount
+        emit EventsLib.FundsRecorded(msg.sender, recipient, amount);
     }
 
     /// @inheritdoc IController
-    function distributePending(address edition, uint256 tokenId) external nonReentrant {
+    function distributePending(address edition, uint256 tokenId) external {
         // distribute pending balance (updates balance and parent's pending balance)
         _distributePending(edition, tokenId);
     }
 
     /// @inheritdoc IController
-    function distributePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external nonReentrant {
+    function distributePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external {
         // validate arrays
         if (editions.length != tokenIds.length) revert ErrorsLib.Controller_InvalidArrayLength();
 
@@ -348,10 +349,13 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
 
         // distribute pending balance (updates balance and parent's pending balance)
         _disburse(edition, tokenId, pendingBalance);
+
+        // edition, id, amount
+        emit EventsLib.PendingDistributed(edition, tokenId, pendingBalance);
     }
 
     /**
-     * @notice disburse proceeds to edition and parent
+     * @notice distribute proceeds to funds recipient balance and parent pending balance
      * @param edition edition
      * @param tokenId token id
      * @param amount proceeds to disburse
@@ -369,7 +373,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;
 
-        // ensure recipient has been set so funds don't get locked
+        // verify recipient has been set
         if (recipient == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
 
         // if root, increment recipient's balance
@@ -378,7 +382,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
             $.balance[recipient] += amount;
 
             // emit Deposited event
-            emit EventsLib.Deposited(recipient, amount);
+            emit EventsLib.Deposited(edition, tokenId, recipient, amount);
         } else {
             // if not root, compute split, increment balance for current edition and increment pending for parent
             uint256 currentEditionProfitShare = $.tokenConfig[parentEdition][parentTokenId].profitShare;
@@ -394,10 +398,10 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
             $.tokenPending[parentEdition][parentTokenId] += parentShare;
 
             // emit Deposited event
-            emit EventsLib.Deposited(recipient, currentEditionShare);
+            emit EventsLib.Deposited(edition, tokenId, recipient, currentEditionShare);
 
             // emit PendingUpdated event
-            emit EventsLib.PendingUpdated(edition, tokenId, parentEdition, parentTokenId, parentShare);
+            emit EventsLib.PendingUpdated(parentEdition, parentTokenId, parentShare);
         }
     }
 

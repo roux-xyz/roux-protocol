@@ -64,6 +64,8 @@ interface IController {
      * @param id token id
      * @param amount amount to disburse
      * @param referrer address of the referrer
+     *
+     * @dev funds pool to the funds recipient
      */
     function disburse(uint256 id, uint256 amount, address referrer) external payable;
 
@@ -71,6 +73,10 @@ interface IController {
      * @notice record funds for a recipient
      * @param recipient address of the recipient
      * @param amount amount to record
+     *
+     * @dev general catchall function used to record funds for a recipient
+     *      - used by SingleEditionCollection to record referral fee earnings
+     *      - used by MultiEditionCollection to record collection fee + referral fee earnings
      */
     function recordFunds(address recipient, uint256 amount) external payable;
 
@@ -78,6 +84,11 @@ interface IController {
      * @notice distribute pending balance for an edition and token ID
      * @param edition address of the edition
      * @param tokenId token ID
+     *
+     * @dev pending balances are funds earned by a token from a child token that have not been distributed
+     *      - they represent the parent share earned by a mint of a fork
+     *      - on the `distributePending` call, the internal `_disburse` function checks if there is
+     *        another parent token and updates balances accordingly
      */
     function distributePending(address edition, uint256 tokenId) external;
 
@@ -118,6 +129,8 @@ interface IController {
      * @param profitShare_ profit share percentage
      *
      * @dev must be called by the edition contract to take effect
+     *      - profit share is the percentage of the proceeds that goes to the child edition
+     *      - cannot be decreased once set, only increased
      */
     function setProfitShare(uint256 tokenId, uint16 profitShare_) external;
 
@@ -127,7 +140,8 @@ interface IController {
      * @param fundsRecipient_ funds recipient address
      * @param profitShare_ profit share percentage
      *
-     * @dev must be called by the edition contract to take effect
+     * @dev must be called by the edition contract to take effect, sets both funds recipient and profit share
+     *      in a single call to save gas on call from the edition contract
      */
     function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external;
 

@@ -209,6 +209,13 @@ abstract contract BaseTest is Test, Events, Defaults {
 
         // add default token
         _addToken(edition);
+
+        // approve users
+        vm.prank(user);
+        mockUSDC.approve(address(edition), type(uint256).max);
+
+        vm.prank(users.user_1);
+        mockUSDC.approve(address(edition), type(uint256).max);
     }
 
     /* -------------------------------------------- */

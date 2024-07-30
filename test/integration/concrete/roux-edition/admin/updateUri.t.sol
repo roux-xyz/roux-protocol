@@ -26,4 +26,8 @@ contract UpdateUri_RouxEdition_Integration_Concrete_Test is BaseTest {
         vm.expectRevert(ErrorsLib.RouxEdition_UriFrozen.selector);
         edition.updateUri(1, "https://new.com");
     }
+
+    /* -------------------------------------------- */
+    /* reverts                                      */
+    /* -------------------------------------------- */
 }

@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
-import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { ControllerBase } from "test/shared/ControllerBase.t.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
-import { BaseTest } from "./Base.t.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
 
-contract RegistryTest is BaseTest {
-    function setUp() public virtual override {
-        BaseTest.setUp();
+contract Attribution_Registry_Integration_Concrete_Test is ControllerBase {
+    function setUp() public override {
+        ControllerBase.setUp();
     }
 
+    /* -------------------------------------------- */
+    /* reverts                                      */
+    /* -------------------------------------------- */
+
+    /// @dev reverts when max depth exceeded
     function test_RevertsWhen_Root_MaxDepthExceeded() external {
         RouxEdition[] memory editions = _createForks(MAX_NUM_FORKS);
 
@@ -28,12 +31,11 @@ contract RegistryTest is BaseTest {
         edition.add(modifiedAddParams);
     }
 
-    function test__RevertWhen_UpgradeToAndCall_OnlyOwner() external {
-        vm.prank(creator);
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        registry.upgradeToAndCall(address(edition), "");
-    }
+    /* -------------------------------------------- */
+    /* view                                         */
+    /* -------------------------------------------- */
 
+    /// @dev returns correct root
     function test__Root_Depth1() external {
         (RouxEdition forkEdition, uint256 forkTokenId) = _createFork(edition, 1, users.creator_1);
 
@@ -44,6 +46,7 @@ contract RegistryTest is BaseTest {
         assertEq(depth, 1);
     }
 
+    /// @dev returns correct root
     function test__Root_Depth2() external {
         RouxEdition[] memory editions = _createForks(2);
 
@@ -54,6 +57,7 @@ contract RegistryTest is BaseTest {
         assertEq(depth, 2);
     }
 
+    /// @dev returns correct root
     function test__Root_Depth_MaxDepth() external {
         RouxEdition[] memory editions = _createForks(MAX_NUM_FORKS);
 
@@ -64,6 +68,7 @@ contract RegistryTest is BaseTest {
         assertEq(depth, MAX_NUM_FORKS);
     }
 
+    /// @dev returns correct root
     function test__Root_DepthOfN(uint256 num) external {
         uint256 n = bound(num, 1, MAX_NUM_FORKS);
         RouxEdition[] memory editions = _createForks(n);
@@ -78,39 +83,5 @@ contract RegistryTest is BaseTest {
         for (uint256 i = 0; i < n + 1; i++) {
             assertEq(factory.isEdition(address(editions[i])), true);
         }
-    }
-
-    function test__Owner() external {
-        assertEq(registry.owner(), address(users.deployer));
-    }
-
-    function test__AddToken() external {
-        RouxEdition edition1 = _createEdition(users.creator_1);
-
-        vm.prank(users.creator_1);
-        edition1.add(defaultAddParams);
-
-        assertEq(edition1.currentToken(), 1);
-
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(edition1), 1);
-
-        assertEq(parentEdition, address(0));
-        assertEq(parentTokenId, 0);
-
-        (address parentEditionReg, uint256 parentTokenIdReg) = registry.attribution(address(edition1), 1);
-
-        assertEq(parentEditionReg, address(0));
-        assertEq(parentTokenIdReg, 0);
-    }
-
-    function test__AddToken_WithAttribution() external {
-        (RouxEdition forkEdition, uint256 forkTokenId) = _createFork(edition, 1, users.creator_1);
-
-        assertEq(forkEdition.currentToken(), forkTokenId);
-
-        (address parentEdition, uint256 parentTokenId) = registry.attribution(address(forkEdition), forkTokenId);
-
-        assertEq(parentEdition, address(edition));
-        assertEq(parentTokenId, 1);
     }
 }

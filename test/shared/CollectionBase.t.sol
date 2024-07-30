@@ -29,6 +29,7 @@ abstract contract CollectionBase is BaseTest {
 
     // users
     address collectionAdmin;
+    address curator;
 
     // single edition collection
     uint256[] singleEditionCollectionIds;
@@ -56,6 +57,7 @@ abstract contract CollectionBase is BaseTest {
 
         // set agents
         collectionAdmin = address(creator);
+        curator = address(users.curator_0);
 
         vm.prank(users.deployer);
         collectionFactory.setAllowlist(false);
@@ -167,8 +169,8 @@ abstract contract CollectionBase is BaseTest {
         CollectionData.MultiEditionCreateParams memory params = CollectionData.MultiEditionCreateParams({
             name: COLLECTION_NAME,
             symbol: COLLECTION_SYMBOL,
-            curator: address(collectionAdmin),
-            collectionFeeRecipient: address(collectionAdmin),
+            curator: address(curator),
+            collectionFeeRecipient: address(curator),
             uri: COLLECTION_URI,
             currency: address(mockUSDC),
             mintStart: uint40(block.timestamp),
@@ -177,7 +179,7 @@ abstract contract CollectionBase is BaseTest {
             itemIds: itemIds
         });
 
-        vm.prank(collectionAdmin);
+        vm.prank(curator);
         MultiEditionCollection collectionInstance = MultiEditionCollection(
             collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params))
         );

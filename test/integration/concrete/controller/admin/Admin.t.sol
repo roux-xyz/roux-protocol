@@ -1,58 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
-import { IController } from "src/interfaces/IController.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { ControllerBase } from "test/shared/ControllerBase.t.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
-import { BaseTest } from "./Base.t.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-
-import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import "forge-std/console.sol";
-
-contract ControllerTest is BaseTest {
-    address testMinter;
-
-    function setUp() public virtual override {
-        BaseTest.setUp();
-
-        // set test edition minter
-        testMinter = address(user);
-
-        // approve test edition to spend mock usdc
-        _approveToken(address(edition), testMinter);
+contract Admin_Controller_Integration_Concrete_Test is ControllerBase {
+    function setUp() public override {
+        ControllerBase.setUp();
     }
 
     /* -------------------------------------------- */
     /* reverts                                      */
     /* -------------------------------------------- */
-
-    function test__RevertWhen_SetController_FundsRecipientIsZero() external {
-        defaultAddParams.fundsRecipient = address(0);
-
-        vm.prank(creator);
-        vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
-        edition.add(defaultAddParams);
-    }
-
-    function test__RevertWhen_SetController_ProfitShareTooHigh() external {
-        RouxEdition edition_ = _createEdition(creator);
-
-        defaultAddParams.profitShare = 10_001;
-        defaultAddParams.parentEdition = address(edition);
-        defaultAddParams.parentTokenId = 1;
-
-        vm.prank(creator);
-        vm.expectRevert(ErrorsLib.Controller_InvalidProfitShare.selector);
-        edition_.add(defaultAddParams);
-    }
 
     function test__RevertWhen_EnablePlatformFee_OnlyOwner() external {
         vm.prank(creator);
@@ -71,13 +36,9 @@ contract ControllerTest is BaseTest {
         controller.initialize();
     }
 
-    function test__AddToken_SetControllerData() external {
-        (, uint256 tokenId) = _addToken(edition);
-
-        assertEq(tokenId, 2);
-        assertEq(controller.fundsRecipient(address(edition), tokenId), defaultAddParams.fundsRecipient);
-        assertEq(controller.profitShare(address(edition), tokenId), PROFIT_SHARE);
-    }
+    /* -------------------------------------------- */
+    /* writes                                       */
+    /* -------------------------------------------- */
 
     function test__PlatformFee_RecordedOnMint() external {
         vm.expectEmit({ emitter: address(controller) });
@@ -86,7 +47,7 @@ contract ControllerTest is BaseTest {
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        _mintToken(edition, 1, testMinter);
+        _mintToken(edition, 1, user);
 
         assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * PLATFORM_FEE) / 10_000);
     }
@@ -95,7 +56,7 @@ contract ControllerTest is BaseTest {
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        _mintToken(edition, 1, testMinter);
+        _mintToken(edition, 1, user);
 
         assertEq(controller.platformFeeBalance(), (TOKEN_PRICE * PLATFORM_FEE) / 10_000);
 
@@ -112,7 +73,7 @@ contract ControllerTest is BaseTest {
         vm.prank(users.deployer);
         controller.enablePlatformFee(true);
 
-        _mintToken(edition, 1, testMinter);
+        _mintToken(edition, 1, user);
 
         uint256 expectedPlatformFee = (TOKEN_PRICE * PLATFORM_FEE) / 10_000;
 

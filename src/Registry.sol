@@ -111,7 +111,7 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
 
     /// @inheritdoc IRegistry
     function hasChild(address edition, uint256 tokenId) external view returns (bool) {
-        return _storage().hasChild[edition][tokenId];
+        return _hasChild(edition, tokenId);
     }
 
     /* -------------------------------------------- */
@@ -134,7 +134,8 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         d.parentEdition = parentEdition;
         d.parentTokenId = parentTokenId;
 
-        $.hasChild[parentEdition][parentTokenId] = true;
+        // set has child if not already set
+        if (!_hasChild(parentEdition, parentTokenId)) $.hasChild[parentEdition][parentTokenId] = true;
 
         // emit event
         emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
@@ -190,5 +191,14 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
                 $.registryData[edition][tokenId].parentEdition, $.registryData[edition][tokenId].parentTokenId, ++depth
             );
         }
+    }
+
+    /**
+     * @notice check if edition has a child
+     * @param edition edition
+     * @param tokenId token id
+     */
+    function _hasChild(address edition, uint256 tokenId) internal view returns (bool) {
+        return _storage().hasChild[edition][tokenId];
     }
 }

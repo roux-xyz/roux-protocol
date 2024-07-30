@@ -27,6 +27,10 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase {
         // mint
         _mintToken(forkEdition, tokenId, user);
 
+        // expect emit
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.PendingDistributed({ edition: address(edition), tokenId: 1, amount: parentShare });
+
         // disburse pending from original edition
         controller.distributePending(address(edition), tokenId);
 

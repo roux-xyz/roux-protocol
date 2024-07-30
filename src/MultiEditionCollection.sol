@@ -148,7 +148,22 @@ contract MultiEditionCollection is Collection {
 
     /// @inheritdoc ICollection
     function price() external view override returns (uint256) {
-        return _price();
+        CollectionStorage storage $ = _collectionStorage();
+
+        uint256 total;
+        for (uint256 i = 0; i < $.itemTargets.length; i++) {
+            total += IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+        }
+
+        return total;
+    }
+
+    /**
+     * @notice get collection fee recipient
+     * @return collection fee recipient
+     */
+    function collectionFeeRecipient() external view returns (address) {
+        return _multiEditionCollectionStorage().collectionFeeRecipient;
     }
 
     /* ------------------------------------------------- */
@@ -188,15 +203,19 @@ contract MultiEditionCollection is Collection {
      * @notice get price for collection
      * @return price
      */
-    function _price() internal view returns (uint256) {
+    function _prices() internal view returns (uint256, uint256[] memory) {
         CollectionStorage storage $ = _collectionStorage();
-
+        uint256 length = $.itemTargets.length;
         uint256 total;
-        for (uint256 i = 0; i < $.itemTargets.length; i++) {
-            total += IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+        uint256[] memory prices = new uint256[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 price_ = IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+            prices[i] = price_;
+            total += price_;
         }
 
-        return total;
+        return (total, prices);
     }
 
     /**
@@ -212,27 +231,27 @@ contract MultiEditionCollection is Collection {
         // mint token bound account
         address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
 
-        // total price
-        uint256 totalPrice = _price();
+        // get prices
+        (uint256 totalPrice, uint256[] memory prices) = _prices();
 
         // transfer payment
         $.currency.safeTransferFrom(msg.sender, address(this), totalPrice);
 
         // initialize rewards variables
-        uint256 totalCollectionReward;
+        uint256 totalCuratorReward;
         uint256 totalReferralReward;
 
         // mint
         for (uint256 i = 0; i < $.itemTargets.length; i++) {
             // get token price
-            uint256 cost = IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+            uint256 cost = prices[i];
 
             // compute rewards
-            uint256 collectionReward = cost * COLLECTION_FEE / 10_000;
-            uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;
+            uint256 referralReward = referrer != address(0) ? (cost * REFERRAL_FEE) / 10_000 : 0;
+            uint256 curatorReward = ((cost - referralReward) * COLLECTION_FEE) / 10_000;
 
             // increment total rewards
-            totalCollectionReward += collectionReward;
+            totalCuratorReward += curatorReward;
             totalReferralReward += referralReward;
 
             // approve erc20 transfer
@@ -240,12 +259,12 @@ contract MultiEditionCollection is Collection {
 
             // mint addition to token bound account
             IRouxEdition($.itemTargets[i]).collectionMultiMint(
-                account, $.itemIds[i], cost - collectionReward - referralReward, ""
+                account, $.itemIds[i], cost - curatorReward - referralReward, ""
             );
         }
 
         // record rewards
-        _controller.recordFunds(_multiEditionCollectionStorage().collectionFeeRecipient, totalCollectionReward);
+        _controller.recordFunds(_multiEditionCollectionStorage().collectionFeeRecipient, totalCuratorReward);
         if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
 
         return collectionTokenId;

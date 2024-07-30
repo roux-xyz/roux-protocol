@@ -24,12 +24,6 @@ contract Mint_RouxEdition_Integration_Concrete_Test is BaseTest {
         BaseTest.setUp();
 
         addParams = defaultAddParams;
-
-        vm.prank(user);
-        mockUSDC.approve(address(edition), type(uint256).max);
-
-        vm.prank(users.user_1);
-        mockUSDC.approve(address(edition), type(uint256).max);
     }
 
     /* -------------------------------------------- */

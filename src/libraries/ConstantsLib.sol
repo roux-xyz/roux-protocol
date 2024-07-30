@@ -12,3 +12,6 @@ bytes32 constant ROUX_SINGLE_EDITION_COLLECTION_SALT = keccak256("ROUX_SINGLE_ED
 
 /// @dev collection salt used for erc6551 implementation
 bytes32 constant ROUX_MULTI_EDITION_COLLECTION_SALT = keccak256("ROUX_MULTI_EDITION_COLLECTION");
+
+/// @dev default uri for unrevealed edition tokens
+string constant DEFAULT_TOKEN_URI = "";

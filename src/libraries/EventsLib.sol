@@ -55,22 +55,36 @@ library EventsLib {
 
     /**
      * @notice emitted when funds are deposited
+     * @param edition edition address
+     * @param tokenId token id
      * @param recipient recipient of the funds
      * @param amount amount deposited
      */
-    event Deposited(address indexed recipient, uint256 amount);
+    event Deposited(address indexed edition, uint256 indexed tokenId, address indexed recipient, uint256 amount);
 
     /**
      * @notice emitted when pending balance is updated
-     * @param edition edition address
-     * @param tokenId token id
      * @param parent parent edition address
      * @param parentTokenId parent token id
      * @param amount amount pending balance is updated with
      */
-    event PendingUpdated(
-        address indexed edition, uint256 indexed tokenId, address parent, uint256 indexed parentTokenId, uint256 amount
-    );
+    event PendingUpdated(address parent, uint256 indexed parentTokenId, uint256 amount);
+
+    /**
+     * @notice emitted when pending balance is distributed
+     * @param edition edition address
+     * @param tokenId token id
+     * @param amount amount pending balance is updated with
+     */
+    event PendingDistributed(address indexed edition, uint256 indexed tokenId, uint256 amount);
+
+    /**
+     * @notice emitted when funds are recorded
+     * @param operator operator address
+     * @param recipient recipient address
+     * @param amount amount
+     */
+    event FundsRecorded(address indexed operator, address indexed recipient, uint256 amount);
 
     /**
      * @notice emitted when funds are withdrawn
