@@ -450,6 +450,10 @@ abstract contract BaseTest is Test, Events, Defaults {
         // get owner
         address owner = Ownable(edition_).owner();
 
+        // set creator + funds recipient to owner
+        defaultAddParams.creator = owner;
+        defaultAddParams.fundsRecipient = owner;
+
         // prank
         vm.prank(owner);
 

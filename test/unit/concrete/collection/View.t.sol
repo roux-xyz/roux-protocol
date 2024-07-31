@@ -54,10 +54,10 @@ contract Price_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
     /// @dev return collection
     function test__Collection_SingleEdition() external view {
         (address[] memory itemTargets, uint256[] memory itemIds) = singleEditionCollection.collection();
-        assertEq(itemIds.length, NUM_TOKENS_IN_COLLECTION);
+        assertEq(itemIds.length, NUM_TOKENS_SINGLE_EDITION_COLLECTION);
         assertEq(itemTargets[0], address(edition));
 
-        for (uint256 i = 0; i < NUM_TOKENS_IN_COLLECTION; i++) {
+        for (uint256 i = 0; i < NUM_TOKENS_SINGLE_EDITION_COLLECTION; i++) {
             assertEq(itemIds[i], i + 1);
         }
     }

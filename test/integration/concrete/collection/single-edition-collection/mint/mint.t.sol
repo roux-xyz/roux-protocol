@@ -69,12 +69,12 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         assertEq(singleEditionCollection.balanceOf(user), 1);
 
         // assert balance - tba
-        for (uint256 i = 1; i <= NUM_TOKENS_IN_COLLECTION; i++) {
+        for (uint256 i = 1; i <= NUM_TOKENS_SINGLE_EDITION_COLLECTION; i++) {
             assertEq(edition.balanceOf(erc6551account, i), 1);
         }
 
         // assert total supply - edition
-        for (uint256 i = 2; i <= NUM_TOKENS_IN_COLLECTION; i++) {
+        for (uint256 i = 2; i <= NUM_TOKENS_SINGLE_EDITION_COLLECTION; i++) {
             // tokens were minted to edition owner on `add`
             assertEq(edition.totalSupply(i), 2);
         }

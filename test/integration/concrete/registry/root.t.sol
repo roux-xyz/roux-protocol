@@ -7,7 +7,7 @@ import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
-import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
+import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 
 contract Attribution_Registry_Integration_Concrete_Test is ControllerBase {
     function setUp() public override {
@@ -20,10 +20,10 @@ contract Attribution_Registry_Integration_Concrete_Test is ControllerBase {
 
     /// @dev reverts when max depth exceeded
     function test_RevertsWhen_Root_MaxDepthExceeded() external {
-        RouxEdition[] memory editions = _createForks(MAX_NUM_FORKS);
+        RouxEdition[] memory editions = _createForks(MAX_CHILDREN);
 
         EditionData.AddParams memory modifiedAddParams = defaultAddParams;
-        modifiedAddParams.parentEdition = address(editions[MAX_NUM_FORKS]);
+        modifiedAddParams.parentEdition = address(editions[MAX_CHILDREN]);
         modifiedAddParams.parentTokenId = 1;
 
         vm.prank(creator);
@@ -59,18 +59,18 @@ contract Attribution_Registry_Integration_Concrete_Test is ControllerBase {
 
     /// @dev returns correct root
     function test__Root_Depth_MaxDepth() external {
-        RouxEdition[] memory editions = _createForks(MAX_NUM_FORKS);
+        RouxEdition[] memory editions = _createForks(MAX_CHILDREN);
 
-        (address root, uint256 tokenId, uint256 depth) = registry.root(address(editions[MAX_NUM_FORKS]), 1);
+        (address root, uint256 tokenId, uint256 depth) = registry.root(address(editions[MAX_CHILDREN]), 1);
 
         assertEq(root, address(edition));
         assertEq(tokenId, 1);
-        assertEq(depth, MAX_NUM_FORKS);
+        assertEq(depth, MAX_CHILDREN);
     }
 
     /// @dev returns correct root
     function test__Root_DepthOfN(uint256 num) external {
-        uint256 n = bound(num, 1, MAX_NUM_FORKS);
+        uint256 n = bound(num, 1, MAX_CHILDREN);
         RouxEdition[] memory editions = _createForks(n);
 
         (address root, uint256 tokenId, uint256 depth) = registry.root(address(editions[n]), 1);

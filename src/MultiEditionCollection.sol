@@ -11,7 +11,7 @@ import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
-import { ROUX_MULTI_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
+import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
@@ -97,6 +97,11 @@ contract MultiEditionCollection is Collection {
 
         // validate length
         if (p.itemTargets.length != p.itemIds.length) revert ErrorsLib.Collection_InvalidItems();
+
+        // validate collection size
+        if (p.itemIds.length > MAX_COLLECTION_SIZE) {
+            revert ErrorsLib.Collection_InvalidCollectionSize();
+        }
 
         for (uint256 i = 0; i < p.itemIds.length; i++) {
             // verify editions
@@ -254,13 +259,14 @@ contract MultiEditionCollection is Collection {
             totalCuratorReward += curatorReward;
             totalReferralReward += referralReward;
 
+            // compute mint cost
+            uint256 netMint = cost - curatorReward - referralReward;
+
             // approve erc20 transfer
-            IERC20($.currency).approve(address($.itemTargets[i]), cost);
+            IERC20($.currency).approve(address($.itemTargets[i]), netMint);
 
             // mint addition to token bound account
-            IRouxEdition($.itemTargets[i]).collectionMultiMint(
-                account, $.itemIds[i], cost - curatorReward - referralReward, ""
-            );
+            IRouxEdition($.itemTargets[i]).collectionMultiMint(account, $.itemIds[i], netMint, "");
         }
 
         // record rewards

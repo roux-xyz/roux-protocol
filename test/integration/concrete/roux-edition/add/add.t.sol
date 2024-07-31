@@ -9,7 +9,7 @@ import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
+import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 
 contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
@@ -77,10 +77,10 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
 
     /// @dev max num forks is enforced
     function test__AddToken_MaxNumForks() external {
-        RouxEdition[] memory editions = new RouxEdition[](MAX_NUM_FORKS + 1);
+        RouxEdition[] memory editions = new RouxEdition[](MAX_CHILDREN + 1);
         editions[0] = edition;
 
-        for (uint256 i = 1; i <= MAX_NUM_FORKS; i++) {
+        for (uint256 i = 1; i <= MAX_CHILDREN; i++) {
             (editions[i],) = _createFork(editions[i - 1], 1, users.creator_1);
 
             (,, uint256 depth) = registry.root(address(editions[i]), 1);
@@ -90,7 +90,7 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
         RouxEdition newEdition = _createEdition(users.creator_1);
 
         addParams.fundsRecipient = users.creator_1;
-        addParams.parentEdition = address(editions[MAX_NUM_FORKS]);
+        addParams.parentEdition = address(editions[MAX_CHILDREN]);
         addParams.parentTokenId = 1;
 
         vm.prank(users.creator_1);

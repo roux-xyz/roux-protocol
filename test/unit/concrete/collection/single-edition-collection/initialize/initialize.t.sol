@@ -7,8 +7,10 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
+import { MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
-contract Price_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
+contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -26,6 +28,26 @@ contract Price_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
         // encode params
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         singleEditionCollection.initialize(abi.encode(singleEditionCollectionParams));
+    }
+
+    /// @dev reverts when collection size is too large
+    function test__RevertWhen_CollectionSizeIsTooLarge() external {
+        // new array
+        uint256[] memory newItemIds = new uint256[](MAX_COLLECTION_SIZE + 1);
+
+        for (uint256 i = 0; i < MAX_COLLECTION_SIZE + 1; i++) {
+            newItemIds[i] = i + 1;
+        }
+
+        // encode params
+        CollectionData.SingleEditionCreateParams memory params = singleEditionCollectionParams;
+        params.itemIds = newItemIds;
+
+        vm.prank(collectionAdmin);
+        vm.expectRevert(ErrorsLib.Collection_InvalidCollectionSize.selector);
+        SingleEditionCollection(
+            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
+        );
     }
 
     /* -------------------------------------------- */

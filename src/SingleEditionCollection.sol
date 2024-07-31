@@ -10,7 +10,7 @@ import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { ROUX_SINGLE_EDITION_COLLECTION_SALT } from "src/libraries/ConstantsLib.sol";
+import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
@@ -99,6 +99,10 @@ contract SingleEditionCollection is Collection {
         _singleEditionCollectionStorage().mintParams =
             CollectionData.SingleEditionMintParams({ price: p.price, mintStart: p.mintStart, mintEnd: p.mintEnd });
 
+        // validate collection size
+        if (p.itemIds.length > MAX_COLLECTION_SIZE) {
+            revert ErrorsLib.Collection_InvalidCollectionSize();
+        }
         // set item target
         $.itemTargets = new address[](1);
         $.itemTargets[0] = p.itemTarget;

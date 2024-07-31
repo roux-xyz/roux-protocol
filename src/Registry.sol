@@ -10,7 +10,7 @@ import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils
 
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { MAX_NUM_FORKS } from "src/libraries/ConstantsLib.sol";
+import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 
 /**
  * @title Registry
@@ -126,7 +126,7 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         (,, uint256 depth) = _root(parentEdition, parentTokenId, 0);
 
         // revert if addition would exceed max depth
-        if (depth + 1 > MAX_NUM_FORKS) revert ErrorsLib.Registry_MaxDepthExceeded();
+        if (depth + 1 > MAX_CHILDREN) revert ErrorsLib.Registry_MaxDepthExceeded();
 
         // set administrator data for edition + token id
         RegistryData storage d = $.registryData[msg.sender][tokenId];

@@ -25,7 +25,7 @@ abstract contract CollectionBase is BaseTest {
     /* state                                        */
     /* -------------------------------------------- */
 
-    uint256 constant NUM_TOKENS_IN_COLLECTION = 5;
+    uint256 constant NUM_TOKENS_SINGLE_EDITION_COLLECTION = 5;
 
     // users
     address collectionAdmin;
@@ -44,6 +44,9 @@ abstract contract CollectionBase is BaseTest {
     RouxEdition[] multiEditionItemTargets = new RouxEdition[](3);
     uint256[] multiEditionItemIds = new uint256[](3);
     MultiEditionCollection multiEditionCollection;
+
+    // multi edition collection create params
+    CollectionData.MultiEditionCreateParams multiEditionCollectionParams;
 
     // mock collection extension
     MockCollectionExtension mockCollectionExtension;
@@ -78,7 +81,7 @@ abstract contract CollectionBase is BaseTest {
 
         // create single edition collection
         (singleEditionCollectionIds, singleEditionCollectionQuantities, singleEditionCollection) =
-            _createSingleEditionCollection(edition, NUM_TOKENS_IN_COLLECTION);
+            _createSingleEditionCollection(edition, NUM_TOKENS_SINGLE_EDITION_COLLECTION);
 
         collectionId = _encodeCollectionId(singleEditionCollectionIds);
 
@@ -99,6 +102,20 @@ abstract contract CollectionBase is BaseTest {
         multiEditionItemIds[0] = 1;
         multiEditionItemIds[1] = 1;
         multiEditionItemIds[2] = 1;
+
+        // create multi edition collection params
+        multiEditionCollectionParams = CollectionData.MultiEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            curator: address(curator),
+            collectionFeeRecipient: address(curator),
+            uri: COLLECTION_URI,
+            currency: address(mockUSDC),
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTargets: _convertToAddressArray(multiEditionItemTargets),
+            itemIds: multiEditionItemIds
+        });
 
         multiEditionCollection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
 
@@ -166,18 +183,9 @@ abstract contract CollectionBase is BaseTest {
         internal
         returns (MultiEditionCollection)
     {
-        CollectionData.MultiEditionCreateParams memory params = CollectionData.MultiEditionCreateParams({
-            name: COLLECTION_NAME,
-            symbol: COLLECTION_SYMBOL,
-            curator: address(curator),
-            collectionFeeRecipient: address(curator),
-            uri: COLLECTION_URI,
-            currency: address(mockUSDC),
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp + MINT_DURATION),
-            itemTargets: _convertToAddressArray(itemTargets),
-            itemIds: itemIds
-        });
+        CollectionData.MultiEditionCreateParams memory params = multiEditionCollectionParams;
+        params.itemTargets = _convertToAddressArray(itemTargets);
+        params.itemIds = itemIds;
 
         vm.prank(curator);
         MultiEditionCollection collectionInstance = MultiEditionCollection(

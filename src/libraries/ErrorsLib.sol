@@ -74,6 +74,9 @@ library ErrorsLib {
     /// @notice invalid caller
     error Collection_InvalidCaller();
 
+    /// @notice invalid collection size
+    error Collection_InvalidCollectionSize();
+
     /* ------------------------------------------------- */
     /* Registry                                          */
     /* ------------------------------------------------- */
