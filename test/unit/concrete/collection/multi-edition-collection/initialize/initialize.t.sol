@@ -7,7 +7,7 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase {
@@ -33,10 +33,10 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
     /// @dev reverts when collection size is too large
     function test__RevertWhen_CollectionSizeIsTooLarge() external {
         // new array
-        address[] memory newItemTargets = new address[](MAX_COLLECTION_SIZE + 1);
-        uint256[] memory newItemIds = new uint256[](MAX_COLLECTION_SIZE + 1);
+        address[] memory newItemTargets = new address[](MAX_MULTI_EDITION_COLLECTION_SIZE + 1);
+        uint256[] memory newItemIds = new uint256[](MAX_MULTI_EDITION_COLLECTION_SIZE + 1);
 
-        for (uint256 i = 0; i < MAX_COLLECTION_SIZE + 1; i++) {
+        for (uint256 i = 0; i < MAX_MULTI_EDITION_COLLECTION_SIZE + 1; i++) {
             newItemTargets[i] = address(edition);
             newItemIds[i] = i + 1;
         }

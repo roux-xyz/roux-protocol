@@ -7,7 +7,7 @@ import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
@@ -33,9 +33,9 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
     /// @dev reverts when collection size is too large
     function test__RevertWhen_CollectionSizeIsTooLarge() external {
         // new array
-        uint256[] memory newItemIds = new uint256[](MAX_COLLECTION_SIZE + 1);
+        uint256[] memory newItemIds = new uint256[](MAX_SINGLE_EDITION_COLLECTION_SIZE + 1);
 
-        for (uint256 i = 0; i < MAX_COLLECTION_SIZE + 1; i++) {
+        for (uint256 i = 0; i < MAX_SINGLE_EDITION_COLLECTION_SIZE + 1; i++) {
             newItemIds[i] = i + 1;
         }
 
@@ -93,7 +93,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
         assertEq(collectionInstance.curator(), address(collectionAdmin));
 
         (address[] memory itemTargets, uint256[] memory itemIds_) = collectionInstance.collection();
-        assertEq(itemTargets.length, 1);
+        assertEq(itemTargets.length, 3);
         assertEq(itemTargets[0], edition_);
         assertEq(itemIds_.length, 3);
         for (uint256 i = 0; i < 3; i++) {

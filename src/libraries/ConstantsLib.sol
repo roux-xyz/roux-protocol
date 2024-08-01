@@ -17,4 +17,7 @@ bytes32 constant ROUX_MULTI_EDITION_COLLECTION_SALT = keccak256("ROUX_MULTI_EDIT
 string constant DEFAULT_TOKEN_URI = "";
 
 /// @dev maximum collection size
-uint256 constant MAX_COLLECTION_SIZE = 10;
+uint256 constant MAX_SINGLE_EDITION_COLLECTION_SIZE = 12;
+
+/// @dev maximum collection size
+uint256 constant MAX_MULTI_EDITION_COLLECTION_SIZE = 8;

@@ -139,6 +139,11 @@ contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
 
     /// @inheritdoc ICollectionFactory
     function create(CollectionData.CollectionType collectionType, bytes calldata params) external returns (address) {
+        // disable multi edition collections for now
+        // if (collectionType == CollectionData.CollectionType.MultiEdition) {
+        //     revert("Multi edition collections are disabled");
+        // }
+
         CollectionFactoryStorage storage $ = _storage();
 
         // verify allowlist
@@ -165,7 +170,11 @@ contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
         $.collections.set(uint256(uint160(collectionInstance)));
 
         // emit event
-        emit EventsLib.NewCollection(collectionType, collectionInstance);
+        if (collectionType == CollectionData.CollectionType.SingleEdition) {
+            emit EventsLib.NewSingleEditionCollection(collectionInstance);
+        } else {
+            emit EventsLib.NewMultiEditionCollection(collectionInstance);
+        }
 
         return collectionInstance;
     }

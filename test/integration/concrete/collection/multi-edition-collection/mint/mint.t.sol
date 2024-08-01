@@ -9,6 +9,7 @@ import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -117,16 +118,160 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         );
     }
 
-    /// TODO
-    // /// @dev successfully mints collection with platform fee
-    // function test__Mint_MultiEditionCollection_WithPlatformFee() external { }
+    /// @dev successfully mints collection with platform fee
+    function test__Mint_MultiEditionCollection_WithPlatformFee() external {
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
 
-    // /// @dev successfully mints collection with referral
-    // function test__Mint_MultiEditionCollection_WithReferral() external { }
+        // get total price
+        uint256 totalPrice = multiEditionCollection.price();
 
-    // /// @dev successfully mints collection with referral and platform fee
-    // function test__Mint_MultiEditionCollection_WithReferralAndPlatformFee() external { }
+        // get collection fee
+        uint256 collectionFee = (totalPrice * COLLECTION_FEE) / 10_000;
+        uint256 platformFee = ((totalPrice - collectionFee) * PLATFORM_FEE) / 10_000;
 
-    // /// @dev successfully mints using extension
-    // function test__Mint_MultiEditionCollection_WithExtension() external { }
+        // mint
+        vm.prank(user);
+        multiEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+
+        // verify balance
+        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
+    }
+
+    /// @dev successfully mints collection with referral
+    function test__Mint_MultiEditionCollection_WithReferral() external {
+        // get total price
+        uint256 totalPrice = multiEditionCollection.price();
+
+        // get collection fee
+        uint256 referralFee = (totalPrice * REFERRAL_FEE) / 10_000;
+        uint256 collectionFee = ((totalPrice - referralFee) * COLLECTION_FEE) / 10_000;
+
+        // get referral fee
+        uint256 edition1ReferralFee = RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+        uint256 edition2ReferralFee = RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+        uint256 edition3ReferralFee = RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+
+        // get collection fee
+        uint256 edition1CollectionFee =
+            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * COLLECTION_FEE / 10_000;
+        uint256 edition2CollectionFee =
+            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * COLLECTION_FEE / 10_000;
+        uint256 edition3CollectionFee =
+            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * COLLECTION_FEE / 10_000;
+
+        // mint
+        vm.prank(user);
+        multiEditionCollection.mint({ to: user, extension: address(0), referrer: referrer, data: "" });
+
+        // verify balances
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - totalPrice);
+        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + collectionFee);
+        assertEq(
+            _getUserControllerBalance(edition1FundsRecipient),
+            startingBalanceEdition1FundsRecipient + RouxEdition(multiEditionItemTargets[0]).defaultPrice(1)
+                - edition1CollectionFee - edition1ReferralFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition2FundsRecipient),
+            startingBalanceEdition2FundsRecipient + RouxEdition(multiEditionItemTargets[1]).defaultPrice(1)
+                - edition2CollectionFee - edition2ReferralFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition3FundsRecipient),
+            startingBalanceEdition3FundsRecipient + RouxEdition(multiEditionItemTargets[2]).defaultPrice(1)
+                - edition3CollectionFee - edition3ReferralFee
+        );
+    }
+
+    /// @dev successfully mints collection with referral and platform fee
+    function test__Mint_MultiEditionCollection_WithReferralAndPlatformFee() external {
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        // get total price
+        uint256 totalPrice = multiEditionCollection.price();
+
+        // calculate fees
+        uint256 referralFee = (totalPrice * REFERRAL_FEE) / 10_000;
+        uint256 collectionFee = ((totalPrice - referralFee) * COLLECTION_FEE) / 10_000;
+        uint256 platformFee = ((totalPrice - collectionFee - referralFee) * PLATFORM_FEE) / 10_000;
+
+        // get referral fee
+        uint256 edition1ReferralFee = RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+        uint256 edition2ReferralFee = RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+        uint256 edition3ReferralFee = RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) * REFERRAL_FEE / 10_000;
+
+        // get collection fee
+        uint256 edition1CollectionFee =
+            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * COLLECTION_FEE / 10_000;
+        uint256 edition2CollectionFee =
+            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * COLLECTION_FEE / 10_000;
+        uint256 edition3CollectionFee =
+            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * COLLECTION_FEE / 10_000;
+
+        // get platform fee
+        uint256 edition1PlatformFee = (
+            RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1CollectionFee - edition1ReferralFee
+        ) * PLATFORM_FEE / 10_000;
+        uint256 edition2PlatformFee = (
+            RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2CollectionFee - edition2ReferralFee
+        ) * PLATFORM_FEE / 10_000;
+        uint256 edition3PlatformFee = (
+            RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3CollectionFee - edition3ReferralFee
+        ) * PLATFORM_FEE / 10_000;
+
+        // mint
+        vm.prank(user);
+        multiEditionCollection.mint({ to: user, extension: address(0), referrer: referrer, data: "" });
+
+        // verify balances
+        assertEq(_getUserControllerBalance(referrer), startingControllerBalanceReferrer + referralFee);
+        assertEq(controller.platformFeeBalance(), startingPlatformFeeBalance + platformFee);
+
+        assertEq(
+            _getUserControllerBalance(edition1FundsRecipient),
+            startingBalanceEdition1FundsRecipient + RouxEdition(multiEditionItemTargets[0]).defaultPrice(1)
+                - edition1CollectionFee - edition1ReferralFee - edition1PlatformFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition2FundsRecipient),
+            startingBalanceEdition2FundsRecipient + RouxEdition(multiEditionItemTargets[1]).defaultPrice(1)
+                - edition2CollectionFee - edition2ReferralFee - edition2PlatformFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition3FundsRecipient),
+            startingBalanceEdition3FundsRecipient + RouxEdition(multiEditionItemTargets[2]).defaultPrice(1)
+                - edition3CollectionFee - edition3ReferralFee - edition3PlatformFee
+        );
+    }
+
+    /// @dev mint maximum collection size
+    function test__Mint_MultiEditionCollection_MaxSize() external {
+        // create editions
+        RouxEdition[] memory editions = new RouxEdition[](MAX_MULTI_EDITION_COLLECTION_SIZE);
+        uint256[] memory tokenIds = new uint256[](MAX_MULTI_EDITION_COLLECTION_SIZE);
+
+        for (uint256 i = 0; i < MAX_MULTI_EDITION_COLLECTION_SIZE; i++) {
+            editions[i] = _createEdition(creator);
+            (, tokenIds[i]) = _addToken(editions[i]);
+        }
+
+        // create multi edition collection
+        MultiEditionCollection multiEditionCollection_ = _createMultiEditionCollection(editions, tokenIds);
+
+        // approve multi edition collection
+        _approveToken(address(multiEditionCollection_), user);
+
+        // mint
+        vm.prank(user);
+        multiEditionCollection_.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+
+        // verify balance
+        assertEq(multiEditionCollection_.balanceOf(user), 1);
+        assertEq(multiEditionCollection_.totalSupply(), 1);
+        assertEq(multiEditionCollection_.ownerOf(1), user);
+    }
 }

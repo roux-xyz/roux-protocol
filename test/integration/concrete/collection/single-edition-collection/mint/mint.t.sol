@@ -9,6 +9,7 @@ import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
+import { MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -180,5 +181,47 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         // verify balances
         assertEq(_getUserControllerBalance(collectionAdmin), startingControllerBalanceCollectionAdmin + customPrice);
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - customPrice);
+    }
+
+    /// @dev mint maximum collection size
+    function test__Mint_SingleEditionCollection_MaxSize() external {
+        // new edition
+        RouxEdition edition_ = _createEdition(creator);
+
+        // new array
+        uint256[] memory newItemIds = new uint256[](MAX_SINGLE_EDITION_COLLECTION_SIZE);
+
+        for (uint256 i = 0; i < MAX_SINGLE_EDITION_COLLECTION_SIZE; i++) {
+            (, newItemIds[i]) = _addToken(edition_);
+        }
+
+        // encode params
+        CollectionData.SingleEditionCreateParams memory params = singleEditionCollectionParams;
+        params.itemTarget = address(edition_);
+        params.itemIds = newItemIds;
+
+        // create single edition collection
+        vm.prank(creator);
+        SingleEditionCollection singleEditionCollection_ = SingleEditionCollection(
+            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
+        );
+
+        // set collection
+        uint256 collectionId = _encodeCollectionId(newItemIds);
+
+        vm.prank(creator);
+        edition_.setCollection(collectionId, address(singleEditionCollection_), true);
+
+        // approve single edition collection
+        _approveToken(address(singleEditionCollection_), user);
+
+        // mint
+        vm.prank(user);
+        singleEditionCollection_.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+
+        // verify balance
+        assertEq(singleEditionCollection_.balanceOf(user), 1);
+        assertEq(singleEditionCollection_.totalSupply(), 1);
+        assertEq(singleEditionCollection_.ownerOf(1), user);
     }
 }

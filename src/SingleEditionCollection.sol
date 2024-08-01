@@ -10,7 +10,7 @@ import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
@@ -47,9 +47,13 @@ contract SingleEditionCollection is Collection {
     /**
      * @notice Collection storage
      * @custom:storage-location erc7201:singleEditionCollection.singleEditionCollectionStorage
+     * @param itemTarget target edition address
+     * @param itemIds array of item IDs in the collection
      * @param mintParams mint parameters
      */
     struct SingleEditionCollectionStorage {
+        address itemTarget;
+        uint256[] itemIds;
         CollectionData.SingleEditionMintParams mintParams;
     }
 
@@ -87,6 +91,7 @@ contract SingleEditionCollection is Collection {
      */
     function initialize(bytes calldata params) external initializer {
         CollectionStorage storage $ = _collectionStorage();
+        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         // factory will transfer ownership to its caller
         _initializeOwner(msg.sender);
@@ -100,12 +105,12 @@ contract SingleEditionCollection is Collection {
             CollectionData.SingleEditionMintParams({ price: p.price, mintStart: p.mintStart, mintEnd: p.mintEnd });
 
         // validate collection size
-        if (p.itemIds.length > MAX_COLLECTION_SIZE) {
+        if (p.itemIds.length > MAX_SINGLE_EDITION_COLLECTION_SIZE) {
             revert ErrorsLib.Collection_InvalidCollectionSize();
         }
-        // set item target
-        $.itemTargets = new address[](1);
-        $.itemTargets[0] = p.itemTarget;
+        // set items
+        $$.itemTarget = p.itemTarget;
+        $$.itemIds = p.itemIds;
 
         // set collection state vars
         $.name = p.name;
@@ -113,7 +118,6 @@ contract SingleEditionCollection is Collection {
         $.curator = p.curator;
         $.uri = p.uri;
         $.currency = p.currency;
-        $.itemIds = p.itemIds;
         $.gate = false;
 
         // approve controller to spend funds
@@ -141,6 +145,20 @@ contract SingleEditionCollection is Collection {
     /// @inheritdoc ICollection
     function price() external view override returns (uint256) {
         return _singleEditionCollectionStorage().mintParams.price;
+    }
+
+    /// @inheritdoc ICollection
+    function collection() external view override returns (address[] memory, uint256[] memory) {
+        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
+
+        address[] memory itemTargets = new address[]($$.itemIds.length);
+        for (uint256 i = 0; i < $$.itemIds.length; i++) {
+            itemTargets[i] = $$.itemTarget;
+        }
+
+        uint256[] memory itemIds = $$.itemIds;
+
+        return (itemTargets, itemIds);
     }
 
     /* ------------------------------------------------- */
@@ -203,6 +221,7 @@ contract SingleEditionCollection is Collection {
      */
     function _mint(address to, address referrer, uint256 cost) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
+        SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;
@@ -217,10 +236,10 @@ contract SingleEditionCollection is Collection {
         uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;
 
         // approve edition to spend funds
-        IERC20($.currency).approve(address($.itemTargets[0]), cost);
+        IERC20($.currency).approve(address($$.itemTarget), cost);
 
         // mint to collection nft token bound account
-        IRouxEdition($.itemTargets[0]).collectionSingleMint(account, $.itemIds, cost - referralReward, "");
+        IRouxEdition($$.itemTarget).collectionSingleMint(account, $$.itemIds, cost - referralReward, "");
 
         // record referral reward
         if (referralReward > 0) _controller.recordFunds(referrer, referralReward);

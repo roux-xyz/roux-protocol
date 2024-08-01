@@ -410,7 +410,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param id token id to update
      * @param newUri new uri
      *
-     * @dev once a fork has been created, the uri is frozen and cannot be udpated.
+     * @dev once a child has been created, the uri is frozen and cannot be udpated.
      *      - to prevent a malicious user from "freezing" an unrevealed token, we only
      *        revert if a current uri has been set
      */
@@ -418,7 +418,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // current uri
         string memory currentUri = _storage().tokens[id].uri;
 
-        // verify fork of existing metadata has not already been created
+        // verify child of existing metadata has not already been created
         if (bytes(currentUri).length > 0 && _registry.hasChild(address(this), id)) {
             revert ErrorsLib.RouxEdition_UriFrozen();
         }

@@ -120,6 +120,14 @@ library EventsLib {
     /* ------------------------------------------------- */
 
     /**
+     * @notice emitted when a collection is minted
+     * @param tokenId token id
+     * @param to recipient
+     * @param account account
+     */
+    event CollectionMinted(uint256 indexed tokenId, address indexed to, address indexed account);
+
+    /**
      * @notice emitted when an extension is added to a collection
      * @param extension extension address
      * @param enable whether the extension is enabled or disabled
@@ -176,9 +184,14 @@ library EventsLib {
     /* ------------------------------------------------- */
 
     /**
-     * @notice new collection
-     * @param collectionType collection type
+     * @notice new single edition collection
      * @param instance collection instance
      */
-    event NewCollection(CollectionData.CollectionType collectionType, address indexed instance);
+    event NewSingleEditionCollection(address indexed instance);
+
+    /**
+     * @notice new multi edition collection
+     * @param instance collection instance
+     */
+    event NewMultiEditionCollection(address indexed instance);
 }

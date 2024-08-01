@@ -64,8 +64,6 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @param uri collection URI
      * @param currency currency address
      * @param gate whether to gate minting
-     * @param itemTargets target edition addresses
-     * @param itemIds array of item IDs in the collection
      * @param extensions mapping of extension addresses to their enabled status
      */
     struct CollectionStorage {
@@ -76,8 +74,6 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         string uri;
         address currency;
         bool gate;
-        address[] itemTargets;
-        uint256[] itemIds;
         mapping(address extension => bool enable) extensions;
     }
 
@@ -148,12 +144,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     }
 
     /// @inheritdoc ICollection
-    function collection() external view returns (address[] memory itemTargets, uint256[] memory itemIds) {
-        CollectionStorage storage $ = _collectionStorage();
-
-        itemTargets = $.itemTargets;
-        itemIds = $.itemIds;
-    }
+    function collection() external view virtual returns (address[] memory itemTargets, uint256[] memory itemIds);
 
     /// @inheritdoc ICollection
     function curator() external view returns (address) {
@@ -274,6 +265,9 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     function _mintTba(address to, uint256 id, bytes32 salt) internal returns (address) {
         // mint collection nft
         super._mint(to, id);
+
+        // emit event
+        emit EventsLib.CollectionMinted(id, to, address(this));
 
         // create erc6551 token bound account
         return _erc6551Registry.createAccount(_accountImplementation, salt, block.chainid, address(this), id);

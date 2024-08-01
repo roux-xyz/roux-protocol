@@ -11,7 +11,7 @@ import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
-import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
@@ -48,10 +48,14 @@ contract MultiEditionCollection is Collection {
     /**
      * @notice Collection storage
      * @custom:storage-location erc7201:multiEditionCollection.multiEditionCollectionStorage
+     * @param itemTargets target edition addresses
+     * @param itemIds array of item IDs in the collection
      * @param mintParams mint parameters
      * @param collectionFeeRecipient rewards recipient address
      */
     struct MultiEditionCollectionStorage {
+        address[] itemTargets;
+        uint256[] itemIds;
         CollectionData.MultiEditionMintParams mintParams;
         address collectionFeeRecipient;
     }
@@ -99,7 +103,7 @@ contract MultiEditionCollection is Collection {
         if (p.itemTargets.length != p.itemIds.length) revert ErrorsLib.Collection_InvalidItems();
 
         // validate collection size
-        if (p.itemIds.length > MAX_COLLECTION_SIZE) {
+        if (p.itemIds.length > MAX_MULTI_EDITION_COLLECTION_SIZE) {
             revert ErrorsLib.Collection_InvalidCollectionSize();
         }
 
@@ -116,8 +120,12 @@ contract MultiEditionCollection is Collection {
         // set mintParams
         $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: p.mintStart, mintEnd: p.mintEnd });
 
-        //$set rewards recipient
+        // set rewards recipient
         $$.collectionFeeRecipient = p.collectionFeeRecipient;
+
+        // set items
+        $$.itemTargets = p.itemTargets;
+        $$.itemIds = p.itemIds;
 
         // set state vars
         $.name = p.name;
@@ -125,8 +133,6 @@ contract MultiEditionCollection is Collection {
         $.curator = p.curator;
         $.uri = p.uri;
         $.currency = p.currency;
-        $.itemTargets = p.itemTargets;
-        $.itemIds = p.itemIds;
         $.gate = false;
 
         // approve controller to spend funds
@@ -153,14 +159,24 @@ contract MultiEditionCollection is Collection {
 
     /// @inheritdoc ICollection
     function price() external view override returns (uint256) {
-        CollectionStorage storage $ = _collectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         uint256 total;
-        for (uint256 i = 0; i < $.itemTargets.length; i++) {
-            total += IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+        for (uint256 i = 0; i < $$.itemTargets.length; i++) {
+            total += IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
         }
 
         return total;
+    }
+
+    /// @inheritdoc ICollection
+    function collection() external view override returns (address[] memory, uint256[] memory) {
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        address[] memory itemTargets = $$.itemTargets;
+        uint256[] memory itemIds = $$.itemIds;
+
+        return (itemTargets, itemIds);
     }
 
     /**
@@ -209,13 +225,14 @@ contract MultiEditionCollection is Collection {
      * @return price
      */
     function _prices() internal view returns (uint256, uint256[] memory) {
-        CollectionStorage storage $ = _collectionStorage();
-        uint256 length = $.itemTargets.length;
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        uint256 length = $$.itemTargets.length;
         uint256 total;
         uint256[] memory prices = new uint256[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            uint256 price_ = IRouxEdition($.itemTargets[i]).defaultPrice($.itemIds[i]);
+            uint256 price_ = IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
             prices[i] = price_;
             total += price_;
         }
@@ -229,6 +246,7 @@ contract MultiEditionCollection is Collection {
      */
     function _mint(address to, address referrer) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;
@@ -247,7 +265,7 @@ contract MultiEditionCollection is Collection {
         uint256 totalReferralReward;
 
         // mint
-        for (uint256 i = 0; i < $.itemTargets.length; i++) {
+        for (uint256 i = 0; i < $$.itemTargets.length; i++) {
             // get token price
             uint256 cost = prices[i];
 
@@ -263,10 +281,10 @@ contract MultiEditionCollection is Collection {
             uint256 netMint = cost - curatorReward - referralReward;
 
             // approve erc20 transfer
-            IERC20($.currency).approve(address($.itemTargets[i]), netMint);
+            IERC20($.currency).approve(address($$.itemTargets[i]), netMint);
 
             // mint addition to token bound account
-            IRouxEdition($.itemTargets[i]).collectionMultiMint(account, $.itemIds[i], netMint, "");
+            IRouxEdition($$.itemTargets[i]).collectionMultiMint(account, $$.itemIds[i], netMint, "");
         }
 
         // record rewards
