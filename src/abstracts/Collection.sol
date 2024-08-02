@@ -17,12 +17,14 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /**
  * @title Collection
  * @custom:version 0.1
  */
 abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles, ReentrancyGuard {
+    using LibBitmap for LibBitmap.Bitmap;
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -64,7 +66,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @param uri collection URI
      * @param currency currency address
      * @param gate whether to gate minting
-     * @param extensions mapping of extension addresses to their enabled status
+     * @param extensions bitmap of extension addresses to their enabled status
      */
     struct CollectionStorage {
         address curator;
@@ -74,7 +76,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         string uri;
         address currency;
         bool gate;
-        mapping(address extension => bool enable) extensions;
+        LibBitmap.Bitmap extensions;
     }
 
     /* ------------------------------------------------- */
@@ -166,7 +168,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
 
     /// @inheritdoc ICollection
     function isExtension(address extension_) external view returns (bool) {
-        return _collectionStorage().extensions[extension_];
+        return _isExtension(extension_);
     }
 
     /// @inheritdoc ICollection
@@ -202,16 +204,19 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     function setExtension(address extension, bool enable, bytes calldata options) external onlyOwner {
         CollectionStorage storage $ = _collectionStorage();
 
-        // validate extension is not zero
-        if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
-
-        // validate extension interface support
-        if (!ICollectionExtension(extension).supportsInterface(type(ICollectionExtension).interfaceId)) {
-            revert ErrorsLib.Collection_InvalidExtension();
-        }
-
         // set extension
-        $.extensions[extension] = enable;
+        if (enable) {
+            // validate extension is not zero
+            if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
+
+            // validate extension interface support
+            if (!ICollectionExtension(extension).supportsInterface(type(ICollectionExtension).interfaceId)) {
+                revert ErrorsLib.Collection_InvalidExtension();
+            }
+            $.extensions.set(uint256(uint160(extension)));
+        } else {
+            $.extensions.unset(uint256(uint160(extension)));
+        }
 
         // update mint params
         if (enable && options.length > 0) {
@@ -228,7 +233,9 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      */
     function updateExtensionParams(address extension, bytes calldata params) external onlyOwner {
         // validate extension is registered
-        if (!_collectionStorage().extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
+        if (!_collectionStorage().extensions.get(uint256(uint160(extension)))) {
+            revert ErrorsLib.Collection_InvalidExtension();
+        }
 
         // call extension with updated params
         ICollectionExtension(extension).setCollectionMintParams(params);
@@ -266,11 +273,22 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         // mint collection nft
         super._mint(to, id);
 
-        // emit event
-        emit EventsLib.CollectionMinted(id, to, address(this));
-
         // create erc6551 token bound account
-        return _erc6551Registry.createAccount(_accountImplementation, salt, block.chainid, address(this), id);
+        address account = _erc6551Registry.createAccount(_accountImplementation, salt, block.chainid, address(this), id);
+
+        // emit event
+        emit EventsLib.CollectionMinted(id, to, account);
+
+        return account;
+    }
+
+    /**
+     * @notice check if extension is registered
+     * @param extension extension address
+     * @return true if extension is valid
+     */
+    function _isExtension(address extension) internal view returns (bool) {
+        return _collectionStorage().extensions.get(uint256(uint160(extension)));
     }
 
     /* ------------------------------------------------- */

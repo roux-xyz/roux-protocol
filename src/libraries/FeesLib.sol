@@ -8,4 +8,4 @@ uint256 constant PLATFORM_FEE = 250;
 uint256 constant REFERRAL_FEE = 750;
 
 /// @dev collection fee | 2000 bps | 20%
-uint256 constant COLLECTION_FEE = 2_000;
+uint256 constant CURATOR_FEE = 2_000;

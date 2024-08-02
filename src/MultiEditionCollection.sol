@@ -10,7 +10,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { REFERRAL_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
 import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,7 +19,7 @@ import { ERC721 } from "solady/tokens/ERC721.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
@@ -28,6 +28,7 @@ import { CollectionData } from "src/types/DataTypes.sol";
  */
 contract MultiEditionCollection is Collection {
     using SafeTransferLib for address;
+    using LibBitmap for LibBitmap.Bitmap;
 
     /* ------------------------------------------------- */
     /* constants                                         */
@@ -203,14 +204,12 @@ contract MultiEditionCollection is Collection {
         nonReentrant
         returns (uint256)
     {
-        CollectionStorage storage $ = _collectionStorage();
-
         if (extension != address(0)) {
-            if (!$.extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
+            if (!_isExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
             ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
-            if ($.gate) revert ErrorsLib.Collection_GatedMint();
+            if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();
         }
 
         return _mint(to, referrer);
@@ -266,30 +265,35 @@ contract MultiEditionCollection is Collection {
 
         // mint
         for (uint256 i = 0; i < $$.itemTargets.length; i++) {
+            address edition = $$.itemTargets[i];
+            uint256 id = $$.itemIds[i];
+
             // get token price
             uint256 cost = prices[i];
 
             // compute rewards
-            uint256 referralReward = referrer != address(0) ? (cost * REFERRAL_FEE) / 10_000 : 0;
-            uint256 curatorReward = ((cost - referralReward) * COLLECTION_FEE) / 10_000;
+            uint256 referralReward = referrer == address(0) ? 0 : (cost * REFERRAL_FEE) / 10_000;
+            uint256 curatorReward = ((cost - referralReward) * CURATOR_FEE) / 10_000;
 
             // increment total rewards
-            totalCuratorReward += curatorReward;
             totalReferralReward += referralReward;
+            totalCuratorReward += curatorReward;
 
-            // compute mint cost
-            uint256 netMint = cost - curatorReward - referralReward;
+            // send funds to controller
+            _controller.disburse({
+                edition: edition,
+                id: id,
+                amount: cost - referralReward - curatorReward,
+                referrer: address(0)
+            });
 
-            // approve erc20 transfer
-            IERC20($.currency).approve(address($$.itemTargets[i]), netMint);
-
-            // mint addition to token bound account
-            IRouxEdition($$.itemTargets[i]).collectionMultiMint(account, $$.itemIds[i], netMint, "");
+            // mint edition to token bound account
+            IRouxEdition(edition).collectionMultiMint(account, id, "");
         }
 
         // record rewards
-        _controller.recordFunds(_multiEditionCollectionStorage().collectionFeeRecipient, totalCuratorReward);
-        if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
+        _controller.recordFunds(referrer, totalReferralReward);
+        _controller.recordFunds($$.collectionFeeRecipient, totalCuratorReward);
 
         return collectionTokenId;
     }

@@ -28,7 +28,7 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         // disburse
         vm.prank(user);
         vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
-        controller.disburse({ id: 1, amount: TOKEN_PRICE, referrer: address(0) });
+        controller.disburse({ edition: address(0), id: 1, amount: TOKEN_PRICE, referrer: address(0) });
     }
 
     /* -------------------------------------------- */
@@ -237,7 +237,7 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         uint256 referralFee = (SINGLE_EDITION_COLLECTION_PRICE * REFERRAL_FEE) / 10_000;
 
         // compute platform fee
-        uint256 platformFee = ((SINGLE_EDITION_COLLECTION_PRICE - referralFee) * PLATFORM_FEE) / 10_000;
+        uint256 platformFee = (SINGLE_EDITION_COLLECTION_PRICE * PLATFORM_FEE) / 10_000;
 
         // mint with referral
         vm.prank(user);

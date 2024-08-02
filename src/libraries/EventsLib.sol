@@ -25,10 +25,9 @@ library EventsLib {
     /**
      * @notice emitted when a collection is set
      * @param collection collection address
-     * @param collectionId collection id
      * @param enable enable or disable collection
      */
-    event CollectionSet(address indexed collection, uint256 collectionId, bool enable);
+    event CollectionSet(address indexed collection, bool enable);
 
     /**
      * @notice emitted when a contract uri is updated
@@ -114,6 +113,12 @@ library EventsLib {
      * @param enabled whether the platform fee is enabled
      */
     event PlatformFeeUpdated(bool enabled);
+
+    /**
+     * @notice emitted when the contract is paused
+     * @param pause_ whether the contract is paused
+     */
+    event Paused(bool pause_);
 
     /* ------------------------------------------------- */
     /* Collection                                        */

@@ -72,11 +72,10 @@ interface IRouxEdition {
 
     /**
      * @notice check if collection is valid for a collection id
-     * @param collectionId collection id
      * @param collection collection address
      * @return true if collection is valid
      */
-    function isCollection(uint256 collectionId, address collection) external view returns (bool);
+    function isCollection(address collection) external view returns (bool);
 
     /**
      * @notice get default price for a token
@@ -151,7 +150,6 @@ interface IRouxEdition {
      * @notice mint tokens for a single edition collection
      * @param to token receiver
      * @param ids array of token ids
-     * @param totalAmount total amount to pay
      * @param data additional data
      *
      * @dev used by SingleEditionCollection to batch mint tokens to token bound account
@@ -160,27 +158,17 @@ interface IRouxEdition {
      *        only be minted as part of a collection
      *      - bypasses validation that token exists
      */
-    function collectionSingleMint(
-        address to,
-        uint256[] memory ids,
-        uint256 totalAmount,
-        bytes calldata data
-    )
-        external
-        payable;
+    function collectionSingleMint(address to, uint256[] memory ids, bytes calldata data) external payable;
 
     /**
      * @notice mint a token for a multi edition collection
      * @param to token receiver
      * @param id token id
-     * @param amount amount to pay
      * @param data additional data
      *
      * @dev used by MultiEditionCollection to mint single edition token to token bound account
      *      - validates that collection was created by `CollectionFactory`
-     *      - validates that token is ungated
      *      - validates that token exists
-     *      - validates currency is consistent
      */
-    function collectionMultiMint(address to, uint256 id, uint256 amount, bytes calldata data) external payable;
+    function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable;
 }

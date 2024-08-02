@@ -263,7 +263,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     /// @dev deploy token bound contracts
     function _deployTokenBoundContracts() internal returns (ERC6551Registry registry_, ERC6551Account accountImpl_) {
         registry_ = new ERC6551Registry();
-        accountImpl_ = new ERC6551Account(address(registry_));
+        accountImpl_ = new ERC6551Account();
 
         vm.label({ account: address(registry_), newLabel: "ERC6551Registry" });
         vm.label({ account: address(accountImpl_), newLabel: "ERC6551Account" });
@@ -434,8 +434,8 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev create edition
-    function _createEdition(address user) internal returns (RouxEdition) {
-        vm.prank(user);
+    function _createEdition(address user_) internal returns (RouxEdition) {
+        vm.prank(user_);
 
         // create edition instance
         bytes memory params = abi.encode(CONTRACT_URI);
@@ -464,16 +464,16 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev approve token
-    function _approveToken(address spender, address user) internal {
+    function _approveToken(address spender, address user_) internal {
         // approve edition
-        vm.prank(user);
+        vm.prank(user_);
         mockUSDC.approve(address(spender), type(uint256).max);
     }
 
     /// @dev mint token
-    function _mintToken(IRouxEdition edition_, uint256 tokenId, address user) internal {
+    function _mintToken(IRouxEdition edition_, uint256 tokenId, address user_) internal {
         // mint
-        vm.prank(user);
+        vm.prank(user_);
         edition_.mint({ to: user, id: tokenId, quantity: 1, extension: address(0), referrer: address(0), data: "" });
     }
 
@@ -481,24 +481,24 @@ abstract contract BaseTest is Test, Events, Defaults {
     function _createFork(
         RouxEdition parentEdition,
         uint256 parentTokenId,
-        address user
+        address user_
     )
         internal
         returns (RouxEdition, uint256)
     {
         // create edition instance
-        RouxEdition forkEdition = _createEdition(user);
+        RouxEdition forkEdition = _createEdition(user_);
 
         // copy default add params
         EditionData.AddParams memory newDefaultAddParams = defaultAddParams;
 
         // modify default add params
-        newDefaultAddParams.fundsRecipient = user;
+        newDefaultAddParams.fundsRecipient = user_;
         newDefaultAddParams.parentEdition = address(parentEdition);
         newDefaultAddParams.parentTokenId = parentTokenId;
 
         // add token
-        vm.prank(user);
+        vm.prank(user_);
         uint256 tokenId = forkEdition.add(newDefaultAddParams);
 
         return (forkEdition, tokenId);
@@ -550,10 +550,10 @@ abstract contract BaseTest is Test, Events, Defaults {
         utilizedUsers[0] = creator;
 
         for (uint256 i = 1; i < num; i++) {
-            address user = creatorArray[i % creatorArray.length];
-            utilizedUsers[i] = user;
+            address user_ = creatorArray[i % creatorArray.length];
+            utilizedUsers[i] = user_;
 
-            vm.startPrank(user);
+            vm.startPrank(user_);
 
             // create edition instance
             bytes memory params = abi.encode(CONTRACT_URI);
@@ -563,9 +563,9 @@ abstract contract BaseTest is Test, Events, Defaults {
             // token params
             EditionData.AddParams memory tokenParams = EditionData.AddParams({
                 tokenUri: TOKEN_URI,
-                creator: user,
+                creator: user_,
                 maxSupply: MAX_SUPPLY,
-                fundsRecipient: user,
+                fundsRecipient: user_,
                 defaultPrice: TOKEN_PRICE,
                 profitShare: PROFIT_SHARE,
                 parentEdition: address(editions[i - 1]),
@@ -614,8 +614,8 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     // @dev get user balance in controller
-    function _getUserControllerBalance(address user) internal view returns (uint256) {
-        return controller.balance(user);
+    function _getUserControllerBalance(address user_) internal view returns (uint256) {
+        return controller.balance(user_);
     }
 
     /* -------------------------------------------- */

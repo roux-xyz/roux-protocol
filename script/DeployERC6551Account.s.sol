@@ -7,8 +7,8 @@ import { ERC6551Account } from "src/ERC6551Account.sol";
 import { BaseScript } from "./Base.s.sol";
 
 contract DeployERC6551Account is BaseScript {
-    function run(address erc6551registry) public broadcast {
-        ERC6551Account accountImpl = new ERC6551Account(erc6551registry);
+    function run() public broadcast {
+        ERC6551Account accountImpl = new ERC6551Account();
         console.log("ERC6551 Account Implementation: ", address(accountImpl));
     }
 }

@@ -67,8 +67,8 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     /**
      * @notice controller storage
      * @custom:storage-location erc7201:rouxController.cntrollerStorage
-     * @param initialized whether the contract has been initialized
      * @param platformFeeEnabled whether platform fee is enabled
+     * @param paused whether the contract is paused
      * @param platformFeeBalance platform fee balance
      * @param tokenConfig token data
      * @param tokenPending token pending
@@ -76,10 +76,21 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
      */
     struct ControllerStorage {
         bool platformFeeEnabled;
+        bool paused;
         uint192 platformFeeBalance;
         mapping(address edition => mapping(uint256 tokenId => TokenConfig)) tokenConfig;
         mapping(address edition => mapping(uint256 tokenId => uint256 amount)) tokenPending;
         mapping(address fundsRecipient => uint256 balance) balance;
+    }
+
+    /* ------------------------------------------------- */
+    /* modifiers                                         */
+    /* ------------------------------------------------- */
+
+    /// @notice revert when paused
+    modifier notPaused() {
+        if (_storage().paused) revert ErrorsLib.Controller_Paused();
+        _;
     }
 
     /* ------------------------------------------------- */
@@ -174,7 +185,17 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     /* ------------------------------------------------- */
 
     /// @inheritdoc IController
-    function disburse(uint256 id, uint256 amount, address referrer) external payable nonReentrant {
+    function disburse(
+        address edition,
+        uint256 id,
+        uint256 amount,
+        address referrer
+    )
+        external
+        payable
+        nonReentrant
+        notPaused
+    {
         // transfer payment
         _transferPayment(msg.sender, amount);
 
@@ -193,11 +214,11 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         }
 
         // disburse
-        _disburse(msg.sender, id, amount - fee - referralFee);
+        _disburse(edition, id, amount - fee - referralFee);
     }
 
     /// @inheritdoc IController
-    function recordFunds(address recipient, uint256 amount) external payable nonReentrant {
+    function recordFunds(address recipient, uint256 amount) external payable nonReentrant notPaused {
         // transfer payment
         _transferPayment(msg.sender, amount);
 
@@ -209,13 +230,13 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     }
 
     /// @inheritdoc IController
-    function distributePending(address edition, uint256 tokenId) external {
+    function distributePending(address edition, uint256 tokenId) external notPaused {
         // distribute pending balance (updates balance and parent's pending balance)
         _distributePending(edition, tokenId);
     }
 
     /// @inheritdoc IController
-    function distributePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external {
+    function distributePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external notPaused {
         // validate arrays
         if (editions.length != tokenIds.length) revert ErrorsLib.Controller_InvalidArrayLength();
 
@@ -226,7 +247,15 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     }
 
     /// @inheritdoc IController
-    function distributePendingAndWithdraw(address edition, uint256 tokenId) external nonReentrant returns (uint256) {
+    function distributePendingAndWithdraw(
+        address edition,
+        uint256 tokenId
+    )
+        external
+        nonReentrant
+        notPaused
+        returns (uint256)
+    {
         // distribute pending balance
         _distributePending(edition, tokenId);
 
@@ -235,22 +264,22 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     }
 
     /// @inheritdoc IController
-    function withdraw(address recipient) external nonReentrant returns (uint256) {
+    function withdraw(address recipient) external nonReentrant notPaused returns (uint256) {
         return _withdraw(recipient);
     }
 
     /// @inheritdoc IController
-    function setFundsRecipient(uint256 tokenId, address fundsRecipient_) external {
+    function setFundsRecipient(uint256 tokenId, address fundsRecipient_) external notPaused {
         _setFundsRecipient(msg.sender, tokenId, fundsRecipient_);
     }
 
     /// @inheritdoc IController
-    function setProfitShare(uint256 tokenId, uint16 profitShare_) external {
+    function setProfitShare(uint256 tokenId, uint16 profitShare_) external notPaused {
         _setProfitShare(msg.sender, tokenId, profitShare_);
     }
 
     /// @inheritdoc IController
-    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external {
+    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external notPaused {
         _setFundsRecipient(msg.sender, tokenId, fundsRecipient_);
         _setProfitShare(msg.sender, tokenId, profitShare_);
     }
@@ -289,8 +318,18 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         return amount;
     }
 
+    /**
+     * @notice pause
+     * @param pause_ true to pause, false to unpause
+     */
+    function pause(bool pause_) external onlyOwner {
+        _storage().paused = pause_;
+
+        emit EventsLib.Paused(pause_);
+    }
+
     /* ------------------------------------------------- */
-    /* proxy | danger zone                               */
+    /* proxy                                             */
     /* ------------------------------------------------- */
 
     /**
@@ -318,18 +357,12 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
      * @notice handle transfer payment
      * @param from sender
      * @param amount amount
+     *
+     * @dev does not support fee-on-transfer tokens
      */
     function _transferPayment(address from, uint256 amount) internal {
-        // cache currency balance
-        uint256 startingBalance = _currency.balanceOf(address(this));
-
         // transfer currency
         _currency.safeTransferFrom(from, address(this), amount);
-
-        // validate transfer
-        if (_currency.balanceOf(address(this)) != startingBalance + amount) {
-            revert ErrorsLib.Controller_TransferFailed();
-        }
     }
 
     /**
@@ -409,6 +442,8 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
      * @notice withdraw
      * @param recipient recipient
      * @return amount amount withdrawn
+     *
+     * @dev anyone can withdraw on behalf of recipient
      */
     function _withdraw(address recipient) internal returns (uint256) {
         // get storage

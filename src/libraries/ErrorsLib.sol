@@ -55,6 +55,9 @@ library ErrorsLib {
     /// @notice invalid array length
     error Controller_InvalidArrayLength();
 
+    /// @notice controller is paused
+    error Controller_Paused();
+
     /* ------------------------------------------------- */
     /* Collection                                        */
     /* ------------------------------------------------- */

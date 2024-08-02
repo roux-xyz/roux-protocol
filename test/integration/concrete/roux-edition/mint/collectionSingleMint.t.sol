@@ -34,7 +34,7 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
     function test__RevertWhen_InvalidCaller() external {
         // unset collection
         vm.prank(collectionAdmin);
-        edition.setCollection(collectionId, address(singleEditionCollection), false);
+        edition.setCollection(address(singleEditionCollection), false);
 
         // attempt to mint
         vm.prank(user);
@@ -106,11 +106,8 @@ contract CollectionSingleMint_RouxEdition_Integration_Concrete_Test is Collectio
         SingleEditionCollection gatedSingleEditionCollection =
             _createSingleEditionCollectionWithParams(address(edition_), tokenIds);
 
-        // set collection
-        uint256 collectionId = _encodeCollectionId(tokenIds);
-
         vm.prank(collectionAdmin);
-        edition_.setCollection(collectionId, address(gatedSingleEditionCollection), true);
+        edition_.setCollection(address(gatedSingleEditionCollection), true);
 
         // approve and mint collection
         _approveToken(address(gatedSingleEditionCollection), user);

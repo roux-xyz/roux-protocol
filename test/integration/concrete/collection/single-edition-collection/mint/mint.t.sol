@@ -51,6 +51,10 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         vm.expectEmit({ emitter: address(singleEditionCollection) });
         emit Transfer({ from: address(0), to: user, tokenId: 1 });
 
+        // emit collection minted event
+        vm.expectEmit({ emitter: address(singleEditionCollection) });
+        emit EventsLib.CollectionMinted(1, user, erc6551account);
+
         // emit batch transfer event
         vm.expectEmit({ emitter: address(edition) });
         emit TransferBatch({
@@ -140,7 +144,7 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         uint256 referralFee = (SINGLE_EDITION_COLLECTION_PRICE * REFERRAL_FEE) / 10_000;
 
         // calculate platform fee
-        uint256 platformFee = ((SINGLE_EDITION_COLLECTION_PRICE - referralFee) * PLATFORM_FEE) / 10_000;
+        uint256 platformFee = (SINGLE_EDITION_COLLECTION_PRICE * PLATFORM_FEE) / 10_000;
 
         // mint
         vm.prank(user);
@@ -206,11 +210,8 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
             collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
         );
 
-        // set collection
-        uint256 collectionId = _encodeCollectionId(newItemIds);
-
         vm.prank(creator);
-        edition_.setCollection(collectionId, address(singleEditionCollection_), true);
+        edition_.setCollection(address(singleEditionCollection_), true);
 
         // approve single edition collection
         _approveToken(address(singleEditionCollection_), user);

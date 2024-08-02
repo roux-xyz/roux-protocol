@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { ICollection } from "src/interfaces/ICollection.sol";
@@ -17,7 +17,7 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
@@ -27,6 +27,7 @@ import { CollectionData } from "src/types/DataTypes.sol";
 contract SingleEditionCollection is Collection {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
+    using LibBitmap for LibBitmap.Bitmap;
 
     /* ------------------------------------------------- */
     /* constants                                         */
@@ -151,12 +152,14 @@ contract SingleEditionCollection is Collection {
     function collection() external view override returns (address[] memory, uint256[] memory) {
         SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
-        address[] memory itemTargets = new address[]($$.itemIds.length);
-        for (uint256 i = 0; i < $$.itemIds.length; i++) {
+        // cache item ids
+        uint256[] memory itemIds = $$.itemIds;
+
+        // collection expects equal length arrays of addresses and ids
+        address[] memory itemTargets = new address[](itemIds.length);
+        for (uint256 i = 0; i < itemIds.length; i++) {
             itemTargets[i] = $$.itemTarget;
         }
-
-        uint256[] memory itemIds = $$.itemIds;
 
         return (itemTargets, itemIds);
     }
@@ -177,15 +180,13 @@ contract SingleEditionCollection is Collection {
         nonReentrant
         returns (uint256)
     {
-        CollectionStorage storage $ = _collectionStorage();
-
         uint128 cost;
         if (extension != address(0)) {
-            if (!$.extensions[extension]) revert ErrorsLib.Collection_InvalidExtension();
+            if (!_isExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
             cost = ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
-            if ($.gate) revert ErrorsLib.Collection_GatedMint();
+            if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();
 
             // set cost ~ only single edition collections have a price set in storage
             cost = _singleEditionCollectionStorage().mintParams.price;
@@ -232,17 +233,29 @@ contract SingleEditionCollection is Collection {
         // transfer payment
         $.currency.safeTransferFrom(msg.sender, address(this), cost);
 
-        // calculate referral reward
-        uint256 referralReward = (referrer != address(0)) ? (cost * REFERRAL_FEE) / 10_000 : 0;
+        // cache item data
+        uint256[] memory itemIds = $$.itemIds;
+        address itemTarget = $$.itemTarget;
 
-        // approve edition to spend funds
-        IERC20($.currency).approve(address($$.itemTarget), cost);
+        // validate tokens + disburse funds
+        uint256 derivedPrice = cost / itemIds.length;
+        uint256 currentValue = cost;
+        for (uint256 i = 0; i < itemIds.length; i++) {
+            // cache id
+            uint256 id = itemIds[i];
+
+            // calculate funds disbursement
+            uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
+            currentValue -= allocatedValue;
+
+            // send funds to controller
+            if (allocatedValue > 0) {
+                _controller.disburse({ edition: itemTarget, id: id, amount: allocatedValue, referrer: referrer });
+            }
+        }
 
         // mint to collection nft token bound account
-        IRouxEdition($$.itemTarget).collectionSingleMint(account, $$.itemIds, cost - referralReward, "");
-
-        // record referral reward
-        if (referralReward > 0) _controller.recordFunds(referrer, referralReward);
+        IRouxEdition(itemTarget).collectionSingleMint(account, itemIds, "");
 
         return collectionTokenId;
     }

@@ -86,7 +86,7 @@ abstract contract CollectionBase is BaseTest {
         collectionId = _encodeCollectionId(singleEditionCollectionIds);
 
         vm.prank(collectionAdmin);
-        edition.setCollection(collectionId, address(singleEditionCollection), true);
+        edition.setCollection(address(singleEditionCollection), true);
 
         _approveToken(address(singleEditionCollection), user);
 

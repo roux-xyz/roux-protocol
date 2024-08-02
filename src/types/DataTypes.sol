@@ -2,12 +2,15 @@
 pragma solidity ^0.8.25;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /* -------------------------------------------- */
 /* Edition                                      */
 /* -------------------------------------------- */
 
 library EditionData {
+    using LibBitmap for LibBitmap.Bitmap;
+
     /**
      * @notice mint params
      * @param defaultPrice default price
@@ -24,7 +27,7 @@ library EditionData {
      * @param maxSupply max supply
      * @param totalSupply total supply
      * @param mintParams mint params
-     * @param extensions mapping of extension addresses to their enabled status
+     * @param extensions enabled extensions
      * @param uri token uri
      */
     struct TokenData {
@@ -32,7 +35,7 @@ library EditionData {
         uint128 totalSupply;
         uint128 maxSupply;
         MintParams mintParams;
-        mapping(address extension => bool enable) extensions;
+        LibBitmap.Bitmap extensions;
         string uri;
     }
 

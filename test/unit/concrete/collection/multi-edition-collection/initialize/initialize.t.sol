@@ -71,6 +71,38 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         MultiEditionCollection(collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params)));
     }
 
+    /// @dev reverts when one of the items is gated
+    function test__RevertWhen_GatedItem() external {
+        // create edition instance
+        RouxEdition edition_ = _createEdition(creator);
+
+        // modify edition params to include gate
+        EditionData.AddParams memory addParams = defaultAddParams;
+        addParams.gate = true;
+
+        // add token
+        vm.prank(creator);
+        uint256 tokenId_ = edition_.add(addParams);
+
+        // create collection
+        address[] memory itemTargets = new address[](2);
+        itemTargets[0] = address(edition);
+        itemTargets[1] = address(edition_);
+
+        uint256[] memory itemIds = new uint256[](2);
+        itemIds[0] = 1;
+        itemIds[1] = tokenId_;
+
+        // create array of item targets
+        CollectionData.MultiEditionCreateParams memory params = multiEditionCollectionParams;
+        params.itemTargets = itemTargets;
+        params.itemIds = itemIds;
+
+        vm.prank(collectionAdmin);
+        vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
+        MultiEditionCollection(collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params)));
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */

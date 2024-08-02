@@ -7,7 +7,7 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { REFERRAL_FEE, PLATFORM_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
 
 contract RecordFunds_Controller_Integration_Concrete_Test is ControllerBase, CollectionBase {
     function setUp() public override(ControllerBase, CollectionBase) {
@@ -38,7 +38,7 @@ contract RecordFunds_Controller_Integration_Concrete_Test is ControllerBase, Col
         uint256 multiEditionCollectionPrice = multiEditionCollection.price();
 
         // calculate collection fee
-        uint256 collectionFee = (multiEditionCollectionPrice * COLLECTION_FEE) / 10_000;
+        uint256 collectionFee = (multiEditionCollectionPrice * CURATOR_FEE) / 10_000;
 
         // record funds
         vm.prank(user);
@@ -63,7 +63,7 @@ contract RecordFunds_Controller_Integration_Concrete_Test is ControllerBase, Col
         uint256 referralFee = (multiEditionCollectionPrice * REFERRAL_FEE) / 10_000;
 
         // calculate collection fee
-        uint256 collectionFee = ((multiEditionCollectionPrice - referralFee) * COLLECTION_FEE) / 10_000;
+        uint256 collectionFee = ((multiEditionCollectionPrice - referralFee) * CURATOR_FEE) / 10_000;
 
         // record funds
         vm.prank(user);

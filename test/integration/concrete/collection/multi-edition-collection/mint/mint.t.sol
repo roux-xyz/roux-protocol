@@ -8,7 +8,7 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { REFERRAL_FEE, PLATFORM_FEE, COLLECTION_FEE } from "src/libraries/FeesLib.sol";
+import { REFERRAL_FEE, PLATFORM_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
 import { MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase {
@@ -71,14 +71,11 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         uint256 totalPrice = multiEditionCollection.price();
 
         // calculate collection fee
-        uint256 collectionFee = (totalPrice * COLLECTION_FEE) / 10_000;
+        uint256 curatorFee = (totalPrice * CURATOR_FEE) / 10_000;
 
-        uint256 edition1CollectionFee =
-            RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * COLLECTION_FEE / 10_000;
-        uint256 edition2CollectionFee =
-            RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) * COLLECTION_FEE / 10_000;
-        uint256 edition3CollectionFee =
-            RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) * COLLECTION_FEE / 10_000;
+        uint256 edition1CollectionFee = RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * CURATOR_FEE / 10_000;
+        uint256 edition2CollectionFee = RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) * CURATOR_FEE / 10_000;
+        uint256 edition3CollectionFee = RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) * CURATOR_FEE / 10_000;
 
         // mint
         vm.prank(user);
@@ -100,7 +97,7 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
 
         // verify balances
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - totalPrice);
-        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + collectionFee);
+        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + curatorFee);
         assertEq(
             _getUserControllerBalance(edition1FundsRecipient),
             startingBalanceEdition1FundsRecipient + RouxEdition(multiEditionItemTargets[0]).defaultPrice(1)
@@ -128,8 +125,8 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         uint256 totalPrice = multiEditionCollection.price();
 
         // get collection fee
-        uint256 collectionFee = (totalPrice * COLLECTION_FEE) / 10_000;
-        uint256 platformFee = ((totalPrice - collectionFee) * PLATFORM_FEE) / 10_000;
+        uint256 curatorFee = (totalPrice * CURATOR_FEE) / 10_000;
+        uint256 platformFee = ((totalPrice - curatorFee) * PLATFORM_FEE) / 10_000;
 
         // mint
         vm.prank(user);
@@ -144,22 +141,22 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         // get total price
         uint256 totalPrice = multiEditionCollection.price();
 
-        // get collection fee
-        uint256 referralFee = (totalPrice * REFERRAL_FEE) / 10_000;
-        uint256 collectionFee = ((totalPrice - referralFee) * COLLECTION_FEE) / 10_000;
-
         // get referral fee
         uint256 edition1ReferralFee = RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * REFERRAL_FEE / 10_000;
         uint256 edition2ReferralFee = RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) * REFERRAL_FEE / 10_000;
         uint256 edition3ReferralFee = RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) * REFERRAL_FEE / 10_000;
 
         // get collection fee
+        uint256 curatorFee =
+            ((totalPrice - edition1ReferralFee - edition2ReferralFee - edition3ReferralFee) * CURATOR_FEE) / 10_000;
+
+        // get collection fee
         uint256 edition1CollectionFee =
-            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * CURATOR_FEE / 10_000;
         uint256 edition2CollectionFee =
-            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * CURATOR_FEE / 10_000;
         uint256 edition3CollectionFee =
-            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * CURATOR_FEE / 10_000;
 
         // mint
         vm.prank(user);
@@ -167,7 +164,7 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
 
         // verify balances
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - totalPrice);
-        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + collectionFee);
+        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + curatorFee);
         assertEq(
             _getUserControllerBalance(edition1FundsRecipient),
             startingBalanceEdition1FundsRecipient + RouxEdition(multiEditionItemTargets[0]).defaultPrice(1)
@@ -196,8 +193,8 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
 
         // calculate fees
         uint256 referralFee = (totalPrice * REFERRAL_FEE) / 10_000;
-        uint256 collectionFee = ((totalPrice - referralFee) * COLLECTION_FEE) / 10_000;
-        uint256 platformFee = ((totalPrice - collectionFee - referralFee) * PLATFORM_FEE) / 10_000;
+        uint256 curatorFee = ((totalPrice - referralFee) * CURATOR_FEE) / 10_000;
+        uint256 platformFee = ((totalPrice - curatorFee - referralFee) * PLATFORM_FEE) / 10_000;
 
         // get referral fee
         uint256 edition1ReferralFee = RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) * REFERRAL_FEE / 10_000;
@@ -206,11 +203,11 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
 
         // get collection fee
         uint256 edition1CollectionFee =
-            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[0]).defaultPrice(1) - edition1ReferralFee) * CURATOR_FEE / 10_000;
         uint256 edition2CollectionFee =
-            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[1]).defaultPrice(1) - edition2ReferralFee) * CURATOR_FEE / 10_000;
         uint256 edition3CollectionFee =
-            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * COLLECTION_FEE / 10_000;
+            (RouxEdition(multiEditionItemTargets[2]).defaultPrice(1) - edition3ReferralFee) * CURATOR_FEE / 10_000;
 
         // get platform fee
         uint256 edition1PlatformFee = (

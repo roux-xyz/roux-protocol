@@ -67,7 +67,7 @@ interface IController {
      *
      * @dev funds pool to the funds recipient
      */
-    function disburse(uint256 id, uint256 amount, address referrer) external payable;
+    function disburse(address edition, uint256 id, uint256 amount, address referrer) external payable;
 
     /**
      * @notice record funds for a recipient
