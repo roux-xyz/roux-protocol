@@ -3,25 +3,19 @@ pragma solidity 0.8.26;
 
 import "forge-std/Script.sol";
 
-import {RouxEdition} from "src/RouxEdition.sol";
-import {BaseScript} from "./Base.s.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { RouxEdition } from "src/RouxEdition.sol";
+import { BaseScript } from "./Base.s.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract UpgradeEditionImpl is BaseScript {
-    function run(
-        address editionBeacon,
-        address controller,
-        address registry,
-        address factory,
-        address collectionFactory
-    ) public broadcast {
+    function run(address editionBeacon, address controller, address registry, address currency) public broadcast {
         address currentImpl = UpgradeableBeacon(editionBeacon).implementation();
         console.log("Current Edition Implementation: %s\n", currentImpl);
 
         console.log("Deploying new Edition implementation...\n");
 
         // deploy new implementation
-        RouxEdition newEditionImpl = new RouxEdition(controller, registry, factory, collectionFactory);
+        RouxEdition newEditionImpl = new RouxEdition(controller, registry, currency);
         console.log("New Edition Implementation: %s\n", address(newEditionImpl));
 
         // upgrade beacon

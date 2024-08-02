@@ -2,23 +2,22 @@
 pragma solidity ^0.8.25;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /* -------------------------------------------- */
 /* Edition                                      */
 /* -------------------------------------------- */
 
 library EditionData {
+    using LibBitmap for LibBitmap.Bitmap;
+
     /**
      * @notice mint params
      * @param defaultPrice default price
-     * @param mintStart mint start
-     * @param mintEnd mint end
      * @param gate whether to gate minting
      */
     struct MintParams {
         uint128 defaultPrice;
-        uint40 mintStart;
-        uint40 mintEnd;
         bool gate;
     }
 
@@ -28,7 +27,7 @@ library EditionData {
      * @param maxSupply max supply
      * @param totalSupply total supply
      * @param mintParams mint params
-     * @param extensions mapping of extension addresses to their enabled status
+     * @param extensions enabled extensions
      * @param uri token uri
      */
     struct TokenData {
@@ -36,37 +35,33 @@ library EditionData {
         uint128 totalSupply;
         uint128 maxSupply;
         MintParams mintParams;
-        mapping(address extension => bool enable) extensions;
+        LibBitmap.Bitmap extensions;
         string uri;
     }
 
     /**
      * @notice add params
      * @param tokenUri token uri
-     * @param creator creator
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param defaultPrice base price - typically overriden by extension
-     * @param mintStart mint start
-     * @param mintEnd mint end
      * @param profitShare profit share
      * @param parentEdition parent edition - address(0) if root
      * @param parentTokenId parent token id - 0 if root
      * @param extension extension - must be previously set to add token
+     * @param gate whether to gate minting - must be set on `add`
      * @param options additional options
      */
     struct AddParams {
         string tokenUri;
-        address creator;
         uint256 maxSupply;
         address fundsRecipient;
         uint256 defaultPrice;
-        uint40 mintStart;
-        uint40 mintEnd;
         uint256 profitShare;
         address parentEdition;
         uint256 parentTokenId;
         address extension;
+        bool gate;
         bytes options;
     }
 }
@@ -92,16 +87,6 @@ library CollectionData {
         uint128 price;
         uint40 mintStart;
         uint40 mintEnd;
-    }
-
-    /**
-     * @notice Collection storage
-     * @custom:storage-location erc7201:singleEditionCollection.singleEditionCollectionStorage
-     * @param fundsRecipient funds recipient address
-     * @param mintParams mint parameters
-     */
-    struct SingleEditionCollectionStorage {
-        SingleEditionMintParams mintParams;
     }
 
     /**
@@ -141,22 +126,11 @@ library CollectionData {
     }
 
     /**
-     * @notice Collection storage
-     * @custom:storage-location erc7201:multiEditionCollection.multiEditionCollectionStorage
-     * @param fundsRecipient funds recipient address
-     * @param mintParams mint parameters
-     */
-    struct MultiEditionCollectionStorage {
-        MultiEditionMintParams mintParams;
-        address rewardsRecipient;
-    }
-
-    /**
      * @notice multi edition create params
      * @param name collection name
      * @param symbol collection symbol
      * @param curator curator address
-     * @param rewardsRecipient rewards recipient address
+     * @param collectionFeeRecipient rewards recipient address
      * @param uri collection URI
      * @param currency currency
      * @param mintStart mint start
@@ -168,7 +142,7 @@ library CollectionData {
         string name;
         string symbol;
         address curator;
-        address rewardsRecipient;
+        address collectionFeeRecipient;
         string uri;
         address currency;
         uint40 mintStart;

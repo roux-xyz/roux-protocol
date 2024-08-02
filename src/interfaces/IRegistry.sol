@@ -3,46 +3,6 @@ pragma solidity 0.8.26;
 
 interface IRegistry {
     /* -------------------------------------------- */
-    /* errors                                       */
-    /* -------------------------------------------- */
-    /**
-     * @notice max depth exceeded
-     */
-    error MaxDepthExceeded();
-
-    /**
-     * @notice invalid attribution edition
-     */
-    error InvalidAttribution();
-
-    /* -------------------------------------------- */
-    /* events                                       */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice disbursement
-     * @param edition edition
-     * @param tokenId token id
-     * @param parentEdition parent edition
-     * @param parentTokenId parent token id
-     */
-    event RegistryUpdated(
-        address indexed edition, uint256 indexed tokenId, address indexed parentEdition, uint256 parentTokenId
-    );
-
-    /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice attribution data
-     */
-    struct RegistryData {
-        address parentEdition;
-        uint256 parentTokenId;
-    }
-
-    /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
 
@@ -62,6 +22,13 @@ interface IRegistry {
      * @return depth of edition
      */
     function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256);
+
+    /**
+     * @notice check if edition has a child
+     * @param edition edition
+     * @param tokenId token id
+     */
+    function hasChild(address edition, uint256 tokenId) external view returns (bool);
 
     /* -------------------------------------------- */
     /* write                                        */

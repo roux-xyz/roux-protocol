@@ -2,28 +2,15 @@
 pragma solidity 0.8.26;
 
 interface IRouxEditionFactory {
-    /* -------------------------------------------- */
-    /* errors                                       */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view functions                                    */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice only allowlist
+     * @notice get collection factory
+     * @return collection factory
      */
-    error OnlyAllowlist();
-
-    /* -------------------------------------------- */
-    /* events                                       */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice new edition
-     * @param instance edition instance
-     */
-    event NewEdition(address indexed instance);
-
-    /* -------------------------------------------- */
-    /* view functions                               */
-    /* -------------------------------------------- */
+    function collectionFactory() external view returns (address);
 
     /**
      * @notice whether the token is an edition
@@ -32,21 +19,9 @@ interface IRouxEditionFactory {
      */
     function isEdition(address token) external view returns (bool);
 
-    /**
-     * @notice get all editions
-     * @return all editions
-     */
-    function getEditions() external view returns (address[] memory);
-
-    /**
-     * @notice check if caller can create an edition
-     * @param caller caller
-     */
-    function canCreate(address caller) external view returns (bool);
-
-    /* -------------------------------------------- */
-    /* write functions                              */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write functions                                   */
+    /* ------------------------------------------------- */
 
     /**
      * @notice create a new edition

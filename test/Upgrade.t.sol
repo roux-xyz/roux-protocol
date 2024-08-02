@@ -6,8 +6,10 @@ import { BaseTest } from "./Base.t.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Ownable as SoladyOwnable } from "solady/auth/Ownable.sol";
+
+import { Ownable as OpenZeppelinOwnable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
 import { Controller } from "src/Controller.sol";
 import { Registry } from "src/Registry.sol";
@@ -23,13 +25,12 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl =
-            new RouxEdition(address(controller), address(registry), address(factory), address(collectionFactory));
+        IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // revert when not owner
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, users.user_0));
-        vm.prank(users.user_0);
-        editionBeacon.upgradeTo(address(newCreatorImpl));
+        vm.expectRevert(abi.encodeWithSelector(OpenZeppelinOwnable.OwnableUnauthorizedAccount.selector, user));
+        vm.prank(user);
+        editionBeacon.upgradeTo(address(newEditionImpl));
     }
 
     function test__RevertWhen_UpgradeController_OnlyOwner() external {
@@ -39,8 +40,8 @@ contract UpgradeTest is BaseTest {
         // deploy new controller implementation
         Controller newControllerImpl = new Controller(address(registry), address(mockUSDC));
 
-        vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         controller.upgradeToAndCall(address(newControllerImpl), "");
     }
 
@@ -53,7 +54,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(Controller.initialize.selector, address(registry));
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         controller.upgradeToAndCall(address(newControllerImpl), initData);
     }
 
@@ -64,8 +65,8 @@ contract UpgradeTest is BaseTest {
         // deploy new registry implementation
         Registry newRegistryImpl = new Registry();
 
-        vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         registry.upgradeToAndCall(address(newRegistryImpl), "");
     }
 
@@ -78,7 +79,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(Registry.initialize.selector);
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         registry.upgradeToAndCall(address(newRegistryImpl), initData);
     }
 
@@ -89,8 +90,8 @@ contract UpgradeTest is BaseTest {
         // deploy new roux edition factory implementation
         RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
 
-        vm.prank(users.user_0);
-        vm.expectRevert(SoladyOwnable.Unauthorized.selector);
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), "");
     }
 
@@ -103,7 +104,7 @@ contract UpgradeTest is BaseTest {
 
         bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector, users.deployer);
         vm.prank(users.deployer);
-        vm.expectRevert("Already initialized");
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
     }
 
@@ -112,21 +113,20 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newCreatorImpl =
-            new RouxEdition(address(controller), address(registry), address(factory), address(collectionFactory));
+        IRouxEdition newEditionImpl = new RouxEdition(address(controller), address(registry), address(mockUSDC));
 
         // set new implementation in beacon
         vm.prank(users.deployer);
-        editionBeacon.upgradeTo(address(newCreatorImpl));
+        editionBeacon.upgradeTo(address(newEditionImpl));
 
         // assert new implementation
-        assertEq(editionBeacon.implementation(), address(newCreatorImpl));
+        assertEq(editionBeacon.implementation(), address(newEditionImpl));
 
         // assert new implementation is not the same as the old one
-        assertNotEq(address(newCreatorImpl), address(editionImpl));
+        assertNotEq(address(newEditionImpl), address(editionImpl));
 
         // add new token
-        vm.startPrank(users.creator_0);
+        vm.startPrank(creator);
 
         // create instance
         bytes memory params = abi.encode(CONTRACT_URI, "");

@@ -1,27 +1,37 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+
+import { Initializable } from "solady/utils/Initializable.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import { BASIS_POINT_SCALE } from "src/libraries/ConstantsLib.sol";
+import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
- * @title Controller
- * @author Roux
+ * @title controller
+ * @author roux
+ * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
-contract Controller is IController, OwnableRoles, ReentrancyGuard {
+contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
      * @notice Controller storage slot
@@ -30,48 +40,23 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     bytes32 internal constant ROUX_CONTROLLER_STORAGE_SLOT =
         0x6ee44408b62b797b2b3f7454b8d82b4275ea0345c9fb009071c08e21e5ce6a00;
 
-    /**
-     * @notice basis point scale
-     */
-    uint256 internal constant BASIS_POINT_SCALE = 10_000;
-
-    /**
-     * @notice platform fee
-     *
-     * @dev 1000 basis points / 20%
-     */
-    uint256 public constant PLATFORM_FEE = 2_000;
-
-    /**
-     * @notice platform fee
-     *
-     * @dev 500 basis points / 5%
-     */
-    uint256 public constant REFERRAL_FEE = 500;
-
-    /**
-     * @notice collection fee
-     *
-     * @dev 2000 basis points / 20%
-     */
-    uint256 public constant COLLECTION_FEE = 2_000;
-
-    /**
-     * @notice registry
-     */
+    /// @notice registry
     IRegistry internal immutable _registry;
 
     /**
      * @notice currency
+     * @dev if the protocol's base currency needs to be changed, a new controller implementation and
+     *      proxy must be deployed, ensuring existing balances can be withdrawn. the RouxEdition
+     *      implementation must be upgraded to use the new controller implementation.
      */
     IERC20 internal immutable _currency;
 
-    /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice attribution data
+     * @notice token config
      * @param fundsRecipient funds recipient
      * @param profitShare profit share
      */
@@ -81,31 +66,46 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     }
 
     /**
-     * @notice RouxEdition storage
+     * @notice controller storage
      * @custom:storage-location erc7201:rouxController.cntrollerStorage
-     * @param initialized whether the contract has been initialized
      * @param platformFeeEnabled whether platform fee is enabled
+     * @param paused whether the contract is paused
      * @param platformFeeBalance platform fee balance
      * @param tokenConfig token data
      * @param tokenPending token pending
      * @param balance balance
      */
     struct ControllerStorage {
-        bool initialized;
         bool platformFeeEnabled;
+        bool paused;
         uint192 platformFeeBalance;
         mapping(address edition => mapping(uint256 tokenId => TokenConfig)) tokenConfig;
         mapping(address edition => mapping(uint256 tokenId => uint256 amount)) tokenPending;
         mapping(address fundsRecipient => uint256 balance) balance;
     }
 
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* modifiers                                         */
+    /* ------------------------------------------------- */
 
+    /// @notice revert when paused
+    modifier notPaused() {
+        if (_storage().paused) revert ErrorsLib.Controller_Paused();
+        _;
+    }
+
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice constructor
+     * @param registry registry address
+     * @param currency_ currency address
+     */
     constructor(address registry, address currency_) {
         // disable initialization of implementation contract
-        _storage().initialized = true;
+        _disableInitializers();
 
         // set registry
         _registry = IRegistry(registry);
@@ -118,25 +118,19 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         renounceOwnership();
     }
 
-    /* -------------------------------------------- */
-    /* initializer                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
 
-    /**
-     * @notice initialize
-     */
-    function initialize() external nonReentrant {
-        // initialize
-        require(!_storage().initialized, "Already initialized");
-        _storage().initialized = true;
-
+    /// @notice initialize
+    function initialize() external initializer nonReentrant {
         // set owner of the proxy
         _initializeOwner(msg.sender);
     }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice get Controller storage location
@@ -148,84 +142,61 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         }
     }
 
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
     function currency() external view returns (address) {
         return address(_currency);
     }
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
+    function decimals() external view returns (uint8) {
+        return IERC20Metadata(address(_currency)).decimals();
+    }
+
+    /// @inheritdoc IController
     function balance(address recipient) external view returns (uint256) {
         return _storage().balance[recipient];
     }
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
     function pending(address edition, uint256 tokenId) external view returns (uint256) {
         return _storage().tokenPending[edition][tokenId];
     }
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
     function platformFeeBalance() external view returns (uint256) {
         return _storage().platformFeeBalance;
     }
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
     function profitShare(address edition, uint256 tokenId) external view returns (uint256) {
         return _storage().tokenConfig[edition][tokenId].profitShare;
     }
 
-    /**
-     * @inheritdoc IController
-     */
+    /// @inheritdoc IController
     function fundsRecipient(address edition, uint256 tokenId) external view returns (address) {
         return _storage().tokenConfig[edition][tokenId].fundsRecipient;
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc IController
-     */
-    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external {
-        // get storage
-        ControllerStorage storage $ = _storage();
-
-        // revert if funds recipient is zero address
-        if (fundsRecipient_ == address(0)) revert InvalidFundsRecipient();
-
-        // revert if profit share is decreased
-        if (profitShare_ > BASIS_POINT_SCALE || profitShare_ < $.tokenConfig[msg.sender][tokenId].profitShare) {
-            revert InvalidProfitShare();
-        }
-
-        // set controller data for edition + token id
-        TokenConfig storage d = $.tokenConfig[msg.sender][tokenId];
-
-        d.fundsRecipient = fundsRecipient_;
-        d.profitShare = profitShare_;
-
-        // emit ControllerDataUpdated(msg.sender, tokenId, fundsRecipient_, profitShare_);
-    }
-
-    /**
-     * @inheritdoc IController
-     */
-    function disburse(uint256 tokenId, uint256 amount, address referrer) external payable nonReentrant {
+    /// @inheritdoc IController
+    function disburse(
+        address edition,
+        uint256 id,
+        uint256 amount,
+        address referrer
+    )
+        external
+        payable
+        nonReentrant
+        notPaused
+    {
         // transfer payment
         _transferPayment(msg.sender, amount);
 
@@ -244,70 +215,79 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         }
 
         // disburse
-        _disburse(msg.sender, tokenId, amount - fee - referralFee);
+        _disburse(edition, id, amount - fee - referralFee);
     }
 
-    /**
-     * @inheritdoc IController
-     */
-    function recordFunds(address recipient, uint256 amount) external payable nonReentrant {
+    /// @inheritdoc IController
+    function recordFunds(address recipient, uint256 amount) external payable nonReentrant notPaused {
         // transfer payment
         _transferPayment(msg.sender, amount);
 
         // record funds
         _storage().balance[recipient] += amount;
 
-        emit Deposited(recipient, amount);
+        // from, to, amount
+        emit EventsLib.FundsRecorded(msg.sender, recipient, amount);
     }
 
-    /**
-     * @inheritdoc IController
-     */
-    function disbursePending(address edition, uint256 tokenId) external nonReentrant {
-        // disburse pending balance (updates balance and parent's pending balance)
-        _disbursePending(edition, tokenId);
+    /// @inheritdoc IController
+    function distributePending(address edition, uint256 tokenId) external notPaused {
+        // distribute pending balance (updates balance and parent's pending balance)
+        _distributePending(edition, tokenId);
     }
 
-    /**
-     * @inheritdoc IController
-     */
-    function disbursePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external nonReentrant {
+    /// @inheritdoc IController
+    function distributePendingBatch(address[] calldata editions, uint256[] calldata tokenIds) external notPaused {
         // validate arrays
-        if (editions.length != tokenIds.length) revert InvalidArrayLength();
+        if (editions.length != tokenIds.length) revert ErrorsLib.Controller_InvalidArrayLength();
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            // disburse pending balance
-            _disbursePending(editions[i], tokenIds[i]);
+            // distribute pending balance
+            _distributePending(editions[i], tokenIds[i]);
         }
     }
 
-    /**
-     * @inheritdoc IController
-     */
-    function disbursePendingAndWithdraw(address edition, uint256 tokenId) external nonReentrant returns (uint256) {
-        // get storage
-        ControllerStorage storage $ = _storage();
-
-        // disburse pending balance
-        _disbursePending(edition, tokenId);
-
-        // get funds recipient
-        address fundsRecipient_ = $.tokenConfig[edition][tokenId].fundsRecipient;
+    /// @inheritdoc IController
+    function distributePendingAndWithdraw(
+        address edition,
+        uint256 tokenId
+    )
+        external
+        nonReentrant
+        notPaused
+        returns (uint256)
+    {
+        // distribute pending balance
+        _distributePending(edition, tokenId);
 
         // withdraw
-        return _withdraw(fundsRecipient_);
+        return _withdraw(_storage().tokenConfig[edition][tokenId].fundsRecipient);
     }
 
-    /**
-     * @inheritdoc IController
-     */
-    function withdraw(address recipient) external nonReentrant returns (uint256) {
+    /// @inheritdoc IController
+    function withdraw(address recipient) external nonReentrant notPaused returns (uint256) {
         return _withdraw(recipient);
     }
 
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
+    /// @inheritdoc IController
+    function setFundsRecipient(uint256 tokenId, address fundsRecipient_) external notPaused {
+        _setFundsRecipient(msg.sender, tokenId, fundsRecipient_);
+    }
+
+    /// @inheritdoc IController
+    function setProfitShare(uint256 tokenId, uint16 profitShare_) external notPaused {
+        _setProfitShare(msg.sender, tokenId, profitShare_);
+    }
+
+    /// @inheritdoc IController
+    function setControllerData(uint256 tokenId, address fundsRecipient_, uint16 profitShare_) external notPaused {
+        _setFundsRecipient(msg.sender, tokenId, fundsRecipient_);
+        _setProfitShare(msg.sender, tokenId, profitShare_);
+    }
+
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
 
     /**
      * @notice enable mint fee
@@ -316,7 +296,7 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
     function enablePlatformFee(bool enable) external onlyOwner {
         _storage().platformFeeEnabled = enable;
 
-        emit PlatformFeeUpdated(enable);
+        emit EventsLib.PlatformFeeUpdated(enable);
     }
 
     /**
@@ -339,15 +319,23 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         return amount;
     }
 
-    /* -------------------------------------------- */
-    /* proxy | danger zone                          */
-    /* -------------------------------------------- */
+    /**
+     * @notice pause
+     * @param pause_ true to pause, false to unpause
+     */
+    function pause(bool pause_) external onlyOwner {
+        _storage().paused = pause_;
+
+        emit EventsLib.Paused(pause_);
+    }
+
+    /* ------------------------------------------------- */
+    /* proxy                                             */
+    /* ------------------------------------------------- */
 
     /**
      * @notice get proxy implementation
      * @return implementation address
-     *
-     * @dev do not remove this function
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
@@ -357,41 +345,33 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
      * @notice upgrade proxy
      * @param newImplementation new implementation contract
      * @param data optional calldata
-     *
-     * @dev do not remove this function
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 
-    /* -------------------------------------------- */
-    /* internal                                     */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
 
     /**
      * @notice handle transfer payment
      * @param from sender
      * @param amount amount
+     *
+     * @dev does not support fee-on-transfer tokens
      */
     function _transferPayment(address from, uint256 amount) internal {
-        // cache currency balance
-        uint256 startingBalance = _currency.balanceOf(address(this));
-
         // transfer currency
         _currency.safeTransferFrom(from, address(this), amount);
-
-        // validate transfer
-        if (_currency.balanceOf(address(this)) != startingBalance + amount) {
-            revert TransferFailed();
-        }
     }
 
     /**
-     * @notice disburse pending balance
+     * @notice distribute pending balance
      * @param edition edition
      * @param tokenId token id
      */
-    function _disbursePending(address edition, uint256 tokenId) internal {
+    function _distributePending(address edition, uint256 tokenId) internal {
         // get storage
         ControllerStorage storage $ = _storage();
 
@@ -401,19 +381,21 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         // set pending balance to zero
         $.tokenPending[edition][tokenId] = 0;
 
-        // disburse pending balance (updates balance and parent's pending balance)
+        // distribute pending balance (updates balance and parent's pending balance)
         _disburse(edition, tokenId, pendingBalance);
+
+        // edition, id, amount
+        emit EventsLib.PendingDistributed(edition, tokenId, pendingBalance);
     }
 
     /**
-     * @notice disburse proceeds to edition and parent
+     * @notice distribute proceeds to funds recipient balance and parent pending balance
      * @param edition edition
      * @param tokenId token id
      * @param amount proceeds to disburse
      *
-     * @dev proceeds are split between current edition and parent based on parent profit share
-     *      profit share is percentage of total proceeds child edition earns, remainder goes to parent
-     *      parent share increments parent's pending balance - will be disbursed when parent withdraws
+     * @dev profit share is set by the parent edition, and represents the percentage of the
+     *      proceeds earned by the child edition, with the remainder going to the parent
      */
     function _disburse(address edition, uint256 tokenId, uint256 amount) internal {
         // get storage
@@ -425,15 +407,18 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;
 
+        // verify recipient has been set
+        if (recipient == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
+
         // if root, increment recipient's balance
         if (parentEdition == address(0)) {
             // increment recipient's balance
             $.balance[recipient] += amount;
 
-            emit Deposited(recipient, amount);
+            // emit Deposited event
+            emit EventsLib.Deposited(edition, tokenId, recipient, amount);
         } else {
             // if not root, compute split, increment balance for current edition and increment pending for parent
-            // get profit share from parent
             uint256 currentEditionProfitShare = $.tokenConfig[parentEdition][parentTokenId].profitShare;
 
             // calculate share of proceeds
@@ -446,8 +431,11 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
             // increment the parent's pending balance
             $.tokenPending[parentEdition][parentTokenId] += parentShare;
 
-            emit Deposited(recipient, currentEditionShare);
-            emit PendingUpdated(edition, tokenId, parentEdition, parentTokenId, parentShare);
+            // emit Deposited event
+            emit EventsLib.Deposited(edition, tokenId, recipient, currentEditionShare);
+
+            // emit PendingUpdated event
+            emit EventsLib.PendingUpdated(parentEdition, parentTokenId, parentShare);
         }
     }
 
@@ -455,6 +443,8 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
      * @notice withdraw
      * @param recipient recipient
      * @return amount amount withdrawn
+     *
+     * @dev anyone can withdraw on behalf of recipient
      */
     function _withdraw(address recipient) internal returns (uint256) {
         // get storage
@@ -469,8 +459,45 @@ contract Controller is IController, OwnableRoles, ReentrancyGuard {
         // transfer to funding recipient
         _currency.safeTransfer(recipient, amount);
 
-        emit Withdrawn(recipient, amount);
+        emit EventsLib.Withdrawn(recipient, amount);
 
         return amount;
+    }
+
+    /**
+     * @notice set funds recipient
+     * @param edition edition
+     * @param tokenId token id
+     * @param fundsRecipient_ funds recipient
+     */
+    function _setFundsRecipient(address edition, uint256 tokenId, address fundsRecipient_) internal {
+        // revert if funds recipient is zero address
+        if (fundsRecipient_ == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
+
+        // set funds recipient
+        _storage().tokenConfig[edition][tokenId].fundsRecipient = fundsRecipient_;
+
+        emit EventsLib.FundsRecipientUpdated(edition, tokenId, fundsRecipient_);
+    }
+
+    /**
+     * @notice set profit share
+     * @param edition edition
+     * @param tokenId token id
+     * @param profitShare_ profit share
+     */
+    function _setProfitShare(address edition, uint256 tokenId, uint16 profitShare_) internal {
+        // get storage
+        ControllerStorage storage $ = _storage();
+
+        // revert if profit share is decreased
+        if (profitShare_ > BASIS_POINT_SCALE || profitShare_ < $.tokenConfig[edition][tokenId].profitShare) {
+            revert ErrorsLib.Controller_InvalidProfitShare();
+        }
+
+        // set profit share
+        $.tokenConfig[edition][tokenId].profitShare = profitShare_;
+
+        emit EventsLib.ProfitShareUpdated(edition, tokenId, profitShare_);
     }
 }

@@ -23,40 +23,23 @@ import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
 import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 
-import { Events } from "./utils/Events.sol";
-import { Defaults } from "./utils/Defaults.sol";
+import { Events } from "test/utils/Events.sol";
+import { Defaults } from "test/utils/Defaults.sol";
 
 import { EditionData, CollectionData } from "src/types/DataTypes.sol";
 
-import { MockUSDC } from "src/mocks/MockUSDC.sol";
-import { MockCreateX } from "src/mocks/MockCreateX.sol";
+import { MockUSDC } from "test/mocks/MockUSDC.sol";
+import { MockExtension } from "test/mocks/MockExtension.sol";
 
 /**
  * @title Base test
- * @author Roux
  */
 abstract contract BaseTest is Test, Events, Defaults {
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
-    string public constant ROUX_EDITION_IMPL = "RouxEditionImpl";
-    string public constant ROUX_EDITION_BEACON = "RouxEditionBeacon";
-    string public constant ROUX_EDITION_FACTORY_IMPL = "RouxEditionFactoryImpl";
-    string public constant ROUX_EDITION_FACTORY_PROXY = "RouxEditionFactoryProxy";
-    string public constant SINGLE_EDITION_COLLECTION_IMPL = "SingleEditionCollectionImpl";
-    string public constant SINGLE_EDITION_COLLECTION_BEACON = "SingleEditionCollectionBeacon";
-    string public constant MULTI_EDITION_COLLECTION_IMPL = "MultiEditionCollectionImpl";
-    string public constant MULTI_EDITION_COLLECTION_BEACON = "MultiEditionCollectionBeacon";
-    string public constant COLLECTION_FACTORY_IMPL = "CollectionFactoryImpl";
-    string public constant COLLECTION_FACTORY_PROXY = "CollectionFactoryProxy";
-
     /* -------------------------------------------- */
     /* structures                                   */
     /* -------------------------------------------- */
 
-    /**
-     * @notice user accounts
-     */
+    /// @dev user accounts
     struct Users {
         address payable deployer;
         address payable user_0;
@@ -68,6 +51,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         address payable creator_2;
         address payable curator_0;
         address payable admin;
+        address payable split;
     }
 
     /* -------------------------------------------- */
@@ -76,7 +60,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     // mocks
     MockUSDC internal mockUSDC;
-    MockCreateX internal createX;
+    MockExtension internal mockExtension;
 
     // registry
     Registry internal registryImpl;
@@ -88,6 +72,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     // edition
     RouxEdition internal editionImpl;
+    UpgradeableBeacon internal editionBeacon;
     RouxEdition internal edition;
     RouxEditionFactory internal factoryImpl;
     RouxEditionFactory internal factory;
@@ -100,13 +85,8 @@ abstract contract BaseTest is Test, Events, Defaults {
     CollectionFactory internal collectionFactoryImpl;
     CollectionFactory internal collectionFactory;
     SingleEditionCollection internal singleEditionCollectionImpl;
-    SingleEditionCollection internal singleEditionCollection;
-    MultiEditionCollection internal multiEditionCollectionImpl;
-    MultiEditionCollection internal multiEditionCollection;
-
-    // proxy
-    UpgradeableBeacon internal editionBeacon;
     UpgradeableBeacon internal singleEditionCollectionBeacon;
+    MultiEditionCollection internal multiEditionCollectionImpl;
     UpgradeableBeacon internal multiEditionCollectionBeacon;
 
     // users
@@ -116,16 +96,20 @@ abstract contract BaseTest is Test, Events, Defaults {
     // default add params
     EditionData.AddParams internal defaultAddParams;
 
+    // default users
+    address internal user;
+    address internal creator;
+
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
 
     function setUp() public virtual {
         // deploy mock USDC
-        _deployMockUSDC();
+        mockUSDC = _deployMockUSDC();
 
-        // deploy CreateX
-        _deployCreateX();
+        // deploy mock extension
+        mockExtension = _deployMockExtension();
 
         // create user accounts
         users = Users({
@@ -138,11 +122,16 @@ abstract contract BaseTest is Test, Events, Defaults {
             creator_1: _createUser("creator_1"),
             creator_2: _createUser("creator_2"),
             curator_0: _createUser("curator_0"),
-            admin: _createUser("admin")
+            admin: _createUser("admin"),
+            split: _createUser("split")
         });
 
+        // set default users
+        user = users.user_0;
+        creator = users.creator_0;
+
         // set creator array
-        creatorArray[0] = users.creator_0;
+        creatorArray[0] = creator;
         creatorArray[1] = users.creator_1;
         creatorArray[2] = users.creator_2;
 
@@ -152,315 +141,195 @@ abstract contract BaseTest is Test, Events, Defaults {
         // set default add params
         _setDefaultAddParams();
 
-        // deploy registry and controller
+        // deploy registry
         registry = _deployRegistry();
+
+        // deploy controller
         controller = _deployController(address(registry), address(mockUSDC));
 
         // deploy token bound contracts
         (erc6551Registry, accountImpl) = _deployTokenBoundContracts();
 
-        // deploy roux edition impl using create3
+        // deploy roux edition impl
         editionImpl = _deployEditionImpl({
             controller_: address(controller),
             registry_: address(registry),
-            rouxEditionFactory_: _computeCreate3Address(ROUX_EDITION_FACTORY_PROXY),
-            collectionFactory_: _computeCreate3Address(COLLECTION_FACTORY_PROXY)
+            currency_: address(mockUSDC)
         });
 
-        // deploy roux edition beacon using create3
-        editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: _computeCreate3Address(ROUX_EDITION_IMPL) });
+        // deploy roux edition beacon
+        editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(editionImpl) });
 
-        // deploy roux edition factory implementation using create3
-        factoryImpl = _deployEditionFactoryImpl({ editionBeacon_: _computeCreate3Address(ROUX_EDITION_BEACON) });
+        // deploy roux edition factory impl
+        factoryImpl = _deployEditionFactoryImpl({ editionBeacon_: address(editionBeacon) });
 
-        // deploy roux edition factory proxy using create3
-        factory = _deployEditionFactoryProxy({ factoryImpl_: _computeCreate3Address(ROUX_EDITION_FACTORY_IMPL) });
+        // deploy roux edition factory proxy
+        factory = _deployEditionFactoryProxy({ factoryImpl_: address(factoryImpl) });
 
-        // deploy single edition collection implementation using create3
+        // deploy single edition collection impl
         singleEditionCollectionImpl = _deploySingleEditionCollectionImpl({
             erc6551registry_: address(erc6551Registry),
             accountImpl_: address(accountImpl),
-            rouxEditionFactory_: _computeCreate3Address(ROUX_EDITION_FACTORY_PROXY)
-        });
-
-        // deploy single edition collection beacon using create3
-        singleEditionCollectionBeacon = _deploySingleEditionCollectionBeacon({
-            singleEditionCollectionImpl_: _computeCreate3Address(SINGLE_EDITION_COLLECTION_IMPL)
-        });
-
-        // deploy multi edition collection implementation using create3
-        multiEditionCollectionImpl = _deployMultiEditionCollectionImpl({
-            erc6551registry_: address(erc6551Registry),
-            accountImpl_: address(accountImpl),
-            rouxEditionFactory_: _computeCreate3Address(ROUX_EDITION_FACTORY_PROXY),
+            rouxEditionFactory_: address(factory),
             controller_: address(controller)
         });
 
-        // deploy multi edition collection beacon using create3
-        multiEditionCollectionBeacon = _deployMultiEditionCollectionBeacon({
-            multiEditionCollectionImpl_: _computeCreate3Address(MULTI_EDITION_COLLECTION_IMPL)
+        // deploy single edition collection beacon
+        singleEditionCollectionBeacon =
+            _deploySingleEditionCollectionBeacon({ singleEditionCollectionImpl_: address(singleEditionCollectionImpl) });
+
+        // deploy multi edition collection impl
+        multiEditionCollectionImpl = _deployMultiEditionCollectionImpl({
+            erc6551registry_: address(erc6551Registry),
+            accountImpl_: address(accountImpl),
+            rouxEditionFactory_: address(factory),
+            controller_: address(controller)
         });
 
-        // deploy collection factory implementation using create3
+        // deploy multi edition collection beacon
+        multiEditionCollectionBeacon =
+            _deployMultiEditionCollectionBeacon({ multiEditionCollectionImpl_: address(multiEditionCollectionImpl) });
+
+        // deploy collection factory impl
         collectionFactoryImpl = _deployCollectionFactoryImpl({
-            singleEditionCollectionBeacon_: _computeCreate3Address(SINGLE_EDITION_COLLECTION_BEACON),
-            multiEditionCollectionBeacon_: _computeCreate3Address(MULTI_EDITION_COLLECTION_BEACON)
+            singleEditionCollectionBeacon_: address(singleEditionCollectionBeacon),
+            multiEditionCollectionBeacon_: address(multiEditionCollectionBeacon)
         });
 
-        // deploy collection factory proxy using create3
-        collectionFactory =
-            _deployCollectionFactoryProxy({ collectionFactoryImpl_: _computeCreate3Address(COLLECTION_FACTORY_IMPL) });
+        // deploy collection factory proxy
+        collectionFactory = _deployCollectionFactoryProxy({ collectionFactoryImpl_: address(collectionFactoryImpl) });
+
+        // set collection factory address on  roux edition factory
+        factory.setCollectionFactory(address(collectionFactory));
 
         vm.stopPrank();
 
-        // allowlist users
-        _allowlistUsers();
-
         // deploy test edition
-        _deployEdition();
+        edition = _deployEdition();
 
         // add default token
         _addToken(edition);
+
+        // approve users
+        vm.prank(user);
+        mockUSDC.approve(address(edition), type(uint256).max);
+
+        vm.prank(users.user_1);
+        mockUSDC.approve(address(edition), type(uint256).max);
     }
 
-    function _deployMockUSDC() internal {
-        mockUSDC = new MockUSDC();
+    /* -------------------------------------------- */
+    /* deployment helpers                          */
+    /* -------------------------------------------- */
+
+    /// @dev deploy mock USDC
+    function _deployMockUSDC() internal returns (MockUSDC mockUSDC_) {
+        mockUSDC_ = new MockUSDC();
         vm.label({ account: address(mockUSDC), newLabel: "MockUSDC" });
     }
 
-    function _deployCreateX() internal {
-        createX = new MockCreateX();
-        vm.label({ account: address(createX), newLabel: "CreateX" });
+    /// @dev deploy mock extension
+    function _deployMockExtension() internal returns (MockExtension extension_) {
+        extension_ = new MockExtension();
+        vm.label({ account: address(extension_), newLabel: "MockExtension" });
     }
 
-    function _setDefaultAddParams() internal {
-        defaultAddParams = EditionData.AddParams({
-            tokenUri: TOKEN_URI,
-            creator: users.creator_0,
-            maxSupply: MAX_SUPPLY,
-            fundsRecipient: users.creator_0,
-            defaultPrice: TOKEN_PRICE,
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp + MINT_DURATION),
-            profitShare: PROFIT_SHARE,
-            parentEdition: address(0),
-            parentTokenId: 0,
-            extension: address(0),
-            options: new bytes(0)
-        });
-    }
-
-    function _deployRegistry() internal returns (Registry) {
-        // deploy registry implementation contract
+    /// @dev deploy registry
+    function _deployRegistry() internal returns (Registry registry_) {
         registryImpl = new Registry();
-        vm.label({ account: address(registryImpl), newLabel: "RegistryImplementation" });
+        vm.label({ account: address(registryImpl), newLabel: "RegistryImpl" });
 
         // encode init data
         bytes memory initData = abi.encodeWithSelector(registryImpl.initialize.selector);
 
         // deploy proxy
-        Registry registry_ = Registry(address(new ERC1967Proxy(address(registryImpl), initData)));
+        registry_ = Registry(address(new ERC1967Proxy(address(registryImpl), initData)));
         vm.label({ account: address(registry_), newLabel: "RegistryProxy" });
-
-        return registry_;
     }
 
-    function _deployController(address registry_, address currency_) internal returns (Controller) {
-        // controller deployment
+    /// @dev deploy controller
+    function _deployController(address registry_, address currency_) internal returns (Controller controller_) {
         controllerImpl = new Controller(registry_, currency_);
-        vm.label({ account: address(controllerImpl), newLabel: "ControllerImplementation" });
+        vm.label({ account: address(controllerImpl), newLabel: "ControllerImpl" });
 
         // encode init data
         bytes memory initData = abi.encodeWithSelector(controllerImpl.initialize.selector);
 
         // deploy proxy
-        Controller controller_ = Controller(address(new ERC1967Proxy(address(controllerImpl), initData)));
+        controller_ = Controller(address(new ERC1967Proxy(address(controllerImpl), initData)));
         vm.label({ account: address(controller_), newLabel: "ControllerProxy" });
-
-        return controller_;
     }
 
-    function _deployTokenBoundContracts() internal returns (ERC6551Registry, ERC6551Account) {
-        // deploy token bound contracts
-        ERC6551Registry erc6551Registry_ = new ERC6551Registry();
-        ERC6551Account accountImpl_ = new ERC6551Account(address(erc6551Registry_));
+    /// @dev deploy token bound contracts
+    function _deployTokenBoundContracts() internal returns (ERC6551Registry registry_, ERC6551Account accountImpl_) {
+        registry_ = new ERC6551Registry();
+        accountImpl_ = new ERC6551Account();
 
-        // label contracts
-        vm.label({ account: address(erc6551Registry_), newLabel: "ERC6551Registry" });
+        vm.label({ account: address(registry_), newLabel: "ERC6551Registry" });
         vm.label({ account: address(accountImpl_), newLabel: "ERC6551Account" });
-
-        return (erc6551Registry_, accountImpl_);
     }
 
+    /// @dev deploy edition implementation
     function _deployEditionImpl(
         address controller_,
         address registry_,
-        address rouxEditionFactory_,
-        address collectionFactory_
+        address currency_
     )
         internal
-        returns (RouxEdition)
+        returns (RouxEdition rouxEditionImpl_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(ROUX_EDITION_IMPL);
-
-        // get creation code
-        bytes memory creationCode = type(RouxEdition).creationCode;
-
-        // generate init code
-        bytes memory initCode =
-            abi.encodePacked(creationCode, abi.encode(controller_, registry_, rouxEditionFactory_, collectionFactory_));
-
-        // deploy RouxEdition implementation
-        RouxEdition rouxEditionImpl_ = RouxEdition(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(rouxEditionImpl_), newLabel: "RouxEdition Implementation" });
-
-        // validate computed address
-        assertEq(
-            address(rouxEditionImpl_),
-            _computeCreate3Address(ROUX_EDITION_IMPL),
-            "edition implementation address mismatch"
-        );
-
-        return rouxEditionImpl_;
+        rouxEditionImpl_ = RouxEdition(new RouxEdition(controller_, registry_, currency_));
+        vm.label({ account: address(rouxEditionImpl_), newLabel: "RouxEditionImpl" });
     }
 
-    function _deployEditionBeacon(address rouxEditionImpl_) internal returns (UpgradeableBeacon) {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(ROUX_EDITION_BEACON);
-
-        // get creation code for upgradeable beacon
-        bytes memory creationCode = type(UpgradeableBeacon).creationCode;
-
-        // generate init code
-        bytes memory initCode = abi.encodePacked(creationCode, abi.encode(rouxEditionImpl_, users.deployer));
-
-        // deploy RouxEdition beacon
-        UpgradeableBeacon editionBeacon_ = UpgradeableBeacon(createX.deployCreate3(salt, initCode));
+    /// @dev deploy edition beacon
+    function _deployEditionBeacon(address rouxEditionImpl_) internal returns (UpgradeableBeacon editionBeacon_) {
+        //TODO: check if can use msg.msg.sender
+        editionBeacon_ = new UpgradeableBeacon(address(rouxEditionImpl_), users.deployer);
         vm.label({ account: address(editionBeacon_), newLabel: "EditionBeacon" });
-
-        // validate computed address
-        assertEq(
-            address(editionBeacon_), _computeCreate3Address(ROUX_EDITION_BEACON), "edition beacon address mismatch"
-        );
-
-        return editionBeacon_;
     }
 
-    function _deployEditionFactoryImpl(address editionBeacon_) internal returns (RouxEditionFactory) {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(ROUX_EDITION_FACTORY_IMPL);
-
-        // get creation code
-        bytes memory creationCode = type(RouxEditionFactory).creationCode;
-
-        // generate init code
-        bytes memory initCode = abi.encodePacked(creationCode, abi.encode(editionBeacon_));
-
-        // deploy RouxEditionFactory implementation
-
-        RouxEditionFactory impl = RouxEditionFactory(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(impl), newLabel: "RouxEditionFactory Implementation" });
-
-        // validate computed address
-        assertEq(
-            address(impl),
-            _computeCreate3Address(ROUX_EDITION_FACTORY_IMPL),
-            "edition factory implementation address mismatch"
-        );
-
-        return impl;
+    /// @dev deploy edition factory implementation
+    function _deployEditionFactoryImpl(address editionBeacon_) internal returns (RouxEditionFactory factoryImpl_) {
+        factoryImpl_ = new RouxEditionFactory(editionBeacon_);
+        vm.label({ account: address(factoryImpl_), newLabel: "RouxEditionFactoryImpl" });
     }
 
-    function _deployEditionFactoryProxy(address factoryImpl_) internal returns (RouxEditionFactory) {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(ROUX_EDITION_FACTORY_PROXY);
-
-        // get creation code for ERC1967Proxy
-        bytes memory creationCode = type(ERC1967Proxy).creationCode;
-
-        // encode init data for RouxEditionFactory
-        bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector, address(users.deployer));
-
-        // encode constructor arguments for ERC1967Proxy
-        bytes memory constructorArgs = abi.encode(factoryImpl_, initData);
-
-        // combine creationCode and constructorArgs
-        bytes memory initCode = abi.encodePacked(creationCode, constructorArgs);
+    /// @dev deploy edition factory proxy
+    function _deployEditionFactoryProxy(address factoryImpl_) internal returns (RouxEditionFactory factory_) {
+        // encode init data
+        bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector);
 
         // deploy RouxEditionFactory proxy
-        address proxyAddress = createX.deployCreate3(salt, initCode);
-        RouxEditionFactory proxy = RouxEditionFactory(proxyAddress);
-        vm.label({ account: address(proxy), newLabel: "RouxEditionFactory Proxy" });
-
-        // validate computed address
-        assertEq(
-            address(proxy), _computeCreate3Address(ROUX_EDITION_FACTORY_PROXY), "edition factory proxy address mismatch"
-        );
-
-        return proxy;
+        factory_ = RouxEditionFactory(address(new ERC1967Proxy(address(factoryImpl_), initData)));
+        vm.label({ account: address(factory_), newLabel: "RouxEditionFactoryProxy" });
     }
 
+    /// @dev deploy single edition collection implementation
     function _deploySingleEditionCollectionImpl(
         address erc6551registry_,
         address accountImpl_,
-        address rouxEditionFactory_
+        address rouxEditionFactory_,
+        address controller_
     )
         internal
-        returns (SingleEditionCollection)
+        returns (SingleEditionCollection singleEditionCollectionImpl_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(SINGLE_EDITION_COLLECTION_IMPL);
-
-        // get creation code
-        bytes memory creationCode = type(SingleEditionCollection).creationCode;
-
-        // encode init code
-        bytes memory initCode =
-            abi.encodePacked(creationCode, abi.encode(erc6551registry_, accountImpl_, rouxEditionFactory_));
-
-        // deploy SingleEditionCollection implementation
-
-        SingleEditionCollection impl = SingleEditionCollection(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(impl), newLabel: "SingleEditionCollection Implementation" });
-
-        // validate computed address
-        assertEq(
-            address(impl),
-            _computeCreate3Address(SINGLE_EDITION_COLLECTION_IMPL),
-            "single edition collection implementation address mismatch"
-        );
-
-        return impl;
+        singleEditionCollectionImpl_ =
+            new SingleEditionCollection(erc6551registry_, accountImpl_, rouxEditionFactory_, controller_);
+        vm.label({ account: address(singleEditionCollectionImpl_), newLabel: "SingleEditionCollectionImpl" });
     }
 
+    /// @dev deploy single edition collection beacon
     function _deploySingleEditionCollectionBeacon(address singleEditionCollectionImpl_)
         internal
-        returns (UpgradeableBeacon)
+        returns (UpgradeableBeacon singleEditionCollectionBeacon_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(SINGLE_EDITION_COLLECTION_BEACON);
-
-        // get creation code
-        bytes memory creationCode = type(UpgradeableBeacon).creationCode;
-
-        // generate init code
-        bytes memory initCode = abi.encodePacked(creationCode, abi.encode(singleEditionCollectionImpl_, users.deployer));
-
-        // deploy upgradeable beacon
-        UpgradeableBeacon beacon = UpgradeableBeacon(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(beacon), newLabel: "SingleEditionCollectionBeacon" });
-
-        // validate computed address
-        assertEq(
-            address(beacon),
-            _computeCreate3Address(SINGLE_EDITION_COLLECTION_BEACON),
-            "single edition collection beacon address mismatch"
-        );
-
-        return beacon;
+        singleEditionCollectionBeacon_ = new UpgradeableBeacon(address(singleEditionCollectionImpl_), users.deployer);
+        vm.label({ account: address(singleEditionCollectionBeacon_), newLabel: "SingleEditionCollectionBeacon" });
     }
 
+    /// @dev deploy multi edition collection implementation
     function _deployMultiEditionCollectionImpl(
         address erc6551registry_,
         address accountImpl_,
@@ -468,181 +337,78 @@ abstract contract BaseTest is Test, Events, Defaults {
         address controller_
     )
         internal
-        returns (MultiEditionCollection)
+        returns (MultiEditionCollection multiEditionCollectionImpl_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(MULTI_EDITION_COLLECTION_IMPL);
-
-        // get creation code
-        bytes memory creationCode = type(MultiEditionCollection).creationCode;
-
-        // encode init code
-        bytes memory initCode =
-            abi.encodePacked(creationCode, abi.encode(erc6551registry_, accountImpl_, rouxEditionFactory_, controller_));
-
-        // deploy MultiEditionCollection implementation
-        MultiEditionCollection impl = MultiEditionCollection(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(impl), newLabel: "MultiEditionCollection Implementation" });
-
-        // validate computed address
-        assertEq(
-            address(impl),
-            _computeCreate3Address(MULTI_EDITION_COLLECTION_IMPL),
-            "multi edition collection implementation address mismatch"
-        );
-
-        return impl;
+        multiEditionCollectionImpl_ =
+            new MultiEditionCollection(erc6551registry_, accountImpl_, rouxEditionFactory_, controller_);
+        vm.label({ account: address(multiEditionCollectionImpl_), newLabel: "MultiEditionCollectionImpl" });
     }
 
+    /// @dev deploy multi edition collection beacon
     function _deployMultiEditionCollectionBeacon(address multiEditionCollectionImpl_)
         internal
-        returns (UpgradeableBeacon)
+        returns (UpgradeableBeacon multiEditionCollectionBeacon_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(MULTI_EDITION_COLLECTION_BEACON);
-
-        // get creation code
-        bytes memory creationCode = type(UpgradeableBeacon).creationCode;
-
-        // generate init code
-        bytes memory initCode = abi.encodePacked(creationCode, abi.encode(multiEditionCollectionImpl_, users.deployer));
-
-        // deploy upgradeable beacon
-
-        UpgradeableBeacon beacon = UpgradeableBeacon(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(beacon), newLabel: "MultiEditionCollectionBeacon" });
-
-        // validate computed address
-        assertEq(
-            address(beacon),
-            _computeCreate3Address(MULTI_EDITION_COLLECTION_BEACON),
-            "multi edition collection beacon address mismatch"
-        );
-
-        return beacon;
+        multiEditionCollectionBeacon_ = new UpgradeableBeacon(address(multiEditionCollectionImpl_), users.deployer);
+        vm.label({ account: address(multiEditionCollectionBeacon_), newLabel: "MultiEditionCollectionBeacon" });
     }
 
+    /// @dev deploy collection factory implementation
     function _deployCollectionFactoryImpl(
         address singleEditionCollectionBeacon_,
         address multiEditionCollectionBeacon_
     )
         internal
-        returns (CollectionFactory)
+        returns (CollectionFactory collectionFactoryImpl_)
     {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(COLLECTION_FACTORY_IMPL);
-
-        // get creation code
-        bytes memory creationCode = type(CollectionFactory).creationCode;
-
-        // encode init code
-        bytes memory initCode =
-            abi.encodePacked(creationCode, abi.encode(singleEditionCollectionBeacon_, multiEditionCollectionBeacon_));
-
-        // deploy CollectionFactory implementation
-        CollectionFactory impl = CollectionFactory(createX.deployCreate3(salt, initCode));
-        vm.label({ account: address(impl), newLabel: "CollectionFactory Implementation" });
-
-        // validate computed address
-        assertEq(
-            address(impl),
-            _computeCreate3Address(COLLECTION_FACTORY_IMPL),
-            "collection factory implementation address mismatch"
-        );
-
-        return impl;
+        collectionFactoryImpl_ = new CollectionFactory(singleEditionCollectionBeacon_, multiEditionCollectionBeacon_);
+        vm.label({ account: address(collectionFactoryImpl_), newLabel: "CollectionFactoryImpl" });
     }
 
-    function _deployCollectionFactoryProxy(address collectionFactoryImpl_) internal returns (CollectionFactory) {
-        // generate salt
-        bytes32 salt = _generateCreate3Salt(COLLECTION_FACTORY_PROXY);
-
-        // get creation code for ERC1967Proxy
-        bytes memory creationCode = type(ERC1967Proxy).creationCode;
-
+    /// @dev deploy collection factory proxy
+    function _deployCollectionFactoryProxy(address collectionFactoryImpl_)
+        internal
+        returns (CollectionFactory collectionFactory_)
+    {
         // encode init data for CollectionFactory
-        bytes memory initData = abi.encodeWithSelector(CollectionFactory.initialize.selector, address(users.deployer));
-
-        // encode constructor arguments for ERC1967Proxy
-        bytes memory constructorArgs = abi.encode(collectionFactoryImpl_, initData);
-
-        // combine creationCode and constructorArgs
-        bytes memory initCode = abi.encodePacked(creationCode, constructorArgs);
+        bytes memory initData = abi.encodeWithSelector(CollectionFactory.initialize.selector);
 
         // deploy CollectionFactory proxy
-        address proxyAddress = createX.deployCreate3(salt, initCode);
-        CollectionFactory proxy = CollectionFactory(proxyAddress);
-
-        vm.label({ account: address(proxy), newLabel: "CollectionFactory Proxy" });
-
-        // validate computed address
-        assertEq(
-            address(proxy),
-            _computeCreate3Address(COLLECTION_FACTORY_PROXY),
-            "collection factory proxy address mismatch"
-        );
-
-        return proxy;
+        collectionFactory_ = CollectionFactory(address(new ERC1967Proxy(address(collectionFactoryImpl_), initData)));
+        vm.label({ account: address(collectionFactory_), newLabel: "CollectionFactoryProxy" });
     }
 
-    function _deployEdition() internal {
-        vm.startPrank(users.creator_0);
+    /// @dev deploy edition
+    function _deployEdition() internal returns (RouxEdition edition_) {
+        vm.startPrank(creator);
 
         bytes memory params = abi.encode(CONTRACT_URI);
-        edition = RouxEdition(factory.create(params));
+        edition_ = RouxEdition(factory.create(params));
 
         vm.stopPrank();
     }
 
-    function _generateCreate3Salt(string memory identifier) internal view returns (bytes32) {
-        return bytes32(
-            abi.encodePacked(
-                address(users.deployer), hex"01", bytes11(keccak256(abi.encodePacked(block.chainid, identifier)))
-            )
-        );
+    /* -------------------------------------------- */
+    /* utility functions                            */
+    /* -------------------------------------------- */
+
+    /// @dev set default add params
+    function _setDefaultAddParams() internal {
+        defaultAddParams = EditionData.AddParams({
+            tokenUri: TOKEN_URI,
+            maxSupply: MAX_SUPPLY,
+            fundsRecipient: creator,
+            defaultPrice: TOKEN_PRICE,
+            profitShare: PROFIT_SHARE,
+            parentEdition: address(0),
+            parentTokenId: 0,
+            extension: address(0),
+            gate: false,
+            options: new bytes(0)
+        });
     }
 
-    function _generateCreate3Salt(address deployer, string memory identifier) internal view returns (bytes32) {
-        return bytes32(
-            abi.encodePacked(deployer, hex"01", bytes11(keccak256(abi.encodePacked(block.chainid, identifier))))
-        );
-    }
-
-    function _computeCreate3Address(string memory identifier) internal view returns (address) {
-        bytes32 salt = _generateCreate3Salt(identifier);
-        bytes32 guardedSalt = keccak256(abi.encode(address(users.deployer), block.chainid, salt));
-        address create3address = createX.computeCreate3Address(guardedSalt);
-
-        return create3address;
-    }
-
-    function _computeCreate3Address(address deployer, string memory identifier) internal view returns (address) {
-        bytes32 salt = _generateCreate3Salt(deployer, identifier);
-        bytes32 guardedSalt = keccak256(abi.encode(deployer, block.chainid, salt));
-        address create3address = createX.computeCreate3Address(guardedSalt);
-
-        return create3address;
-    }
-
-    function _allowlistUsers() internal {
-        vm.startPrank(users.deployer);
-
-        // add editions to allowlist
-        address[] memory allowlist = new address[](2);
-        allowlist[0] = address(users.creator_0);
-        allowlist[1] = address(users.creator_1);
-        factory.addAllowlist(allowlist);
-
-        // add curators to curator allowlist
-        address[] memory curatorAllowlist = new address[](3);
-        curatorAllowlist[0] = address(users.creator_0);
-        curatorAllowlist[1] = address(users.creator_1);
-        curatorAllowlist[2] = address(users.curator_0);
-        collectionFactory.addAllowlist(curatorAllowlist);
-
-        vm.stopPrank();
-    }
-
+    /// @dev encode mint params
     function _encodeMintParams(
         uint128 price,
         uint40 mintStart,
@@ -656,6 +422,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         return abi.encode(price, mintStart, mintEnd, maxMintable);
     }
 
+    /// @dev create user
     function _createUser(string memory name) internal returns (address payable addr) {
         addr = payable(makeAddr(name));
         vm.label({ account: addr, newLabel: name });
@@ -665,9 +432,25 @@ abstract contract BaseTest is Test, Events, Defaults {
         mockUSDC.mint(addr, 100 * 10 ** 6);
     }
 
+    /// @dev create edition
+    function _createEdition(address user_) internal returns (RouxEdition) {
+        vm.prank(user_);
+
+        // create edition instance
+        bytes memory params = abi.encode(CONTRACT_URI);
+        RouxEdition edition_ = RouxEdition(factory.create(params));
+        vm.label({ account: address(edition), newLabel: "New Edition" });
+
+        return edition_;
+    }
+
+    /// @dev add token
     function _addToken(RouxEdition edition_) internal returns (address, uint256) {
         // get owner
         address owner = Ownable(edition_).owner();
+
+        // set creator + funds recipient to owner
+        defaultAddParams.fundsRecipient = owner;
 
         // prank
         vm.prank(owner);
@@ -678,55 +461,48 @@ abstract contract BaseTest is Test, Events, Defaults {
         return (owner, tokenId);
     }
 
-    function _createEdition(address user) internal returns (RouxEdition) {
-        vm.prank(user);
-
-        // create edition instance
-        bytes memory params = abi.encode(CONTRACT_URI);
-        RouxEdition edition_ = RouxEdition(factory.create(params));
-        vm.label({ account: address(edition), newLabel: "New Edition" });
-
-        return edition_;
-    }
-
-    function _approveToken(address edition_, address user) internal {
+    /// @dev approve token
+    function _approveToken(address spender, address user_) internal {
         // approve edition
-        vm.prank(user);
-        mockUSDC.approve(address(edition_), type(uint256).max);
+        vm.prank(user_);
+        mockUSDC.approve(address(spender), type(uint256).max);
     }
 
-    function _mintToken(IRouxEdition edition_, uint256 tokenId, address user) internal {
+    /// @dev mint token
+    function _mintToken(IRouxEdition edition_, uint256 tokenId, address user_) internal {
         // mint
-        vm.prank(user);
-        edition_.mint(users.user_0, tokenId, 1, address(0), address(0), "");
+        vm.prank(user_);
+        edition_.mint({ to: user, id: tokenId, quantity: 1, extension: address(0), referrer: address(0), data: "" });
     }
 
+    /// @dev create fork with new edition
     function _createFork(
         RouxEdition parentEdition,
         uint256 parentTokenId,
-        address user
+        address user_
     )
         internal
         returns (RouxEdition, uint256)
     {
         // create edition instance
-        RouxEdition forkEdition = _createEdition(user);
+        RouxEdition forkEdition = _createEdition(user_);
 
         // copy default add params
         EditionData.AddParams memory newDefaultAddParams = defaultAddParams;
 
         // modify default add params
-        newDefaultAddParams.fundsRecipient = user;
+        newDefaultAddParams.fundsRecipient = user_;
         newDefaultAddParams.parentEdition = address(parentEdition);
         newDefaultAddParams.parentTokenId = parentTokenId;
 
         // add token
-        vm.prank(user);
+        vm.prank(user_);
         uint256 tokenId = forkEdition.add(newDefaultAddParams);
 
         return (forkEdition, tokenId);
     }
 
+    /// @dev create fork using existing edition
     function _createForkExistingEdition(
         RouxEdition edition_,
         RouxEdition parentEdition,
@@ -745,16 +521,14 @@ abstract contract BaseTest is Test, Events, Defaults {
         uint256 tokenId = edition_.add(
             EditionData.AddParams({
                 tokenUri: TOKEN_URI,
-                creator: owner,
                 maxSupply: MAX_SUPPLY,
                 fundsRecipient: owner,
                 defaultPrice: TOKEN_PRICE,
-                mintStart: uint40(block.timestamp),
-                mintEnd: uint40(block.timestamp + MINT_DURATION),
                 profitShare: PROFIT_SHARE,
                 parentEdition: address(parentEdition),
                 parentTokenId: parentTokenId,
                 extension: address(0),
+                gate: false,
                 options: new bytes(0)
             })
         );
@@ -762,30 +536,21 @@ abstract contract BaseTest is Test, Events, Defaults {
         return tokenId;
     }
 
+    /// @dev create multiple forks
     function _createForks(uint256 forks) internal returns (RouxEdition[] memory) {
-        // allowlist any users not in the array
-        for (uint256 i = 0; i < creatorArray.length; i++) {
-            if (!factory.canCreate(creatorArray[i])) {
-                vm.prank(users.deployer);
-                address[] memory allowlist = new address[](1);
-                allowlist[0] = creatorArray[i];
-                factory.addAllowlist(allowlist);
-            }
-        }
-
         uint256 num = forks + 1;
         RouxEdition[] memory editions = new RouxEdition[](num);
         editions[0] = edition;
 
         // address array
         address[] memory utilizedUsers = new address[](num);
-        utilizedUsers[0] = users.creator_0;
+        utilizedUsers[0] = creator;
 
         for (uint256 i = 1; i < num; i++) {
-            address user = creatorArray[i % creatorArray.length];
-            utilizedUsers[i] = user;
+            address user_ = creatorArray[i % creatorArray.length];
+            utilizedUsers[i] = user_;
 
-            vm.startPrank(user);
+            vm.startPrank(user_);
 
             // create edition instance
             bytes memory params = abi.encode(CONTRACT_URI);
@@ -795,16 +560,14 @@ abstract contract BaseTest is Test, Events, Defaults {
             // token params
             EditionData.AddParams memory tokenParams = EditionData.AddParams({
                 tokenUri: TOKEN_URI,
-                creator: user,
                 maxSupply: MAX_SUPPLY,
-                fundsRecipient: user,
+                fundsRecipient: user_,
                 defaultPrice: TOKEN_PRICE,
-                mintStart: uint40(block.timestamp),
-                mintEnd: uint40(block.timestamp + MINT_DURATION),
                 profitShare: PROFIT_SHARE,
                 parentEdition: address(editions[i - 1]),
                 parentTokenId: 1,
                 extension: address(0),
+                gate: false,
                 options: new bytes(0)
             });
 
@@ -814,15 +577,19 @@ abstract contract BaseTest is Test, Events, Defaults {
             vm.stopPrank();
         }
 
+        assertEq(editions.length, forks + 1);
+
         return editions;
     }
 
+    /// @dev add multiple tokens
     function _addMultipleTokens(RouxEdition edition_, uint256 num) internal {
         for (uint256 i = 0; i < num; i++) {
             _addToken(edition_);
         }
     }
 
+    /// @dev compute split
     function _computeSplit(
         RouxEdition edition_,
         uint256 tokenId,
@@ -842,57 +609,20 @@ abstract contract BaseTest is Test, Events, Defaults {
         return (parentShare, childShare);
     }
 
-    function _createSingleEditionCollection(
-        RouxEdition edition_,
-        uint256 num
-    )
-        internal
-        returns (uint256[] memory tokenIds, uint256[] memory quantities, SingleEditionCollection collection)
-    {
-        // 1st already created
-        _addMultipleTokens(edition_, num - 1);
-
-        tokenIds = new uint256[](num);
-        quantities = new uint256[](num);
-
-        for (uint256 i = 0; i < num; i++) {
-            tokenIds[i] = i + 1;
-            quantities[i] = 1;
-        }
-
-        // deploy collection
-        collection = _createCollectionWithParams(address(edition), tokenIds);
-
-        // add collection
-        vm.prank(users.creator_0);
-        edition.setCollection(tokenIds, address(collection), true);
+    // @dev get user balance in controller
+    function _getUserControllerBalance(address user_) internal view returns (uint256) {
+        return controller.balance(user_);
     }
 
-    function _createCollectionWithParams(
-        address itemTarget,
-        uint256[] memory itemIds
-    )
-        internal
-        returns (SingleEditionCollection)
-    {
-        // create params
-        bytes memory params = abi.encode(
-            COLLECTION_NAME,
-            COLLECTION_SYMBOL,
-            address(users.creator_0),
-            COLLECTION_URI,
-            SINGLE_EDITION_COLLECTION_PRICE,
-            address(mockUSDC),
-            uint40(block.timestamp),
-            uint40(block.timestamp + MINT_DURATION),
-            address(itemTarget),
-            itemIds
-        );
+    /* -------------------------------------------- */
+    /* modifiers                                    */
+    /* -------------------------------------------- */
 
-        vm.prank(users.creator_0);
-        SingleEditionCollection collectionInstance =
-            SingleEditionCollection((collectionFactory.create(CollectionData.CollectionType.SingleEdition, params)));
+    modifier useEditionAdmin(RouxEdition edition_) {
+        address admin = Ownable(address(edition_)).owner();
 
-        return collectionInstance;
+        vm.startPrank(admin);
+        _;
+        vm.stopPrank();
     }
 }

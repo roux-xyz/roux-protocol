@@ -1,63 +1,25 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.26;
 
-abstract contract Events {
-    /* -------------------------------------------- */
-    /* Controller                                   */
-    /* -------------------------------------------- */
+import "src/libraries/EventsLib.sol";
 
-    event Deposited(address indexed recipient, uint256 amount);
-    event PendingUpdated(
-        address edition,
-        uint256 indexed tokenId,
-        address parent,
-        uint256 indexed parentTokenId,
-        uint256 amount
-    );
-    event Withdrawn(address indexed edition, uint256 indexed tokenId, address indexed to, uint256 amount);
-    event WithdrawnBatch(address indexed edition, uint256[] indexed tokenIds, address indexed to, uint256 amount);
-    event PlatformFeeUpdated(bool enabled);
+contract Events {
+    /// @dev see {IEditionExtension}
+    event MintParamsUpdated(address indexed edition, uint256 indexed id, bytes mintParams);
 
-    /* -------------------------------------------- */
-    /* Registry                                     */
-    /* -------------------------------------------- */
-    event RegistryUpdated(
-        address indexed edition,
-        uint256 indexed tokenId,
-        address indexed parentEdition,
-        uint256 parentTokenId
-    );
-
-    /* -------------------------------------------- */
-    /* Edition                                      */
-    /* -------------------------------------------- */
-    event TokenAdded(uint256 indexed id);
-    event MinterAdded(address indexed minter, uint256 indexed id);
-    event MinterRemoved(address indexed minter, uint256 indexed id);
-
-    /* -------------------------------------------- */
-    /* EditionFactory                               */
-    /* -------------------------------------------- */
-    event NewEdition(address indexed instance);
-
-    /* -------------------------------------------- */
-    /* ERC-1155                                     */
-    /* -------------------------------------------- */
-
+    /// @dev see {IERC1155}
     event TransferSingle(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256 id,
-        uint256 amount
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
     );
+
+    /// @dev see {IERC1155}
     event TransferBatch(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256[] ids,
-        uint256[] amounts
+        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] amounts
     );
-    event ApprovalForAll(address indexed owner, address indexed operator, bool isApproved);
+
+    /// @dev see {IERC1155}
     event URI(string value, uint256 indexed id);
+
+    /// @dev see {IERC721}
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }
