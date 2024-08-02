@@ -28,9 +28,10 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
 /**
- * @title Roux Edition
- * @author maks pazuniak (@maks-p)
+ * @title roux edition
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
 contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCastLib for uint256;
@@ -263,40 +264,61 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         payable
         nonReentrant
     {
-        EditionData.TokenData storage d = _storage().tokens[id];
+        // validate and process mint
+        uint256 price = _preProcessDirectMint(to, id, quantity, extension);
 
-        uint256 cost;
-        if (extension == address(0)) {
-            // gated mints require a valid extension
-            if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
-            cost = d.mintParams.defaultPrice * quantity;
-        } else {
-            // validate extension is registered by edition
-            if (!d.extensions.get(uint256(uint160(extension)))) revert ErrorsLib.RouxEdition_InvalidExtension();
-
-            // approve mint and get cost of mint
-            cost = IEditionExtension(extension).approveMint({
-                id: id,
-                quantity: quantity,
-                operator: msg.sender,
-                account: to,
-                data: data
-            });
-        }
-
-        // validate mint
-        _validateMint(id, quantity);
-
-        if (cost > 0) {
+        if (price > 0) {
             // transfer payment to edition
-            _currency.safeTransferFrom(msg.sender, address(this), cost);
+            _currency.safeTransferFrom(msg.sender, address(this), price);
 
             // send funds to controller
-            _controller.disburse({ edition: address(this), id: id, amount: cost, referrer: referrer });
+            _controller.disburse({ edition: address(this), id: id, amount: price, referrer: referrer });
         }
 
-        // mint
-        _unsafeMint(to, id, quantity, data);
+        _mint(to, id, quantity, data);
+    }
+
+    /// @inheritdoc IRouxEdition
+    function batchMint(
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata quantities,
+        address[] calldata extensions,
+        address referrer,
+        bytes calldata data
+    )
+        external
+        payable
+        nonReentrant
+    {
+        // validate array lengths
+        if (ids.length != quantities.length || ids.length != extensions.length) {
+            revert ErrorsLib.RouxEdition_InvalidParams();
+        }
+
+        // initialize vars
+        uint256 totalPrice;
+        uint256[] memory prices = new uint256[](ids.length);
+
+        // process mints to validate and get total prices
+        for (uint256 i = 0; i < ids.length; i++) {
+            prices[i] = _preProcessDirectMint(to, ids[i], quantities[i], extensions[i]);
+            totalPrice += prices[i];
+        }
+
+        if (totalPrice > 0) {
+            // transfer payment to edition
+            _currency.safeTransferFrom(msg.sender, address(this), totalPrice);
+
+            // disburse funds to controller
+            for (uint256 i = 0; i < ids.length; i++) {
+                if (prices[i] > 0) {
+                    _controller.disburse({ edition: address(this), id: ids[i], amount: prices[i], referrer: referrer });
+                }
+            }
+        }
+
+        _batchMint(to, ids, quantities, data);
     }
 
     /// @inheritdoc IRouxEdition
@@ -314,14 +336,13 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // validate caller
         if (!$.collections.get(uint256(uint160(msg.sender)))) revert ErrorsLib.RouxEdition_InvalidCaller();
 
-        // set quantities array + update total supply
+        // create quantities array + update total supply
         uint256[] memory quantities = new uint256[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
+        for (uint256 i = 0; i < ids.length; ++i) {
             quantities[i] = 1;
-            $.tokens[ids[i]].totalSupply++;
+            _incrementTotalSupply(ids[i], 1);
         }
 
-        // mint
         _batchMint(to, ids, quantities, "");
     }
 
@@ -332,11 +353,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // validate caller is a multi-edition collection
         if (!$.collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
-        // validate mint
         _validateMint(id, 1);
+        _incrementTotalSupply(id, 1);
 
-        // mint
-        _unsafeMint(to, id, 1, data);
+        _mint(to, id, 1, data);
     }
 
     /* ------------------------------------------------- */
@@ -354,7 +374,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         EditionData.TokenData storage d = $.tokens[id];
 
-        if (p.creator == address(0) || p.maxSupply == 0) {
+        if (p.maxSupply == 0) {
             revert ErrorsLib.RouxEdition_InvalidParams();
         }
 
@@ -363,8 +383,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // set token data
         d.uri = p.tokenUri;
-        d.creator = p.creator;
         d.maxSupply = p.maxSupply == 0 ? type(uint128).max : p.maxSupply.toUint128();
+        d.creator = msg.sender;
 
         // set controller data ~ funds recipient
         _controller.setControllerData(id, p.fundsRecipient, p.profitShare.toUint16());
@@ -379,8 +399,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             _setExtension(id, p.extension, true, p.options);
         }
 
+        // mint token to creator ~ increment supply
+        _incrementTotalSupply(id, 1);
+
         // mint token to creator
-        _unsafeMint(p.creator, id, 1, "");
+        _mint(msg.sender, id, 1, "");
 
         emit EventsLib.TokenAdded(id);
 
@@ -394,7 +417,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      *
      * @dev once a child has been created, the uri is frozen and cannot be udpated.
      *      - to prevent a malicious user from "freezing" an unrevealed token, we only
-     *        revert if a current uri has been set
+     *        revert if a current uri has previously been set
      */
     function updateUri(uint256 id, string memory newUri) external onlyOwner {
         // current uri
@@ -542,22 +565,79 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /* ------------------------------------------------- */
 
     /**
-     * @notice internal mint function
+     * @notice preprocess direct mint
      * @param to token receiver
      * @param id token id
-     * @param quantity number of tokens to mint
-     * @param data additional data
-     *
-     * @dev unvalidated mint function to update total supply before calling erc1155 mint
+     * @param quantity quantity
+     * @param extension extension
      */
-    function _unsafeMint(address to, uint256 id, uint256 quantity, bytes memory data) internal {
-        // increment supply
+    function _preProcessDirectMint(
+        address to,
+        uint256 id,
+        uint256 quantity,
+        address extension
+    )
+        internal
+        returns (uint256)
+    {
+        _validateMint(id, quantity);
+        _incrementTotalSupply(id, quantity);
+
+        return _getPrice(to, id, quantity, extension);
+    }
+
+    /**
+     * @notice internal function to validate mint
+     * @param id token id
+     * @param quantity number of tokens to mint
+     */
+    function _validateMint(uint256 id, uint256 quantity) internal view {
+        EditionData.TokenData storage d = _storage().tokens[id];
+
+        // validate token exists
+        if (!_exists(id)) revert ErrorsLib.RouxEdition_InvalidTokenId();
+
+        // validate max supply
+        if (quantity + d.totalSupply > d.maxSupply) {
+            revert ErrorsLib.RouxEdition_MaxSupplyExceeded();
+        }
+    }
+
+    /**
+     * @notice compute price
+     * @param to token receiver
+     * @param id token id
+     * @param quantity quantity
+     * @param extension extension
+     */
+    function _getPrice(address to, uint256 id, uint256 quantity, address extension) internal returns (uint256 price) {
+        EditionData.TokenData storage d = _storage().tokens[id];
+
+        if (extension == address(0)) {
+            if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
+            price = d.mintParams.defaultPrice * quantity;
+        } else {
+            if (!d.extensions.get(uint256(uint160(extension)))) revert ErrorsLib.RouxEdition_InvalidExtension();
+
+            price = IEditionExtension(extension).approveMint({
+                id: id,
+                quantity: quantity,
+                operator: msg.sender,
+                account: to,
+                data: ""
+            });
+        }
+    }
+
+    /**
+     * @notice increment total supply
+     * @param id token id
+     * @param quantity quantity
+     */
+    function _incrementTotalSupply(uint256 id, uint256 quantity) internal {
         unchecked {
             _storage().tokens[id].totalSupply += quantity.toUint128();
         }
-
-        // call erc1155 mint
-        _mint(to, id, quantity, data);
     }
 
     /**
@@ -617,22 +697,5 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // emit event
         emit EventsLib.ExtensionSet(extension, id, enable);
-    }
-
-    /**
-     * @notice internal function to validate mint
-     * @param id token id
-     * @param quantity number of tokens to mint
-     */
-    function _validateMint(uint256 id, uint256 quantity) internal view {
-        EditionData.TokenData storage d = _storage().tokens[id];
-
-        // validate token exists
-        if (!_exists(id)) revert ErrorsLib.RouxEdition_InvalidTokenId();
-
-        // validate max supply
-        if (quantity + d.totalSupply > d.maxSupply) {
-            revert ErrorsLib.RouxEdition_MaxSupplyExceeded();
-        }
     }
 }

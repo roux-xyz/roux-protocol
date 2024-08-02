@@ -396,7 +396,6 @@ abstract contract BaseTest is Test, Events, Defaults {
     function _setDefaultAddParams() internal {
         defaultAddParams = EditionData.AddParams({
             tokenUri: TOKEN_URI,
-            creator: creator,
             maxSupply: MAX_SUPPLY,
             fundsRecipient: creator,
             defaultPrice: TOKEN_PRICE,
@@ -451,7 +450,6 @@ abstract contract BaseTest is Test, Events, Defaults {
         address owner = Ownable(edition_).owner();
 
         // set creator + funds recipient to owner
-        defaultAddParams.creator = owner;
         defaultAddParams.fundsRecipient = owner;
 
         // prank
@@ -523,7 +521,6 @@ abstract contract BaseTest is Test, Events, Defaults {
         uint256 tokenId = edition_.add(
             EditionData.AddParams({
                 tokenUri: TOKEN_URI,
-                creator: owner,
                 maxSupply: MAX_SUPPLY,
                 fundsRecipient: owner,
                 defaultPrice: TOKEN_PRICE,
@@ -563,7 +560,6 @@ abstract contract BaseTest is Test, Events, Defaults {
             // token params
             EditionData.AddParams memory tokenParams = EditionData.AddParams({
                 tokenUri: TOKEN_URI,
-                creator: user_,
                 maxSupply: MAX_SUPPLY,
                 fundsRecipient: user_,
                 defaultPrice: TOKEN_PRICE,

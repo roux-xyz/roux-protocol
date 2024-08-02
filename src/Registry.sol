@@ -13,8 +13,10 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 
 /**
- * @title Registry
+ * @title registry
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
 contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     /* -------------------------------------------- */

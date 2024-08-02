@@ -42,7 +42,6 @@ library EditionData {
     /**
      * @notice add params
      * @param tokenUri token uri
-     * @param creator creator
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param defaultPrice base price - typically overriden by extension
@@ -55,7 +54,6 @@ library EditionData {
      */
     struct AddParams {
         string tokenUri;
-        address creator;
         uint256 maxSupply;
         address fundsRecipient;
         uint256 defaultPrice;

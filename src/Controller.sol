@@ -20,9 +20,10 @@ import { BASIS_POINT_SCALE } from "src/libraries/ConstantsLib.sol";
 import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
- * @title Controller
- * @author maks pazuniak (@maks-p)
+ * @title controller
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
 contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;

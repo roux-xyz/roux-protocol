@@ -15,8 +15,10 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 
 /**
- * @title RouxEdition Factory
+ * @title roux edition factory
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
 contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;

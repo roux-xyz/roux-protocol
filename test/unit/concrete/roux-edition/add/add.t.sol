@@ -52,16 +52,6 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         edition.add(addParams);
     }
 
-    /// @dev cannot add token with zero address as creator
-    function test__RevertWhen_AddToken_CreatorIsZeroAddress() external {
-        // modify default add params
-        addParams.creator = address(0);
-
-        vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEdition_InvalidParams.selector);
-        edition.add(addParams);
-    }
-
     /// @dev cannot set parent token address to self
     function test__RevertWhen_AddToken_ParentEditionIsSelf() external {
         // modify default add params
@@ -169,9 +159,6 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev token creator is set after add
     function test__AddToken_CreatorIsSet() external {
-        // modify default add params
-        addParams.creator = users.creator_1;
-
         // create edition instance
         IRouxEdition edition_ = _createEdition(users.creator_1);
 

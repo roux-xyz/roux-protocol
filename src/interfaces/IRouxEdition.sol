@@ -147,6 +147,26 @@ interface IRouxEdition {
         payable;
 
     /**
+     * @notice batch mint tokens for a single edition collection
+     * @param to token receiver
+     * @param ids array of token ids
+     * @param quantities array of quantities
+     * @param extensions array of extensions
+     * @param referrer referrer address
+     * @param data additional data
+     */
+    function batchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        address[] memory extensions,
+        address referrer,
+        bytes calldata data
+    )
+        external
+        payable;
+
+    /**
      * @notice mint tokens for a single edition collection
      * @param to token receiver
      * @param ids array of token ids

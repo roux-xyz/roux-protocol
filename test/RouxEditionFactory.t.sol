@@ -17,29 +17,29 @@ contract RouxEditionFactoryTest is BaseTest {
         BaseTest.setUp();
     }
 
+    /// @dev only allowlist
     function test__RevertWhen_OnlyAllowlist() external {
         bytes memory params = abi.encode(CONTRACT_URI);
 
         vm.prank(users.deployer);
         factory.setAllowlist(true);
 
-        vm.startPrank(user);
+        vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_OnlyAllowlist.selector);
-        RouxEdition edition_ = RouxEdition(factory.create(params));
-
-        vm.stopPrank();
+        RouxEdition(factory.create(params));
     }
 
+    /// @dev only owner can add allowlist
     function test__RevertWhen_OnlyOwner_AddAllowlist() external {
-        vm.expectRevert(Ownable.Unauthorized.selector);
-
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_1;
 
         vm.prank(creator);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         factory.addAllowlist(allowlist);
     }
 
+    /// @dev already initialized
     function test__RevertWhen_AlreadyInitialized() external {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
@@ -54,10 +54,12 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.stopPrank();
     }
 
-    function test__Owner() external {
+    /// @dev owner
+    function test__Owner() external view {
         assertEq(factory.owner(), address(users.deployer));
     }
 
+    /// @dev disable allowlist
     function test__DisableAllowlist() external {
         vm.prank(users.deployer);
         factory.setAllowlist(false);
@@ -69,6 +71,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
+    /// @dev transfer ownership
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
         factory.transferOwnership(creator);
@@ -76,6 +79,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.owner(), address(creator));
     }
 
+    /// @dev add allowlist
     function test__AddAllowlist() external {
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_2;
@@ -90,6 +94,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
+    /// @dev remove allowlist
     function test__RemoveAllowlist() external {
         address[] memory allowlist = new address[](1);
         allowlist[0] = users.creator_2;
@@ -109,6 +114,7 @@ contract RouxEditionFactoryTest is BaseTest {
         vm.stopPrank();
     }
 
+    /// @dev create
     function test__Create() external {
         vm.prank(creator);
 
@@ -118,6 +124,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
+    /// @dev is edition true
     function test__IsEdition_True() external {
         vm.prank(creator);
         bytes memory params = abi.encode(CONTRACT_URI);
@@ -126,10 +133,12 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
-    function test__IsEdition_False() external {
+    /// @dev is edition false
+    function test__IsEdition_False() external view {
         assertFalse(factory.isEdition(address(creator)));
     }
 
+    /// @dev get editions
     function test__getEditions() external {
         address[] memory allowlist = new address[](2);
         allowlist[0] = users.creator_1;
@@ -151,6 +160,7 @@ contract RouxEditionFactoryTest is BaseTest {
         editions[2] = factory.create(params);
     }
 
+    /// @dev upgrade factory
     function test__UpgradeFactory() external {
         assertEq(factory.getImplementation(), address(factoryImpl));
 

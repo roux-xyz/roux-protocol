@@ -23,8 +23,10 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
- * @title Multi Edition Collection
+ * @title multi edition collection
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
 contract MultiEditionCollection is Collection {
     using SafeTransferLib for address;

@@ -3,23 +3,23 @@ pragma solidity 0.8.26;
 
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
-
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
-
+import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 
 /**
- * @title Collection Factory
+ * @title collection factory
+ * @author roux
  * @custom:version 0.1
+ * @custom:security-contact mp@roux.app
  */
-contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
+contract CollectionFactory is ICollectionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
 
     /* ------------------------------------------------- */
@@ -75,11 +75,8 @@ contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
      * @param multiEditionCollectionBeacon multi edition collection beacon
      */
     constructor(address singleEditionCollectionBeacon, address multiEditionCollectionBeacon) {
-        CollectionFactoryStorage storage $ = _storage();
-
         // disable initialization of implementation contract
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
+        _disableInitializers();
 
         // set single edition collection beacon
         _singleEditionCollectionBeacon = singleEditionCollectionBeacon;
@@ -97,17 +94,9 @@ contract CollectionFactory is ICollectionFactory, Ownable, ReentrancyGuard {
     /* ------------------------------------------------- */
 
     /// @notice initialize CollectionFactory
-    function initialize() external {
-        CollectionFactoryStorage storage $ = _storage();
-
-        require(!$.initialized, "Already initialized");
-        $.initialized = true;
-
+    function initialize() external initializer {
         // set owner of proxy
         _initializeOwner(msg.sender);
-
-        // enable allowlist
-        $.enableAllowlist = true;
     }
 
     /* ------------------------------------------------- */
