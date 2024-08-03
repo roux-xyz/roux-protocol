@@ -104,10 +104,8 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
             maliciousParams = CollectionData.MultiEditionCreateParams({
                 name: COLLECTION_NAME,
                 symbol: COLLECTION_SYMBOL,
-                curator: address(collectionAdmin),
                 collectionFeeRecipient: address(collectionAdmin),
                 uri: COLLECTION_URI,
-                currency: address(mockUSDC),
                 mintStart: uint40(block.timestamp),
                 mintEnd: uint40(block.timestamp + MINT_DURATION),
                 itemTargets: itemTargets,

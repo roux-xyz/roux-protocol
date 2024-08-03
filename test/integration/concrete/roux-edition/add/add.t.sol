@@ -107,7 +107,7 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
         vm.prank(users.creator_1);
         uint256 tokenId_ = edition_.add(addParams);
 
-        assertTrue(edition_.isExtension(tokenId_, address(mockExtension)));
+        assertTrue(edition_.isRegisteredExtension(tokenId_, address(mockExtension)));
     }
 
     /// @dev extension is set as part of add params - with mint params
@@ -122,7 +122,7 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
         vm.prank(users.creator_1);
         uint256 tokenId_ = edition_.add(addParams);
 
-        assertTrue(edition_.isExtension(tokenId_, address(mockExtension)));
+        assertTrue(edition_.isRegisteredExtension(tokenId_, address(mockExtension)));
         assertEq(IEditionExtension(address(mockExtension)).price(address(edition_), tokenId_), extPrice);
     }
 }

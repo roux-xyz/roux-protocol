@@ -22,7 +22,7 @@ import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 /**
  * @title controller
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard {
@@ -68,16 +68,16 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     /**
      * @notice controller storage
      * @custom:storage-location erc7201:rouxController.cntrollerStorage
-     * @param platformFeeEnabled whether platform fee is enabled
      * @param paused whether the contract is paused
+     * @param platformFeeEnabled whether platform fee is enabled
      * @param platformFeeBalance platform fee balance
      * @param tokenConfig token data
      * @param tokenPending token pending
      * @param balance balance
      */
     struct ControllerStorage {
-        bool platformFeeEnabled;
         bool paused;
+        bool platformFeeEnabled;
         uint192 platformFeeBalance;
         mapping(address edition => mapping(uint256 tokenId => TokenConfig)) tokenConfig;
         mapping(address edition => mapping(uint256 tokenId => uint256 amount)) tokenPending;
@@ -107,14 +107,12 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // disable initialization of implementation contract
         _disableInitializers();
 
-        // set registry
-        _registry = IRegistry(registry);
+        _initializeOwner(msg.sender);
 
-        // set currency
+        _registry = IRegistry(registry);
         _currency = IERC20(currency_);
 
         // renounce ownership of implementation contract
-        _initializeOwner(msg.sender);
         renounceOwnership();
     }
 
@@ -204,14 +202,18 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         uint192 fee;
         if (_storage().platformFeeEnabled) {
             fee = ((amount * PLATFORM_FEE) / BASIS_POINT_SCALE).toUint192();
-            _storage().platformFeeBalance += fee;
+            unchecked {
+                _storage().platformFeeBalance += fee;
+            }
         }
 
         // handle referral fee
         uint192 referralFee;
         if (referrer != address(0)) {
             referralFee = ((amount * REFERRAL_FEE) / BASIS_POINT_SCALE).toUint192();
-            _storage().balance[referrer] += referralFee;
+            unchecked {
+                _storage().balance[referrer] += referralFee;
+            }
         }
 
         // disburse
@@ -241,7 +243,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // validate arrays
         if (editions.length != tokenIds.length) revert ErrorsLib.Controller_InvalidArrayLength();
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i = 0; i < tokenIds.length; ++i) {
             // distribute pending balance
             _distributePending(editions[i], tokenIds[i]);
         }
@@ -413,7 +415,9 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // if root, increment recipient's balance
         if (parentEdition == address(0)) {
             // increment recipient's balance
-            $.balance[recipient] += amount;
+            unchecked {
+                $.balance[recipient] += amount;
+            }
 
             // emit Deposited event
             emit EventsLib.Deposited(edition, tokenId, recipient, amount);
@@ -425,11 +429,12 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
             uint256 currentEditionShare = (amount * currentEditionProfitShare) / BASIS_POINT_SCALE;
             uint256 parentShare = amount - currentEditionShare;
 
-            // increment recipient's balance
-            $.balance[recipient] += currentEditionShare;
-
-            // increment the parent's pending balance
-            $.tokenPending[parentEdition][parentTokenId] += parentShare;
+            unchecked {
+                // increment recipient's balance
+                $.balance[recipient] += currentEditionShare;
+                // increment the parent's pending balance
+                $.tokenPending[parentEdition][parentTokenId] += parentShare;
+            }
 
             // emit Deposited event
             emit EventsLib.Deposited(edition, tokenId, recipient, currentEditionShare);

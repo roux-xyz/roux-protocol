@@ -80,12 +80,12 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
         vm.prank(creator);
         edition.setExtension(1, address(mockExtension), true, "");
 
-        assertTrue(edition.isExtension(1, address(mockExtension)));
+        assertTrue(edition.isRegisteredExtension(1, address(mockExtension)));
     }
 
     /// @dev returns whether extension is set - when false
     function test__IsExtension_False() external view {
-        assertFalse(edition.isExtension(1, address(mockExtension)));
+        assertFalse(edition.isRegisteredExtension(1, address(mockExtension)));
     }
 
     /// @dev returns whether token is multi edition collection mint eligible - when true

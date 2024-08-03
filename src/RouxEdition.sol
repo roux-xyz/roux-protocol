@@ -26,7 +26,7 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 /**
  * @title roux edition
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
@@ -95,35 +95,19 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @notice constructor
      * @param controller controller
      * @param registry registry
-     * @param currency_ currency
      */
-    constructor(
-        address editionFactory,
-        address collectionFactory,
-        address controller,
-        address registry,
-        address currency_
-    ) {
+    constructor(address editionFactory, address collectionFactory, address controller, address registry) {
         // disable initializers
         _disableInitializers();
 
-        // set owner
+        // factory will transfer ownership to its caller
         _initializeOwner(msg.sender);
 
-        // set edition factory
         _editionFactory = IRouxEditionFactory(editionFactory);
-
-        // set collection factory
         _collectionFactory = ICollectionFactory(collectionFactory);
-
-        // set controller
         _controller = IController(controller);
-
-        // set registry
         _registry = IRegistry(registry);
-
-        // set currency
-        _currency = currency_;
+        _currency = IController(_controller).currency();
 
         // renounce ownership of implementation contract
         renounceOwnership();
@@ -220,13 +204,13 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /// @inheritdoc IRouxEdition
-    function isExtension(uint256 id, address extension) external view returns (bool) {
-        return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
+    function isRegisteredExtension(uint256 id, address extension) external view returns (bool) {
+        return _isRegisteredExtension(id, extension);
     }
 
     /// @inheritdoc IRouxEdition
-    function isCollection(address collection) external view returns (bool) {
-        return _storage().collections.get(uint256(uint160(collection)));
+    function isRegisteredCollection(address collection) external view returns (bool) {
+        return _isRegisteredCollection(collection);
     }
 
     /// @inheritdoc IRouxEdition
@@ -305,9 +289,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         uint256[] memory prices = new uint256[](ids.length);
 
         // process mints to validate and get total prices
-        for (uint256 i = 0; i < ids.length; i++) {
+        for (uint256 i = 0; i < ids.length; ++i) {
             prices[i] = _preProcessDirectMint(to, ids[i], quantities[i], extensions[i]);
-            totalPrice += prices[i];
+
+            unchecked {
+                totalPrice += prices[i];
+            }
         }
 
         if (totalPrice > 0) {
@@ -315,7 +302,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             _currency.safeTransferFrom(msg.sender, address(this), totalPrice);
 
             // disburse funds to controller
-            for (uint256 i = 0; i < ids.length; i++) {
+            for (uint256 i = 0; i < ids.length; ++i) {
                 if (prices[i] > 0) {
                     _controller.disburse({ edition: address(this), id: ids[i], amount: prices[i], referrer: referrer });
                 }
@@ -336,7 +323,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         nonReentrant
     {
         // validate caller
-        if (!_storage().collections.get(uint256(uint160(msg.sender)))) revert ErrorsLib.RouxEdition_InvalidCaller();
+        if (!_isRegisteredCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         // create quantities array + update total supply
         uint256[] memory quantities = new uint256[](ids.length);
@@ -383,7 +370,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // set token data
         d.uri = p.tokenUri;
-        d.maxSupply = p.maxSupply == 0 ? type(uint128).max : p.maxSupply.toUint128();
+        d.maxSupply = p.maxSupply.toUint128();
         d.creator = msg.sender;
 
         // set controller data ~ funds recipient
@@ -423,7 +410,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // current uri
         string memory currentUri = _storage().tokens[id].uri;
 
-        // verify child of existing metadata has not already been created
+        // verify child using existing metadata has not already been created
         if (bytes(currentUri).length > 0 && _registry.hasChild(address(this), id)) {
             revert ErrorsLib.RouxEdition_UriFrozen();
         }
@@ -617,7 +604,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
             price = d.mintParams.defaultPrice * quantity;
         } else {
-            if (!d.extensions.get(uint256(uint160(extension)))) revert ErrorsLib.RouxEdition_InvalidExtension();
+            if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             price = IEditionExtension(extension).approveMint({
                 id: id,
@@ -697,5 +684,24 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // emit event
         emit EventsLib.ExtensionSet(extension, id, enable);
+    }
+
+    /**
+     * @notice check if collection is registered
+     * @param collection collection address
+     * @return true if collection is registered
+     */
+    function _isRegisteredCollection(address collection) internal view returns (bool) {
+        return _storage().collections.get(uint256(uint160(collection)));
+    }
+
+    /**
+     * @notice check if extension is registered
+     * @param id token id
+     * @param extension extension address
+     * @return true if extension is registered
+     */
+    function _isRegisteredExtension(uint256 id, address extension) internal view returns (bool) {
+        return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
     }
 }

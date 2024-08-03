@@ -10,8 +10,7 @@ contract DeployEditionImpl is BaseScript {
         address editionFactory,
         address collectionFactory,
         address controller,
-        address registry,
-        address currency
+        address registry
     )
         public
         broadcast
@@ -20,7 +19,7 @@ contract DeployEditionImpl is BaseScript {
         console.log("Deploying Edition implementation...\n");
 
         // deploy implementation
-        editionImpl = new RouxEdition(editionFactory, collectionFactory, controller, registry, currency);
+        editionImpl = new RouxEdition(editionFactory, collectionFactory, controller, registry);
         console.log("Edition Implementation: %s\n", address(editionImpl));
     }
 }

@@ -25,9 +25,8 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newEditionImpl = new RouxEdition(
-            address(factory), address(collectionFactory), address(controller), address(registry), address(mockUSDC)
-        );
+        IRouxEdition newEditionImpl =
+            new RouxEdition(address(factory), address(collectionFactory), address(controller), address(registry));
 
         // revert when not owner
         vm.expectRevert(abi.encodeWithSelector(OpenZeppelinOwnable.OwnableUnauthorizedAccount.selector, user));
@@ -115,9 +114,8 @@ contract UpgradeTest is BaseTest {
         assertEq(editionBeacon.implementation(), address(editionImpl));
 
         // deploy new edition implementation with updated minter array
-        IRouxEdition newEditionImpl = new RouxEdition(
-            address(factory), address(collectionFactory), address(controller), address(registry), address(mockUSDC)
-        );
+        IRouxEdition newEditionImpl =
+            new RouxEdition(address(factory), address(collectionFactory), address(controller), address(registry));
 
         // set new implementation in beacon
         vm.prank(users.deployer);

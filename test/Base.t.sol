@@ -202,8 +202,7 @@ abstract contract BaseTest is Test, Events, Defaults {
             editionFactory_: address(factory),
             collectionFactory_: address(collectionFactory),
             controller_: address(controller),
-            registry_: address(registry),
-            currency_: address(mockUSDC)
+            registry_: address(registry)
         });
 
         // upgrade edition beacon
@@ -287,14 +286,12 @@ abstract contract BaseTest is Test, Events, Defaults {
         address editionFactory_,
         address collectionFactory_,
         address controller_,
-        address registry_,
-        address currency_
+        address registry_
     )
         internal
         returns (RouxEdition rouxEditionImpl_)
     {
-        rouxEditionImpl_ =
-            RouxEdition(new RouxEdition(editionFactory_, collectionFactory_, controller_, registry_, currency_));
+        rouxEditionImpl_ = RouxEdition(new RouxEdition(editionFactory_, collectionFactory_, controller_, registry_));
         vm.label({ account: address(rouxEditionImpl_), newLabel: "RouxEditionImpl" });
     }
 

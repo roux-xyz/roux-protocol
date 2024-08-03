@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 /**
  * @title no-op roux edition
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  * @dev used to avoid circular dependencies in deployment process
  */

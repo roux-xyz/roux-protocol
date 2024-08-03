@@ -68,14 +68,14 @@ interface IRouxEdition {
      * @param extension extension address
      * @return true if extension is valid
      */
-    function isExtension(uint256 id, address extension) external view returns (bool);
+    function isRegisteredExtension(uint256 id, address extension) external view returns (bool);
 
     /**
      * @notice check if collection is valid for a collection id
      * @param collection collection address
      * @return true if collection is valid
      */
-    function isCollection(address collection) external view returns (bool);
+    function isRegisteredCollection(address collection) external view returns (bool);
 
     /**
      * @notice get default price for a token

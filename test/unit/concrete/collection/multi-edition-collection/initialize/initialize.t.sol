@@ -149,7 +149,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         params.itemIds = itemIds;
 
         // create collection
-        vm.prank(collectionAdmin);
+        vm.prank(curator);
         MultiEditionCollection collectionInstance = MultiEditionCollection(
             collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params))
         );
@@ -161,7 +161,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         assertEq(collectionInstance.price(), TOKEN_PRICE * 8);
         assertEq(collectionInstance.currency(), address(mockUSDC));
         assertEq(collectionInstance.totalSupply(), 0);
-        assertEq(collectionInstance.isExtension(address(mockExtension)), false);
+        assertEq(collectionInstance.isRegisteredExtension(address(mockExtension)), false);
         assertEq(collectionInstance.curator(), address(curator));
 
         (address[] memory itemTargets_, uint256[] memory itemIds_) = collectionInstance.collection();

@@ -55,20 +55,20 @@ contract SetCollection_RouxEdition_Integration_Concrete_Test is CollectionBase {
 
         edition.setCollection(address(singleEditionCollection), true);
 
-        assertTrue(edition.isCollection(address(singleEditionCollection)));
+        assertTrue(edition.isRegisteredCollection(address(singleEditionCollection)));
     }
 
     /// @dev set collection - disable
     function test__SetCollection_Disable() external useEditionAdmin(edition) {
         edition.setCollection(address(singleEditionCollection), true);
 
-        assertTrue(edition.isCollection(address(singleEditionCollection)));
+        assertTrue(edition.isRegisteredCollection(address(singleEditionCollection)));
 
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.CollectionSet(address(singleEditionCollection), false);
 
         edition.setCollection(address(singleEditionCollection), false);
 
-        assertFalse(edition.isCollection(address(singleEditionCollection)));
+        assertFalse(edition.isRegisteredCollection(address(singleEditionCollection)));
     }
 }

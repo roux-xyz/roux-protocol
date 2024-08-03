@@ -16,7 +16,7 @@ import { CollectionData } from "src/types/DataTypes.sol";
 /**
  * @title collection factory
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract CollectionFactory is ICollectionFactory, Initializable, Ownable, ReentrancyGuard {
@@ -151,6 +151,9 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
         // create collection instance
         address collectionInstance =
             address(new BeaconProxy(beacon, abi.encodeWithSignature("initialize(bytes)", params)));
+
+        // set curator
+        ICollection(collectionInstance).setCurator(msg.sender);
 
         // transfer ownership to caller
         Ownable(collectionInstance).transferOwnership(msg.sender);

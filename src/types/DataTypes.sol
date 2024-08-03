@@ -93,10 +93,8 @@ library CollectionData {
      * @notice single edition create params
      * @param name collection name
      * @param symbol collection symbol
-     * @param curator curator address
      * @param uri collection URI
      * @param price price
-     * @param currency currency
      * @param mintStart mint start
      * @param mintEnd mint end
      * @param itemTarget item target
@@ -105,10 +103,8 @@ library CollectionData {
     struct SingleEditionCreateParams {
         string name;
         string symbol;
-        address curator;
         string uri;
         uint128 price;
-        address currency;
         uint40 mintStart;
         uint40 mintEnd;
         address itemTarget;
@@ -129,10 +125,9 @@ library CollectionData {
      * @notice multi edition create params
      * @param name collection name
      * @param symbol collection symbol
-     * @param curator curator address
+     *
      * @param collectionFeeRecipient rewards recipient address
      * @param uri collection URI
-     * @param currency currency
      * @param mintStart mint start
      * @param mintEnd mint end
      * @param itemTargets item targets
@@ -141,10 +136,8 @@ library CollectionData {
     struct MultiEditionCreateParams {
         string name;
         string symbol;
-        address curator;
         address collectionFeeRecipient;
         string uri;
-        address currency;
         uint40 mintStart;
         uint40 mintEnd;
         address[] itemTargets;

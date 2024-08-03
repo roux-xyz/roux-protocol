@@ -58,7 +58,7 @@ contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
         vm.prank(collectionAdmin);
         singleEditionCollection.setExtension(address(mockCollectionExtension), true, "");
 
-        assertTrue(singleEditionCollection.isExtension(address(mockCollectionExtension)));
+        assertTrue(singleEditionCollection.isRegisteredExtension(address(mockCollectionExtension)));
     }
 
     /// @dev successfully sets extension - with mint params
@@ -75,7 +75,7 @@ contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
             address(mockCollectionExtension), true, abi.encode(customPrice, mintStart, mintEnd)
         );
 
-        assertTrue(singleEditionCollection.isExtension(address(mockCollectionExtension)));
+        assertTrue(singleEditionCollection.isRegisteredExtension(address(mockCollectionExtension)));
         assertEq(ICollectionExtension(address(mockCollectionExtension)).price(), customPrice);
     }
 }

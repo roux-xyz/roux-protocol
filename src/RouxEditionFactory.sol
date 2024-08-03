@@ -17,7 +17,7 @@ import { Initializable } from "solady/utils/Initializable.sol";
 /**
  * @title roux edition factory
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, ReentrancyGuard {

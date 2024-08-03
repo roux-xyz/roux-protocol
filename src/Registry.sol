@@ -15,13 +15,13 @@ import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 /**
  * @title registry
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
-    /* -------------------------------------------- */
-    /* constants                                    */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
 
     /**
      * @notice Registry storage slot
@@ -30,9 +30,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     bytes32 internal constant ROUX_REGISTRY_STORAGE_SLOT =
         0x526b27153fa869a204893bc4926da2a9c5dc034df85df1046d3f9c814a26d100;
 
-    /* -------------------------------------------- */
-    /* structures                                   */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
     /**
      * @notice registry data
@@ -55,9 +55,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         mapping(address edition => mapping(uint256 tokenId => RegistryData)) registryData;
     }
 
-    /* -------------------------------------------- */
-    /* constructor                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* constructor                                       */
+    /* ------------------------------------------------- */
 
     constructor() {
         // disable initialization of implementation contract
@@ -68,18 +68,18 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         renounceOwnership();
     }
 
-    /* -------------------------------------------- */
-    /* initializer                                  */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
 
     function initialize() external initializer nonReentrant {
         // set owner of the proxy
         _initializeOwner(msg.sender);
     }
 
-    /* -------------------------------------------- */
-    /* storage                                      */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
 
     /**
      * @notice get roux registry storage location
@@ -91,9 +91,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         }
     }
 
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* view                                              */
+    /* ------------------------------------------------- */
 
     /// @inheritdoc IRegistry
     function attribution(address edition, uint256 tokenId) external view returns (address, uint256) {
@@ -116,9 +116,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         return _hasChild(edition, tokenId);
     }
 
-    /* -------------------------------------------- */
-    /* write                                        */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* write                                             */
+    /* ------------------------------------------------- */
 
     /// @inheritdoc IRegistry
     function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external nonReentrant {
@@ -143,9 +143,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
     }
 
-    /* -------------------------------------------- */
-    /* proxy | danger zone                          */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* proxy | danger zone                               */
+    /* ------------------------------------------------- */
 
     /**
      * @notice get proxy implementation
@@ -164,9 +164,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 
-    /* -------------------------------------------- */
-    /* internal                                     */
-    /* -------------------------------------------- */
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
 
     /**
      * @notice get root edition for a given edition

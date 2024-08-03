@@ -106,4 +106,7 @@ library ErrorsLib {
 
     /// @notice only allowlist
     error CollectionFactory_OnlyAllowlist();
+
+    /// @notice collection curator already set
+    error Collection_CuratorAlreadySet();
 }
