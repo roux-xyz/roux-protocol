@@ -7,12 +7,6 @@ interface IRouxEditionFactory {
     /* ------------------------------------------------- */
 
     /**
-     * @notice get collection factory
-     * @return collection factory
-     */
-    function collectionFactory() external view returns (address);
-
-    /**
      * @notice whether the token is an edition
      * @param token token address
      * @return whether the token is an edition

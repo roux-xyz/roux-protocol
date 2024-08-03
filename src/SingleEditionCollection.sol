@@ -68,16 +68,16 @@ contract SingleEditionCollection is Collection {
      * @notice constructor
      * @param erc6551registry registry
      * @param accountImplementation initial erc6551 account implementation
-     * @param rouxEditionFactory roux edition factory
+     * @param editionFactory roux edition factory
      * @param controller controller
      */
     constructor(
         address erc6551registry,
         address accountImplementation,
-        address rouxEditionFactory,
+        address editionFactory,
         address controller
     )
-        Collection(erc6551registry, accountImplementation, rouxEditionFactory, controller)
+        Collection(erc6551registry, accountImplementation, editionFactory, controller)
     { }
 
     /* ------------------------------------------------- */

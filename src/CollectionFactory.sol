@@ -201,7 +201,7 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     }
 
     /* -------------------------------------------- */
-    /* proxy | danger zone                          */
+    /* proxy                                        */
     /* -------------------------------------------- */
 
     /**

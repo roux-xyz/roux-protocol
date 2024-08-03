@@ -44,14 +44,12 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
      * @param editions set of editions
      * @param owner owner of the contract
-     * @param collectionFactory collection factory
      * @param enableAllowlist whether to enable allowlist
      * @param allowlist allowlist of editions
      */
     struct RouxEditionFactoryStorage {
         LibBitmap.Bitmap editions;
         address owner;
-        address collectionFactory;
         bool enableAllowlist;
         mapping(address => bool) allowlist;
     }
@@ -116,11 +114,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         return _storage().editions.get(uint256(uint160(edition)));
     }
 
-    /// @inheritdoc IRouxEditionFactory
-    function collectionFactory() external view returns (address) {
-        return _storage().collectionFactory;
-    }
-
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -178,23 +171,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
      */
     function removeAllowlist(address account) external onlyOwner {
         _storage().allowlist[account] = false;
-    }
-
-    /**
-     * @notice set collection factory
-     * @param collectionFactory_ collection factory address
-     * @dev one-time setter used to avoid circular dependency
-     */
-    function setCollectionFactory(address collectionFactory_) external onlyOwner {
-        RouxEditionFactoryStorage storage $ = _storage();
-
-        // verify collection factory is not already set
-        if ($.collectionFactory != address(0)) {
-            revert ErrorsLib.RouxEditionFactory_CollectionFactoryAlreadySet();
-        }
-
-        // set collection factory
-        $.collectionFactory = collectionFactory_;
     }
 
     /* -------------------------------------------- */
