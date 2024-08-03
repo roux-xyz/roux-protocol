@@ -3,12 +3,20 @@ pragma solidity 0.8.26;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Controller } from "src/Controller.sol";
-import { BaseScript } from "./Base.s.sol";
+import { BaseScript } from "script/Base.s.sol";
 
 import "forge-std/Script.sol";
 
 contract UpgradeController is BaseScript {
-    function run(address proxyAddress, address registry, address currency) public broadcast {
+    function run(
+        address proxyAddress,
+        address registry,
+        address currency
+    )
+        public
+        broadcast
+        returns (Controller newControllerImpl)
+    {
         console.log("Deploying new Controller implementation...\n");
 
         // deploy controller implementation contract
