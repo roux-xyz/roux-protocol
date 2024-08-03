@@ -20,7 +20,7 @@ contract UpgradeController is BaseScript {
         console.log("Deploying new Controller implementation...\n");
 
         // deploy controller implementation contract
-        Controller newControllerImpl = new Controller(registry, currency);
+        newControllerImpl = new Controller(registry, currency);
 
         console.log("New Controller implementation: %s\n", address(newControllerImpl));
         console.log("Upgrading Controller proxy...\n");
