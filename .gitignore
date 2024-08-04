@@ -9,8 +9,13 @@ out/
 /broadcast/*/11155111
 broadcast/
 
+#Ignore abi files
+abi/
+
 # Docs
 docs/
 
 # Dotenv file
 .env
+
+node_modules/

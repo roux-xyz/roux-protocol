@@ -7,9 +7,16 @@
       }
     },
     {
-      "files": ["*.ts"],
+     "files": ["*.ts"],
       "options": {
-        "printWidth": 120
+        "parser": "typescript",
+        "printWidth": 100,
+        "tabWidth": 2,
+        "singleQuote": true,
+        "trailingComma": "all",
+        "bracketSpacing": true,
+        "semi": true,
+        "useTabs": false
       }
     }
   ]
