@@ -64,21 +64,21 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
 
         edition.setExtension(1, address(mockExtension), true, "");
 
-        assertTrue(edition.isExtension(1, address(mockExtension)));
+        assertTrue(edition.isRegisteredExtension(1, address(mockExtension)));
     }
 
     /// @dev successfully disables extension
     function test__DisableExtension() external useEditionAdmin(edition) {
         edition.setExtension(1, address(mockExtension), true, "");
 
-        assertTrue(edition.isExtension(1, address(mockExtension)));
+        assertTrue(edition.isRegisteredExtension(1, address(mockExtension)));
 
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.ExtensionSet(address(mockExtension), 1, false);
 
         edition.setExtension(1, address(mockExtension), false, "");
 
-        assertFalse(edition.isExtension(1, address(mockExtension)));
+        assertFalse(edition.isRegisteredExtension(1, address(mockExtension)));
     }
 
     /// @dev set extension with mint params
@@ -88,6 +88,6 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
         edition.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
 
         assertEq(mockExtension.price(address(edition), 1), customPrice);
-        assertTrue(edition.isExtension(1, address(mockExtension)));
+        assertTrue(edition.isRegisteredExtension(1, address(mockExtension)));
     }
 }

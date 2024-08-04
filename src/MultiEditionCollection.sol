@@ -6,13 +6,7 @@ import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
-
 import { Collection } from "src/abstracts/Collection.sol";
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
-import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
-
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { ERC721 } from "solady/tokens/ERC721.sol";
@@ -21,11 +15,15 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
+import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 /**
  * @title multi edition collection
- * @author roux
- * @custom:version 0.1
+ * @author rouxa
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract MultiEditionCollection is Collection {
@@ -71,16 +69,16 @@ contract MultiEditionCollection is Collection {
      * @notice constructor
      * @param erc6551registry registry
      * @param accountImplementation initial erc6551 account implementation
-     * @param rouxEditionFactory roux edition factory
+     * @param editionFactory roux edition factory
      * @param controller controller
      */
     constructor(
         address erc6551registry,
         address accountImplementation,
-        address rouxEditionFactory,
+        address editionFactory,
         address controller
     )
-        Collection(erc6551registry, accountImplementation, rouxEditionFactory, controller)
+        Collection(erc6551registry, accountImplementation, editionFactory, controller)
     { }
 
     /* ------------------------------------------------- */
@@ -110,16 +108,6 @@ contract MultiEditionCollection is Collection {
             revert ErrorsLib.Collection_InvalidCollectionSize();
         }
 
-        for (uint256 i = 0; i < p.itemIds.length; i++) {
-            // verify editions
-            if (!_editionFactory.isEdition(p.itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
-
-            // verify items
-            if (!IRouxEdition(p.itemTargets[i]).multiCollectionMintEligible(p.itemIds[i], p.currency)) {
-                revert ErrorsLib.Collection_InvalidItems();
-            }
-        }
-
         // set mintParams
         $$.mintParams = CollectionData.MultiEditionMintParams({ mintStart: p.mintStart, mintEnd: p.mintEnd });
 
@@ -133,10 +121,18 @@ contract MultiEditionCollection is Collection {
         // set state vars
         $.name = p.name;
         $.symbol = p.symbol;
-        $.curator = p.curator;
         $.uri = p.uri;
-        $.currency = p.currency;
-        $.gate = false;
+        $.currency = IController(_controller).currency();
+
+        for (uint256 i = 0; i < p.itemIds.length; ++i) {
+            // verify editions
+            if (!_editionFactory.isEdition($$.itemTargets[i])) revert ErrorsLib.Collection_InvalidItems();
+
+            // verify items
+            if (!IRouxEdition($$.itemTargets[i]).multiCollectionMintEligible($$.itemIds[i], $.currency)) {
+                revert ErrorsLib.Collection_InvalidItems();
+            }
+        }
 
         // approve controller to spend funds
         IERC20($.currency).approve(address(_controller), type(uint256).max);
@@ -165,8 +161,10 @@ contract MultiEditionCollection is Collection {
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
         uint256 total;
-        for (uint256 i = 0; i < $$.itemTargets.length; i++) {
-            total += IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
+        for (uint256 i = 0; i < $$.itemTargets.length; ++i) {
+            unchecked {
+                total += IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
+            }
         }
 
         return total;
@@ -207,7 +205,7 @@ contract MultiEditionCollection is Collection {
         returns (uint256)
     {
         if (extension != address(0)) {
-            if (!_isExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
+            if (!_isRegisteredExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
             ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
@@ -232,10 +230,13 @@ contract MultiEditionCollection is Collection {
         uint256 total;
         uint256[] memory prices = new uint256[](length);
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 price_ = IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
             prices[i] = price_;
-            total += price_;
+
+            unchecked {
+                total += price_;
+            }
         }
 
         return (total, prices);
@@ -266,7 +267,7 @@ contract MultiEditionCollection is Collection {
         uint256 totalReferralReward;
 
         // mint
-        for (uint256 i = 0; i < $$.itemTargets.length; i++) {
+        for (uint256 i = 0; i < $$.itemTargets.length; ++i) {
             address edition = $$.itemTargets[i];
             uint256 id = $$.itemIds[i];
 
@@ -278,8 +279,10 @@ contract MultiEditionCollection is Collection {
             uint256 curatorReward = ((cost - referralReward) * CURATOR_FEE) / 10_000;
 
             // increment total rewards
-            totalReferralReward += referralReward;
-            totalCuratorReward += curatorReward;
+            unchecked {
+                totalReferralReward += referralReward;
+                totalCuratorReward += curatorReward;
+            }
 
             // send funds to controller
             _controller.disburse({
@@ -294,7 +297,7 @@ contract MultiEditionCollection is Collection {
         }
 
         // record rewards
-        _controller.recordFunds(referrer, totalReferralReward);
+        if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
         _controller.recordFunds($$.collectionFeeRecipient, totalCuratorReward);
 
         return collectionTokenId;

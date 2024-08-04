@@ -16,7 +16,7 @@ import { CollectionData } from "src/types/DataTypes.sol";
 /**
  * @title collection factory
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract CollectionFactory is ICollectionFactory, Initializable, Ownable, ReentrancyGuard {
@@ -54,15 +54,15 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      * @param initialized whether the contract has been initialized
      * @param collectionImplementation collection implementation
      * @param collections set of collections
-     * @param allowlist allowlist of collections
-     * @param enableAllowlist whether to enable allowlist
+     * @param denylist denylist of accounts
+     * @param enableDenyList whether to enable denylist
      */
     struct CollectionFactoryStorage {
         bool initialized;
         address collectionImplementation;
         LibBitmap.Bitmap collections;
-        mapping(address => bool) allowlist;
-        bool enableAllowlist;
+        LibBitmap.Bitmap denylist;
+        bool enableDenyList;
     }
 
     /* ------------------------------------------------- */
@@ -135,8 +135,10 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
 
         CollectionFactoryStorage storage $ = _storage();
 
-        // verify allowlist
-        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert ErrorsLib.CollectionFactory_OnlyAllowlist();
+        // check denylist
+        if ($.enableDenyList && $.denylist.get(uint256(uint160(msg.sender)))) {
+            revert ErrorsLib.CollectionFactory_DenyList();
+        }
 
         // set which collection beacon to create
         address beacon;
@@ -151,6 +153,9 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
         // create collection instance
         address collectionInstance =
             address(new BeaconProxy(beacon, abi.encodeWithSignature("initialize(bytes)", params)));
+
+        // set curator
+        ICollection(collectionInstance).setCurator(msg.sender);
 
         // transfer ownership to caller
         Ownable(collectionInstance).transferOwnership(msg.sender);
@@ -173,35 +178,43 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /* ------------------------------------------------- */
 
     /**
-     * @notice set allowlist to enabled or disabled
-     * @param enable whether to enable allowlist
+     * @notice set denylist to enabled or disabled
+     * @param enable whether to enable denylist
      */
-    function setAllowlist(bool enable) external onlyOwner {
-        _storage().enableAllowlist = enable;
+    function setDenyList(bool enable) external onlyOwner {
+        _storage().enableDenyList = enable;
     }
 
     /**
-     * @notice add accounts to allowlist
-     * @param accounts accounts to add to allowlist
+     * @notice add account to denylist
+     * @param account account to add to denylist
      */
-    function addAllowlist(address[] memory accounts) external onlyOwner {
+    function addDenyList(address account) external onlyOwner {
+        _storage().denylist.set(uint256(uint160(account)));
+    }
+
+    /**
+     * @notice add multiple accounts to denylist
+     * @param accounts accounts to add to denylist
+     */
+    function addDenyList(address[] memory accounts) external onlyOwner {
         CollectionFactoryStorage storage $ = _storage();
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            $.allowlist[accounts[i]] = true;
+            $.denylist.set(uint256(uint160(accounts[i])));
         }
     }
 
     /**
-     * @notice remove account from allowlist
-     * @param account  acuount to remove from allowlist
+     * @notice remove account from denylist
+     * @param account account to remove from denylist
      */
-    function removeAllowlist(address account) external onlyOwner {
-        _storage().allowlist[account] = false;
+    function removeDenylist(address account) external onlyOwner {
+        _storage().denylist.unset(uint256(uint160(account)));
     }
 
     /* -------------------------------------------- */
-    /* proxy | danger zone                          */
+    /* proxy                                        */
     /* -------------------------------------------- */
 
     /**

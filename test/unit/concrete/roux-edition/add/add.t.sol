@@ -176,7 +176,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         vm.prank(creator);
         uint256 tokenId_ = edition.add(addParams);
 
-        assertTrue(edition.isExtension(tokenId_, address(mockExtension)));
+        assertTrue(edition.isRegisteredExtension(tokenId_, address(mockExtension)));
     }
 
     /// @dev token max supply is set after add

@@ -6,7 +6,7 @@ import { ERC6551 } from "solady/accounts/ERC6551.sol";
 /**
  * @title erc6551 account
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract ERC6551Account is ERC6551 {

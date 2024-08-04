@@ -6,24 +6,23 @@ import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-
+import { IController } from "src/interfaces/IController.sol";
 import { Collection } from "src/abstracts/Collection.sol";
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
-import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
-
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
  * @title single edition collection
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract SingleEditionCollection is Collection {
@@ -68,16 +67,16 @@ contract SingleEditionCollection is Collection {
      * @notice constructor
      * @param erc6551registry registry
      * @param accountImplementation initial erc6551 account implementation
-     * @param rouxEditionFactory roux edition factory
+     * @param editionFactory roux edition factory
      * @param controller controller
      */
     constructor(
         address erc6551registry,
         address accountImplementation,
-        address rouxEditionFactory,
+        address editionFactory,
         address controller
     )
-        Collection(erc6551registry, accountImplementation, rouxEditionFactory, controller)
+        Collection(erc6551registry, accountImplementation, editionFactory, controller)
     { }
 
     /* ------------------------------------------------- */
@@ -118,10 +117,8 @@ contract SingleEditionCollection is Collection {
         // set collection state vars
         $.name = p.name;
         $.symbol = p.symbol;
-        $.curator = p.curator;
         $.uri = p.uri;
-        $.currency = p.currency;
-        $.gate = false;
+        $.currency = IController(_controller).currency();
 
         // approve controller to spend funds
         IERC20($.currency).approve(address(_controller), type(uint256).max);
@@ -159,7 +156,7 @@ contract SingleEditionCollection is Collection {
 
         // collection expects equal length arrays of addresses and ids
         address[] memory itemTargets = new address[](itemIds.length);
-        for (uint256 i = 0; i < itemIds.length; i++) {
+        for (uint256 i = 0; i < itemIds.length; ++i) {
             itemTargets[i] = $$.itemTarget;
         }
 
@@ -182,19 +179,19 @@ contract SingleEditionCollection is Collection {
         nonReentrant
         returns (uint256)
     {
-        uint128 cost;
+        uint128 price_;
         if (extension != address(0)) {
-            if (!_isExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
-            cost = ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
+            if (!_isRegisteredExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
+            price_ = ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
             if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();
 
             // set cost ~ only single edition collections have a price set in storage
-            cost = _singleEditionCollectionStorage().mintParams.price;
+            price_ = _singleEditionCollectionStorage().mintParams.price;
         }
 
-        return _mint(to, referrer, cost);
+        return _mint(to, referrer, price_);
     }
 
     /* ------------------------------------------------- */
@@ -242,7 +239,7 @@ contract SingleEditionCollection is Collection {
         // validate tokens + disburse funds
         uint256 derivedPrice = cost / itemIds.length;
         uint256 currentValue = cost;
-        for (uint256 i = 0; i < itemIds.length; i++) {
+        for (uint256 i = 0; i < itemIds.length; ++i) {
             // cache id
             uint256 id = itemIds[i];
 

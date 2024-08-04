@@ -34,7 +34,6 @@ abstract contract CollectionBase is BaseTest {
     // single edition collection
     uint256[] singleEditionCollectionIds;
     uint256[] singleEditionCollectionQuantities;
-    uint256 collectionId;
     SingleEditionCollection singleEditionCollection;
 
     // single edition collection create params
@@ -57,76 +56,89 @@ abstract contract CollectionBase is BaseTest {
 
     function setUp() public virtual override {
         BaseTest.setUp();
-
-        // set agents
-        collectionAdmin = address(creator);
-        curator = address(users.curator_0);
-
-        vm.prank(users.deployer);
-        collectionFactory.setAllowlist(false);
-
-        // set single edition collection params
-        singleEditionCollectionParams = CollectionData.SingleEditionCreateParams({
-            name: COLLECTION_NAME,
-            symbol: COLLECTION_SYMBOL,
-            curator: address(collectionAdmin),
-            uri: COLLECTION_URI,
-            price: SINGLE_EDITION_COLLECTION_PRICE,
-            currency: address(mockUSDC),
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp + MINT_DURATION),
-            itemTarget: address(edition),
-            itemIds: singleEditionCollectionIds
-        });
-
-        // create single edition collection
-        (singleEditionCollectionIds, singleEditionCollectionQuantities, singleEditionCollection) =
-            _createSingleEditionCollection(edition, NUM_TOKENS_SINGLE_EDITION_COLLECTION);
-
-        collectionId = _encodeCollectionId(singleEditionCollectionIds);
-
-        vm.prank(collectionAdmin);
-        edition.setCollection(address(singleEditionCollection), true);
-
-        _approveToken(address(singleEditionCollection), user);
-
-        // create multi edition collection
-        multiEditionItemTargets[0] = _createEdition(creator);
-        multiEditionItemTargets[1] = _createEdition(users.creator_1);
-        multiEditionItemTargets[2] = _createEdition(users.creator_2);
-
-        _addToken(multiEditionItemTargets[0]);
-        _addToken(multiEditionItemTargets[1]);
-        _addToken(multiEditionItemTargets[2]);
-
-        multiEditionItemIds[0] = 1;
-        multiEditionItemIds[1] = 1;
-        multiEditionItemIds[2] = 1;
-
-        // create multi edition collection params
-        multiEditionCollectionParams = CollectionData.MultiEditionCreateParams({
-            name: COLLECTION_NAME,
-            symbol: COLLECTION_SYMBOL,
-            curator: address(curator),
-            collectionFeeRecipient: address(curator),
-            uri: COLLECTION_URI,
-            currency: address(mockUSDC),
-            mintStart: uint40(block.timestamp),
-            mintEnd: uint40(block.timestamp + MINT_DURATION),
-            itemTargets: _convertToAddressArray(multiEditionItemTargets),
-            itemIds: multiEditionItemIds
-        });
-
-        multiEditionCollection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
-
-        mockCollectionExtension = new MockCollectionExtension();
-
-        _approveToken(address(multiEditionCollection), user);
+        _setupAgents();
+        _setupSingleEditionCollection();
+        _setupMultiEditionCollection();
+        _setupMockCollectionExtension();
     }
 
     /* -------------------------------------------- */
     /* utility functions                            */
     /* -------------------------------------------- */
+
+    /// @dev setup agents
+    function _setupAgents() internal {
+        collectionAdmin = address(creator);
+        curator = address(users.curator_0);
+
+        vm.prank(users.deployer);
+    }
+
+    /// @dev setup single edition collection
+    function _setupSingleEditionCollection() internal {
+        _setSingleEditionCollectionParams();
+
+        (singleEditionCollectionIds, singleEditionCollectionQuantities, singleEditionCollection) =
+            _createSingleEditionCollection(edition, NUM_TOKENS_SINGLE_EDITION_COLLECTION);
+
+        vm.prank(collectionAdmin);
+        edition.setCollection(address(singleEditionCollection), true);
+
+        _approveToken(address(singleEditionCollection), user);
+    }
+
+    /// @dev setup multi edition collection
+    function _setupMultiEditionCollection() internal {
+        _createMultiEditionItems();
+
+        _setMultiEditionCollectionParams();
+        multiEditionCollection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
+        _approveToken(address(multiEditionCollection), user);
+    }
+
+    /// @dev setup mock collection extension
+    function _setupMockCollectionExtension() internal {
+        mockCollectionExtension = new MockCollectionExtension();
+    }
+
+    /// @dev set single edition collection params
+    function _setSingleEditionCollectionParams() internal {
+        singleEditionCollectionParams = CollectionData.SingleEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            uri: COLLECTION_URI,
+            price: SINGLE_EDITION_COLLECTION_PRICE,
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTarget: address(edition),
+            itemIds: singleEditionCollectionIds
+        });
+    }
+
+    /// @dev create multi edition items
+    function _createMultiEditionItems() internal {
+        multiEditionItemTargets[0] = _createEdition(creator);
+        multiEditionItemTargets[1] = _createEdition(users.creator_1);
+        multiEditionItemTargets[2] = _createEdition(users.creator_2);
+
+        (, multiEditionItemIds[0]) = _addToken(multiEditionItemTargets[0]);
+        (, multiEditionItemIds[1]) = _addToken(multiEditionItemTargets[1]);
+        (, multiEditionItemIds[2]) = _addToken(multiEditionItemTargets[2]);
+    }
+
+    /// @dev set multi edition collection params
+    function _setMultiEditionCollectionParams() internal {
+        multiEditionCollectionParams = CollectionData.MultiEditionCreateParams({
+            name: COLLECTION_NAME,
+            symbol: COLLECTION_SYMBOL,
+            collectionFeeRecipient: address(curator),
+            uri: COLLECTION_URI,
+            mintStart: uint40(block.timestamp),
+            mintEnd: uint40(block.timestamp + MINT_DURATION),
+            itemTargets: _convertToAddressArray(multiEditionItemTargets),
+            itemIds: multiEditionItemIds
+        });
+    }
 
     /// @dev create single edition collection
     function _createSingleEditionCollection(

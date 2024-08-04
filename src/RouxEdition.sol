@@ -9,12 +9,6 @@ import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
-
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -24,13 +18,15 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
-
 import { EditionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
  * @title roux edition
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
@@ -60,6 +56,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /// @notice controller
     IController internal immutable _controller;
 
+    /// @notice edition factory
+    IRouxEditionFactory internal immutable _editionFactory;
+
+    /// @notice collection factory
+    ICollectionFactory internal immutable _collectionFactory;
+
     /**
      * @notice base currency
      * @dev see note {Controller-_currency}
@@ -75,16 +77,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @custom:storage-location erc7201:rouxEdition.rouxEditionStorages
      * @param tokenId current token id
      * @param contractURI contract uri
-     * @param editionFactory edition factory
-     * @param collectionFactory collection factory
      * @param collections mapping of enabled collections
      * @param tokens mapping of token id to token data
      */
     struct RouxEditionStorage {
         uint256 tokenId;
         string contractURI;
-        IRouxEditionFactory editionFactory;
-        ICollectionFactory collectionFactory;
         LibBitmap.Bitmap collections;
         mapping(uint256 tokenId => EditionData.TokenData tokenData) tokens;
     }
@@ -97,23 +95,19 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @notice constructor
      * @param controller controller
      * @param registry registry
-     * @param currency_ currency
      */
-    constructor(address controller, address registry, address currency_) {
+    constructor(address editionFactory, address collectionFactory, address controller, address registry) {
         // disable initializers
         _disableInitializers();
 
-        // set owner
+        // factory will transfer ownership to its caller
         _initializeOwner(msg.sender);
 
-        // set controller
+        _editionFactory = IRouxEditionFactory(editionFactory);
+        _collectionFactory = ICollectionFactory(collectionFactory);
         _controller = IController(controller);
-
-        // set registry
         _registry = IRegistry(registry);
-
-        // set currency
-        _currency = currency_;
+        _currency = IController(_controller).currency();
 
         // renounce ownership of implementation contract
         renounceOwnership();
@@ -132,12 +126,6 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // editionFactory transfers ownership to caller after initialization
         _initializeOwner(msg.sender);
-
-        // set edition factory
-        $.editionFactory = IRouxEditionFactory(msg.sender);
-
-        // set collection factory
-        $.collectionFactory = ICollectionFactory(IRouxEditionFactory(msg.sender).collectionFactory());
 
         // approve controller
         _currency.safeApprove(address(_controller), type(uint256).max);
@@ -216,13 +204,13 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /// @inheritdoc IRouxEdition
-    function isExtension(uint256 id, address extension) external view returns (bool) {
-        return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
+    function isRegisteredExtension(uint256 id, address extension) external view returns (bool) {
+        return _isRegisteredExtension(id, extension);
     }
 
     /// @inheritdoc IRouxEdition
-    function isCollection(address collection) external view returns (bool) {
-        return _storage().collections.get(uint256(uint160(collection)));
+    function isRegisteredCollection(address collection) external view returns (bool) {
+        return _isRegisteredCollection(collection);
     }
 
     /// @inheritdoc IRouxEdition
@@ -301,9 +289,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         uint256[] memory prices = new uint256[](ids.length);
 
         // process mints to validate and get total prices
-        for (uint256 i = 0; i < ids.length; i++) {
+        for (uint256 i = 0; i < ids.length; ++i) {
             prices[i] = _preProcessDirectMint(to, ids[i], quantities[i], extensions[i]);
-            totalPrice += prices[i];
+
+            unchecked {
+                totalPrice += prices[i];
+            }
         }
 
         if (totalPrice > 0) {
@@ -311,7 +302,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             _currency.safeTransferFrom(msg.sender, address(this), totalPrice);
 
             // disburse funds to controller
-            for (uint256 i = 0; i < ids.length; i++) {
+            for (uint256 i = 0; i < ids.length; ++i) {
                 if (prices[i] > 0) {
                     _controller.disburse({ edition: address(this), id: ids[i], amount: prices[i], referrer: referrer });
                 }
@@ -331,10 +322,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         payable
         nonReentrant
     {
-        RouxEditionStorage storage $ = _storage();
-
         // validate caller
-        if (!$.collections.get(uint256(uint160(msg.sender)))) revert ErrorsLib.RouxEdition_InvalidCaller();
+        if (!_isRegisteredCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         // create quantities array + update total supply
         uint256[] memory quantities = new uint256[](ids.length);
@@ -348,10 +337,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable nonReentrant {
-        RouxEditionStorage storage $ = _storage();
-
         // validate caller is a multi-edition collection
-        if (!$.collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
+        if (!_collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         _validateMint(id, 1);
         _incrementTotalSupply(id, 1);
@@ -383,10 +370,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // set token data
         d.uri = p.tokenUri;
-        d.maxSupply = p.maxSupply == 0 ? type(uint128).max : p.maxSupply.toUint128();
+        d.maxSupply = p.maxSupply.toUint128();
         d.creator = msg.sender;
 
-        // set controller data ~ funds recipient
+        // set controller data
         _controller.setControllerData(id, p.fundsRecipient, p.profitShare.toUint16());
 
         // optionally set registry data
@@ -423,7 +410,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // current uri
         string memory currentUri = _storage().tokens[id].uri;
 
-        // verify child of existing metadata has not already been created
+        // verify child using existing metadata has not already been created
         if (bytes(currentUri).length > 0 && _registry.hasChild(address(this), id)) {
             revert ErrorsLib.RouxEdition_UriFrozen();
         }
@@ -488,7 +475,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param enable enable or disable collection
      *
      * @dev bypases validation that token is ungated and exists; frontends should
-     *      validate that token exists before calling this function
+     *      validate that token exists before calling this function as convenience
      */
     function setCollection(address collection, bool enable) external onlyOwner {
         // validate collection
@@ -551,7 +538,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /* ------------------------------------------------- */
-    /* erc165 interface                                */
+    /* erc165 interface                                  */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IERC165
@@ -609,6 +596,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param id token id
      * @param quantity quantity
      * @param extension extension
+     * @return price
      */
     function _getPrice(address to, uint256 id, uint256 quantity, address extension) internal returns (uint256 price) {
         EditionData.TokenData storage d = _storage().tokens[id];
@@ -617,7 +605,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
             price = d.mintParams.defaultPrice * quantity;
         } else {
-            if (!d.extensions.get(uint256(uint160(extension)))) revert ErrorsLib.RouxEdition_InvalidExtension();
+            if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             price = IEditionExtension(extension).approveMint({
                 id: id,
@@ -649,7 +637,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     function _setRegistryData(uint256 id, address parentEdition, uint256 parentTokenId) internal {
         // revert if not an edition or not a valid token, or edition is self
         if (
-            !_storage().editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
+            !_editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
                 || parentEdition == address(this)
         ) {
             revert ErrorsLib.RouxEdition_InvalidAttribution();
@@ -697,5 +685,24 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // emit event
         emit EventsLib.ExtensionSet(extension, id, enable);
+    }
+
+    /**
+     * @notice check if collection is registered
+     * @param collection collection address
+     * @return true if collection is registered
+     */
+    function _isRegisteredCollection(address collection) internal view returns (bool) {
+        return _storage().collections.get(uint256(uint160(collection)));
+    }
+
+    /**
+     * @notice check if extension is registered
+     * @param id token id
+     * @param extension extension address
+     * @return true if extension is registered
+     */
+    function _isRegisteredExtension(uint256 id, address extension) internal view returns (bool) {
+        return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
     }
 }

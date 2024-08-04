@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity ^0.8.26;
 
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
@@ -52,7 +52,7 @@ interface ICollection is IERC165 {
      * @param extension extension address
      * @return true if extension is enabled
      */
-    function isExtension(address extension) external view returns (bool);
+    function isRegisteredExtension(address extension) external view returns (bool);
 
     /**
      * @notice check if collection is gated
@@ -77,4 +77,15 @@ interface ICollection is IERC165 {
      *      reverts if insufficient funds are provided)
      */
     function mint(address to, address extension, address referrer, bytes calldata data) external returns (uint256);
+
+    /* -------------------------------------------- */
+    /* admin                                        */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice one time setter for curator
+     * @param curator_ curator address
+     * @dev called by collection factory on initialization
+     */
+    function setCurator(address curator_) external;
 }

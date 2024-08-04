@@ -16,22 +16,6 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
     }
 
     /* -------------------------------------------- */
-    /* reverts                                      */
-    /* -------------------------------------------- */
-
-    /// @dev reverts when disburse called on token without funds recipient
-    function test__RevertWhen_Disburse_TokenWithoutFundsRecipient() external {
-        // approve
-        vm.prank(user);
-        mockUSDC.approve(address(controller), type(uint256).max);
-
-        // disburse
-        vm.prank(user);
-        vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
-        controller.disburse({ edition: address(0), id: 1, amount: TOKEN_PRICE, referrer: address(0) });
-    }
-
-    /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 

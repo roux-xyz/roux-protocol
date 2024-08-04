@@ -18,10 +18,11 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 /**
  * @title Collection
- * @custom:version 0.1
+ * @custom:version 1.0
  */
 abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
@@ -85,7 +86,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
 
     /**
      * @notice constructor
-     * @param erc6551registry registry
+     * @param erc6551registry erc6551 registry
      * @param accountImplementation erc6551 account implementation
      * @param editionFactory roux edition factory
      * @param controller controller
@@ -94,16 +95,9 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         // disable initialization of implementation contract
         _disableInitializers();
 
-        // set erc6551 registry
         _erc6551Registry = IERC6551Registry(erc6551registry);
-
-        // set initial erc6551 account implementation
         _accountImplementation = accountImplementation;
-
-        // set roux edition factory
         _editionFactory = IRouxEditionFactory(editionFactory);
-
-        // set controller
         _controller = IController(controller);
     }
 
@@ -112,7 +106,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     /* ------------------------------------------------- */
 
     /**
-     * @notice Get Collection storage location
+     * @notice get collection storage location
      * @return $ Collection storage location
      */
     function _collectionStorage() internal pure returns (CollectionStorage storage $) {
@@ -167,8 +161,8 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     }
 
     /// @inheritdoc ICollection
-    function isExtension(address extension_) external view returns (bool) {
-        return _isExtension(extension_);
+    function isRegisteredExtension(address extension_) external view returns (bool) {
+        return _isRegisteredExtension(extension_);
     }
 
     /// @inheritdoc ICollection
@@ -194,6 +188,17 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     /* ------------------------------------------------- */
     /* admin                                             */
     /* ------------------------------------------------- */
+
+    /// @inheritdoc ICollection
+    function setCurator(address curator_) external onlyOwner {
+        CollectionStorage storage $ = _collectionStorage();
+
+        if ($.curator == address(0)) {
+            $.curator = curator_;
+        } else {
+            revert ErrorsLib.Collection_CuratorAlreadySet();
+        }
+    }
 
     /**
      * @notice sets or unsets an extension for a collection
@@ -271,7 +276,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      */
     function _mintTba(address to, uint256 id, bytes32 salt) internal returns (address) {
         // mint collection nft
-        super._mint(to, id);
+        _mint(to, id);
 
         // create erc6551 token bound account
         address account = _erc6551Registry.createAccount(_accountImplementation, salt, block.chainid, address(this), id);
@@ -287,7 +292,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @param extension extension address
      * @return true if extension is valid
      */
-    function _isExtension(address extension) internal view returns (bool) {
+    function _isRegisteredExtension(address extension) internal view returns (bool) {
         return _collectionStorage().extensions.get(uint256(uint160(extension)));
     }
 
@@ -295,9 +300,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     /* erc165 interface                                */
     /* ------------------------------------------------- */
 
-    /**
-     * @inheritdoc IERC165
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
         return interfaceId == type(ICollection).interfaceId || super.supportsInterface(interfaceId);
     }

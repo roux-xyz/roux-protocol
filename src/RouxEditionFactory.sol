@@ -3,21 +3,19 @@ pragma solidity 0.8.26;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 
 /**
  * @title roux edition factory
  * @author roux
- * @custom:version 0.1
+ * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
 contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, ReentrancyGuard {
@@ -44,16 +42,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
      * @param editions set of editions
      * @param owner owner of the contract
-     * @param collectionFactory collection factory
-     * @param enableAllowlist whether to enable allowlist
-     * @param allowlist allowlist of editions
+     * @param enableDenyList whether to enable denylist
+     * @param denylist denylist of editions
      */
     struct RouxEditionFactoryStorage {
         LibBitmap.Bitmap editions;
         address owner;
-        address collectionFactory;
-        bool enableAllowlist;
-        mapping(address => bool) allowlist;
+        bool enableDenyList;
+        LibBitmap.Bitmap denylist;
     }
 
     /* -------------------------------------------- */
@@ -116,11 +112,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         return _storage().editions.get(uint256(uint160(edition)));
     }
 
-    /// @inheritdoc IRouxEditionFactory
-    function collectionFactory() external view returns (address) {
-        return _storage().collectionFactory;
-    }
-
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -129,8 +120,10 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        // check allowlist
-        if ($.enableAllowlist && !$.allowlist[msg.sender]) revert ErrorsLib.RouxEdition_OnlyAllowlist();
+        // check denylist
+        if ($.enableDenyList && $.denylist.get(uint256(uint160(msg.sender)))) {
+            revert ErrorsLib.RouxEditionFactory_DenyList();
+        }
 
         // create edition instance
         address editionInstance =
@@ -153,48 +146,39 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /* -------------------------------------------- */
 
     /**
-     * @notice set allowlist to enabled or disabled
-     * @param enable whether to enable allowlist
+     * @notice set denylist to enabled or disabled
+     * @param enable whether to enable denylist
      */
-    function setAllowlist(bool enable) external onlyOwner {
-        _storage().enableAllowlist = enable;
+    function setDenyList(bool enable) external onlyOwner {
+        _storage().enableDenyList = enable;
     }
 
     /**
-     * @notice add accounts to allowlist
-     * @param accounts accounts to add to allowlist
+     * @notice add account to denylist
+     * @param account  account to add to denylist
      */
-    function addAllowlist(address[] memory accounts) external onlyOwner {
+    function addDenyList(address account) external onlyOwner {
+        _storage().denylist.set(uint256(uint160(account)));
+    }
+
+    /**
+     * @notice overload add accounts to denylist
+     * @param accounts accounts to add to denylist
+     */
+    function addDenyList(address[] memory accounts) external onlyOwner {
         RouxEditionFactoryStorage storage $ = _storage();
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            $.allowlist[accounts[i]] = true;
+            $.denylist.set(uint256(uint160(accounts[i])));
         }
     }
 
     /**
-     * @notice remove account from allowlist
-     * @param account  acuount to remove from allowlist
+     * @notice remove account from denylist
+     * @param account  acuount to remove from denylist
      */
-    function removeAllowlist(address account) external onlyOwner {
-        _storage().allowlist[account] = false;
-    }
-
-    /**
-     * @notice set collection factory
-     * @param collectionFactory_ collection factory address
-     * @dev one-time setter used to avoid circular dependency
-     */
-    function setCollectionFactory(address collectionFactory_) external onlyOwner {
-        RouxEditionFactoryStorage storage $ = _storage();
-
-        // verify collection factory is not already set
-        if ($.collectionFactory != address(0)) {
-            revert ErrorsLib.RouxEditionFactory_CollectionFactoryAlreadySet();
-        }
-
-        // set collection factory
-        $.collectionFactory = collectionFactory_;
+    function removeDenylist(address account) external onlyOwner {
+        _storage().denylist.unset(uint256(uint160(account)));
     }
 
     /* -------------------------------------------- */

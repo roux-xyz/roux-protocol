@@ -89,7 +89,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
         assertEq(collectionInstance.price(), SINGLE_EDITION_COLLECTION_PRICE + 888);
         assertEq(collectionInstance.currency(), address(mockUSDC));
         assertEq(collectionInstance.totalSupply(), 0);
-        assertEq(collectionInstance.isExtension(address(mockExtension)), false);
+        assertEq(collectionInstance.isRegisteredExtension(address(mockExtension)), false);
         assertEq(collectionInstance.curator(), address(collectionAdmin));
 
         (address[] memory itemTargets, uint256[] memory itemIds_) = collectionInstance.collection();

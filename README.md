@@ -32,6 +32,10 @@ run `anvil` in a different terminal window
 
 `0x000000006551c19487814612e58FE06813775758`
 
+### base sepolia usdc
+
+`0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+
 ### Using cast to make calls
 
 **Set up Contract Address env vars**

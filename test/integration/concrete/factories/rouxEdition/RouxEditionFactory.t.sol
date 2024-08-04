@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import { BaseTest } from "./Base.t.sol";
+import { BaseTest } from "test/Base.t.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
@@ -17,26 +17,25 @@ contract RouxEditionFactoryTest is BaseTest {
         BaseTest.setUp();
     }
 
-    /// @dev only allowlist
-    function test__RevertWhen_OnlyAllowlist() external {
+    /// @dev revert when denylisted
+    function test__RevertWhen_Denylisted() external {
         bytes memory params = abi.encode(CONTRACT_URI);
 
-        vm.prank(users.deployer);
-        factory.setAllowlist(true);
+        vm.startPrank(users.deployer);
+        factory.setDenyList(true);
+        factory.addDenyList(user);
+        vm.stopPrank();
 
         vm.prank(user);
-        vm.expectRevert(ErrorsLib.RouxEdition_OnlyAllowlist.selector);
+        vm.expectRevert(ErrorsLib.RouxEditionFactory_DenyList.selector);
         RouxEdition(factory.create(params));
     }
 
-    /// @dev only owner can add allowlist
-    function test__RevertWhen_OnlyOwner_AddAllowlist() external {
-        address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_1;
-
+    /// @dev only owner can add to denylist
+    function test__RevertWhen_OnlyOwner_AddToDenylist() external {
         vm.prank(creator);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        factory.addAllowlist(allowlist);
+        factory.addDenyList(users.creator_1);
     }
 
     /// @dev already initialized
@@ -59,10 +58,13 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.owner(), address(users.deployer));
     }
 
-    /// @dev disable allowlist
-    function test__DisableAllowlist() external {
-        vm.prank(users.deployer);
-        factory.setAllowlist(false);
+    /// @dev disable denylist
+    function test__DisableDenylist() external {
+        vm.startPrank(users.deployer);
+        factory.setDenyList(true);
+        factory.addDenyList(user);
+        factory.setDenyList(false);
+        vm.stopPrank();
 
         vm.prank(user);
         bytes memory params = abi.encode(CONTRACT_URI);
@@ -79,39 +81,32 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.owner(), address(creator));
     }
 
-    /// @dev add allowlist
-    function test__AddAllowlist() external {
-        address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_2;
+    /// @dev add to denylist
+    function test__AddToDenylist() external {
+        vm.startPrank(users.deployer);
+        factory.setDenyList(true);
+        factory.addDenyList(users.creator_2);
+        vm.stopPrank();
 
-        vm.prank(users.deployer);
-        RouxEditionFactory(factory).addAllowlist(allowlist);
+        vm.prank(users.creator_2);
+        bytes memory params = abi.encode(CONTRACT_URI);
+        vm.expectRevert(ErrorsLib.RouxEditionFactory_DenyList.selector);
+        factory.create(params);
+    }
+
+    /// @dev remove from denylist
+    function test__RemoveFromDenylist() external {
+        vm.startPrank(users.deployer);
+        factory.setDenyList(true);
+        factory.addDenyList(users.creator_2);
+        factory.removeDenylist(users.creator_2);
+        vm.stopPrank();
 
         vm.prank(users.creator_2);
         bytes memory params = abi.encode(CONTRACT_URI);
         address newEdition = factory.create(params);
 
         assertEq(factory.isEdition(newEdition), true);
-    }
-
-    /// @dev remove allowlist
-    function test__RemoveAllowlist() external {
-        address[] memory allowlist = new address[](1);
-        allowlist[0] = users.creator_2;
-
-        vm.prank(users.deployer);
-        RouxEditionFactory(factory).addAllowlist(allowlist);
-
-        vm.prank(users.deployer);
-        RouxEditionFactory(factory).removeAllowlist(users.creator_2);
-
-        bytes memory params = abi.encode(CONTRACT_URI);
-        vm.startPrank(users.creator_2);
-        address newEdition = factory.create(params);
-
-        assertEq(factory.isEdition(newEdition), true);
-
-        vm.stopPrank();
     }
 
     /// @dev create
@@ -140,12 +135,10 @@ contract RouxEditionFactoryTest is BaseTest {
 
     /// @dev get editions
     function test__getEditions() external {
-        address[] memory allowlist = new address[](2);
-        allowlist[0] = users.creator_1;
-        allowlist[1] = users.creator_2;
-
-        vm.prank(users.deployer);
-        RouxEditionFactory(factory).addAllowlist(allowlist);
+        vm.startPrank(users.deployer);
+        factory.setDenyList(true);
+        factory.addDenyList(users.user_0);
+        vm.stopPrank();
 
         address[] memory editions = new address[](3);
         bytes memory params = abi.encode(CONTRACT_URI);
@@ -158,6 +151,10 @@ contract RouxEditionFactoryTest is BaseTest {
 
         vm.prank(users.creator_2);
         editions[2] = factory.create(params);
+
+        for (uint256 i = 0; i < 3; i++) {
+            assertEq(factory.isEdition(editions[i]), true);
+        }
     }
 
     /// @dev upgrade factory

@@ -14,6 +14,7 @@ import { Registry } from "src/Registry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
+import { NoOp } from "src/NoOp.sol";
 
 import { ERC6551Account } from "src/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
@@ -71,6 +72,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     Controller internal controller;
 
     // edition
+    NoOp internal noOpImpl;
     RouxEdition internal editionImpl;
     UpgradeableBeacon internal editionBeacon;
     RouxEdition internal edition;
@@ -147,18 +149,14 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy controller
         controller = _deployController(address(registry), address(mockUSDC));
 
+        // deploy no-op implementation
+        noOpImpl = _deployNoOpImpl();
+
         // deploy token bound contracts
         (erc6551Registry, accountImpl) = _deployTokenBoundContracts();
 
-        // deploy roux edition impl
-        editionImpl = _deployEditionImpl({
-            controller_: address(controller),
-            registry_: address(registry),
-            currency_: address(mockUSDC)
-        });
-
         // deploy roux edition beacon
-        editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(editionImpl) });
+        editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(noOpImpl) });
 
         // deploy roux edition factory impl
         factoryImpl = _deployEditionFactoryImpl({ editionBeacon_: address(editionBeacon) });
@@ -199,8 +197,16 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy collection factory proxy
         collectionFactory = _deployCollectionFactoryProxy({ collectionFactoryImpl_: address(collectionFactoryImpl) });
 
-        // set collection factory address on  roux edition factory
-        factory.setCollectionFactory(address(collectionFactory));
+        // deploy roux edition impl
+        editionImpl = _deployEditionImpl({
+            editionFactory_: address(factory),
+            collectionFactory_: address(collectionFactory),
+            controller_: address(controller),
+            registry_: address(registry)
+        });
+
+        // upgrade edition beacon
+        editionBeacon.upgradeTo(address(editionImpl));
 
         vm.stopPrank();
 
@@ -260,6 +266,12 @@ abstract contract BaseTest is Test, Events, Defaults {
         vm.label({ account: address(controller_), newLabel: "ControllerProxy" });
     }
 
+    /// @dev deploy no-op implementation
+    function _deployNoOpImpl() internal returns (NoOp noOpImpl_) {
+        noOpImpl_ = new NoOp();
+        vm.label({ account: address(noOpImpl_), newLabel: "NoOpImpl" });
+    }
+
     /// @dev deploy token bound contracts
     function _deployTokenBoundContracts() internal returns (ERC6551Registry registry_, ERC6551Account accountImpl_) {
         registry_ = new ERC6551Registry();
@@ -271,14 +283,15 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev deploy edition implementation
     function _deployEditionImpl(
+        address editionFactory_,
+        address collectionFactory_,
         address controller_,
-        address registry_,
-        address currency_
+        address registry_
     )
         internal
         returns (RouxEdition rouxEditionImpl_)
     {
-        rouxEditionImpl_ = RouxEdition(new RouxEdition(controller_, registry_, currency_));
+        rouxEditionImpl_ = RouxEdition(new RouxEdition(editionFactory_, collectionFactory_, controller_, registry_));
         vm.label({ account: address(rouxEditionImpl_), newLabel: "RouxEditionImpl" });
     }
 
