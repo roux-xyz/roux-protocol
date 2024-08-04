@@ -7,19 +7,17 @@ import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
-
 import { Collection } from "src/abstracts/Collection.sol";
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
-import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
-
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
  * @title single edition collection

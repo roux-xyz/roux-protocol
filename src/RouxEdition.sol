@@ -19,9 +19,9 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
  * @title roux edition

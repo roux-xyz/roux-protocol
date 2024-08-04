@@ -3,16 +3,14 @@ pragma solidity 0.8.26;
 
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
 
 /**
  * @title roux edition factory

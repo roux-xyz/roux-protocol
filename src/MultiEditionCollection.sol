@@ -6,13 +6,7 @@ import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
-
 import { Collection } from "src/abstracts/Collection.sol";
-import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { EventsLib } from "src/libraries/EventsLib.sol";
-import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
-import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
-
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
 import { ERC721 } from "solady/tokens/ERC721.sol";
@@ -21,6 +15,10 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { EventsLib } from "src/libraries/EventsLib.sol";
+import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
+import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 /**
  * @title multi edition collection
