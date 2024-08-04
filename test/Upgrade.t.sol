@@ -2,15 +2,12 @@
 pragma solidity 0.8.26;
 
 import { BaseTest } from "./Base.t.sol";
-
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-
 import { Ownable as OpenZeppelinOwnable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-
 import { Controller } from "src/Controller.sol";
 import { Registry } from "src/Registry.sol";
 import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
@@ -20,6 +17,7 @@ contract UpgradeTest is BaseTest {
         BaseTest.setUp();
     }
 
+    /// @dev revert when not owner
     function test__RevertWhen_UpgradeEdition_OnlyOwner() external {
         // assert current implementation
         assertEq(editionBeacon.implementation(), address(editionImpl));
@@ -34,6 +32,7 @@ contract UpgradeTest is BaseTest {
         editionBeacon.upgradeTo(address(newEditionImpl));
     }
 
+    /// @dev revert when not owner
     function test__RevertWhen_UpgradeController_OnlyOwner() external {
         // assert current implementation
         assertEq(controller.getImplementation(), address(controllerImpl));
@@ -46,6 +45,7 @@ contract UpgradeTest is BaseTest {
         controller.upgradeToAndCall(address(newControllerImpl), "");
     }
 
+    /// @dev revert when attempting to initialize previously initialized contract
     function test__RevertWhen_UpgradeController_AttemptInitialization() external {
         // assert current implementation
         assertEq(controller.getImplementation(), address(controllerImpl));
@@ -59,6 +59,7 @@ contract UpgradeTest is BaseTest {
         controller.upgradeToAndCall(address(newControllerImpl), initData);
     }
 
+    /// @dev revert when not owner
     function test__RevertWhen_UpgradeRegistry_OnlyOwner() external {
         // assert current implementation
         assertEq(registry.getImplementation(), address(registryImpl));
@@ -71,6 +72,7 @@ contract UpgradeTest is BaseTest {
         registry.upgradeToAndCall(address(newRegistryImpl), "");
     }
 
+    /// @dev revert when attempting to initialize previously initialized contract
     function test__RevertWhen_UpgradeRegistry_AttemptInitialization() external {
         // assert current implementation
         assertEq(registry.getImplementation(), address(registryImpl));
@@ -84,6 +86,7 @@ contract UpgradeTest is BaseTest {
         registry.upgradeToAndCall(address(newRegistryImpl), initData);
     }
 
+    /// @dev revert when not owner
     function test__RevertWhen_UpgradeRouxEditionFactory_OnlyOwner() external {
         // assert current implementation
         assertEq(factory.getImplementation(), address(factoryImpl));
@@ -96,6 +99,7 @@ contract UpgradeTest is BaseTest {
         factory.upgradeToAndCall(address(newFactoryImpl), "");
     }
 
+    /// @dev revert when attempting to initialize previously initialized contract
     function test__RevertWhen_UpgradeRouxEditionFactory_AttemptInitialization() external {
         // assert current implementation
         assertEq(factory.getImplementation(), address(factoryImpl));
@@ -109,6 +113,7 @@ contract UpgradeTest is BaseTest {
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
     }
 
+    /// @dev upgrade edition
     function test__UpgradeEdition() external {
         // assert current implementation
         assertEq(editionBeacon.implementation(), address(editionImpl));
@@ -141,6 +146,7 @@ contract UpgradeTest is BaseTest {
         assertEq(RouxEdition(newEdition).totalSupply(1), 1);
     }
 
+    /// @dev upgrade controller
     function test__UpgradeController() external {
         // assert current implementation
         assertEq(controller.getImplementation(), address(controllerImpl));
@@ -155,6 +161,7 @@ contract UpgradeTest is BaseTest {
         assertEq(controller.getImplementation(), address(newControllerImpl));
     }
 
+    /// @dev upgrade registry
     function test__UpgradeRegistry() external {
         // assert current implementation
         assertEq(registry.getImplementation(), address(registryImpl));
@@ -169,6 +176,7 @@ contract UpgradeTest is BaseTest {
         assertEq(registry.getImplementation(), address(newRegistryImpl));
     }
 
+    /// @dev upgrade edition factory
     function test__UpgradeEditionFactory() external {
         // assert current implementation
         assertEq(factory.getImplementation(), address(factoryImpl));

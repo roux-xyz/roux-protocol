@@ -222,11 +222,16 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
 
     /// @inheritdoc IController
     function recordFunds(address recipient, uint256 amount) external payable nonReentrant notPaused {
+        // don't send to zero address
+        if (recipient == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
+
         // transfer payment
         _transferPayment(msg.sender, amount);
 
         // record funds
-        _storage().balance[recipient] += amount;
+        unchecked {
+            _storage().balance[recipient] += amount;
+        }
 
         // from, to, amount
         emit EventsLib.FundsRecorded(msg.sender, recipient, amount);
@@ -409,9 +414,6 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;
 
-        // verify recipient has been set
-        if (recipient == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
-
         // if root, increment recipient's balance
         if (parentEdition == address(0)) {
             // increment recipient's balance
@@ -476,7 +478,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
      * @param fundsRecipient_ funds recipient
      */
     function _setFundsRecipient(address edition, uint256 tokenId, address fundsRecipient_) internal {
-        // revert if funds recipient is zero address
+        // revert if funds recipient is set to zero address
         if (fundsRecipient_ == address(0)) revert ErrorsLib.Controller_InvalidFundsRecipient();
 
         // set funds recipient

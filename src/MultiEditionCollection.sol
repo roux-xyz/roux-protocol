@@ -299,7 +299,7 @@ contract MultiEditionCollection is Collection {
         }
 
         // record rewards
-        _controller.recordFunds(referrer, totalReferralReward);
+        if (totalReferralReward > 0) _controller.recordFunds(referrer, totalReferralReward);
         _controller.recordFunds($$.collectionFeeRecipient, totalCuratorReward);
 
         return collectionTokenId;

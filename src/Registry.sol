@@ -7,7 +7,7 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
@@ -19,6 +19,8 @@ import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
  * @custom:security-contact mp@roux.app
  */
 contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
+    using LibBitmap for LibBitmap.Bitmap;
+
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -51,7 +53,7 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
      * @param registryData edition to token id to registry data
      */
     struct RouxRegistryStorage {
-        mapping(address edition => mapping(uint256 tokenId => bool hasChild)) hasChild;
+        mapping(address edition => LibBitmap.Bitmap hasChild) hasChild;
         mapping(address edition => mapping(uint256 tokenId => RegistryData)) registryData;
     }
 
@@ -137,7 +139,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         d.parentTokenId = parentTokenId;
 
         // set has child if not already set
-        if (!_hasChild(parentEdition, parentTokenId)) $.hasChild[parentEdition][parentTokenId] = true;
+        if (!_hasChild(parentEdition, parentTokenId)) {
+            $.hasChild[parentEdition].set(parentTokenId);
+        }
 
         // emit event
         emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
@@ -201,6 +205,6 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
      * @param tokenId token id
      */
     function _hasChild(address edition, uint256 tokenId) internal view returns (bool) {
-        return _storage().hasChild[edition][tokenId];
+        return _storage().hasChild[edition].get(tokenId);
     }
 }

@@ -72,7 +72,6 @@ abstract contract CollectionBase is BaseTest {
         curator = address(users.curator_0);
 
         vm.prank(users.deployer);
-        collectionFactory.setAllowlist(false);
     }
 
     /// @dev setup single edition collection

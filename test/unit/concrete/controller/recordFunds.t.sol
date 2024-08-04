@@ -13,6 +13,22 @@ contract RecordFunds_Controller_Unit_Concrete_Test is ControllerBase {
         ControllerBase.setUp();
     }
 
+    /* -------------------------------------------- */
+    /* reverts                                      */
+    /* -------------------------------------------- */
+
+    /// @dev reverts when record funds to zero address
+    function test__RevertWhen_RecordFunds_ZeroAddress() external {
+        // approve
+        vm.prank(user);
+        mockUSDC.approve(address(controller), type(uint256).max);
+
+        // disburse
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.Controller_InvalidFundsRecipient.selector);
+        controller.recordFunds(address(0), TOKEN_PRICE);
+    }
+
     /// @dev returns correct balance - after recording funds
     function test__RecordFunds() external {
         // cache starting balance

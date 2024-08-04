@@ -373,7 +373,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         d.maxSupply = p.maxSupply.toUint128();
         d.creator = msg.sender;
 
-        // set controller data ~ funds recipient
+        // set controller data
         _controller.setControllerData(id, p.fundsRecipient, p.profitShare.toUint16());
 
         // optionally set registry data
@@ -475,7 +475,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param enable enable or disable collection
      *
      * @dev bypases validation that token is ungated and exists; frontends should
-     *      validate that token exists before calling this function
+     *      validate that token exists before calling this function as convenience
      */
     function setCollection(address collection, bool enable) external onlyOwner {
         // validate collection
@@ -538,7 +538,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /* ------------------------------------------------- */
-    /* erc165 interface                                */
+    /* erc165 interface                                  */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IERC165
@@ -596,6 +596,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param id token id
      * @param quantity quantity
      * @param extension extension
+     * @return price
      */
     function _getPrice(address to, uint256 id, uint256 quantity, address extension) internal returns (uint256 price) {
         EditionData.TokenData storage d = _storage().tokens[id];

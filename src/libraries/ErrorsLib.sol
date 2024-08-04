@@ -21,9 +21,6 @@ library ErrorsLib {
     /// @notice gated mint
     error RouxEdition_GatedMint();
 
-    /// @notice only allowlist
-    error RouxEdition_OnlyAllowlist();
-
     /// @notice invalid attribution
     error RouxEdition_InvalidAttribution();
 
@@ -97,6 +94,9 @@ library ErrorsLib {
     /// @notice collection factory already set
     error RouxEditionFactory_CollectionFactoryAlreadySet();
 
+    /// @notice
+    error RouxEditionFactory_DenyList();
+
     /* ------------------------------------------------- */
     /* CollectionFactory                                 */
     /* ------------------------------------------------- */
@@ -104,8 +104,8 @@ library ErrorsLib {
     /// @notice invalid collection type
     error CollectionFactory_InvalidCollectionType();
 
-    /// @notice only allowlist
-    error CollectionFactory_OnlyAllowlist();
+    /// @notice denylist
+    error CollectionFactory_DenyList();
 
     /// @notice collection curator already set
     error Collection_CuratorAlreadySet();
