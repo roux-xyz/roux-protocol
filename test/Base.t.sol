@@ -50,6 +50,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         address payable creator_0;
         address payable creator_1;
         address payable creator_2;
+        address payable creator_3;
         address payable curator_0;
         address payable admin;
         address payable split;
@@ -123,6 +124,7 @@ abstract contract BaseTest is Test, Events, Defaults {
             creator_0: _createUser("creator_0"),
             creator_1: _createUser("creator_1"),
             creator_2: _createUser("creator_2"),
+            creator_3: _createUser("creator_3"),
             curator_0: _createUser("curator_0"),
             admin: _createUser("admin"),
             split: _createUser("split")

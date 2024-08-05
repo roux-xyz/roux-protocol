@@ -9,9 +9,7 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
-/**
- * @title ControllerBase test
- */
+/// @title ControllerBase test
 abstract contract ControllerBase is BaseTest {
     function setUp() public virtual override {
         BaseTest.setUp();
