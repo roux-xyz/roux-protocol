@@ -51,18 +51,10 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /**
      * @notice CollectionFactory storage
      * @custom:storage-location erc7201:collectionFactory.collectionFactoryStorage
-     * @param initialized whether the contract has been initialized
-     * @param collectionImplementation collection implementation
      * @param collections set of collections
-     * @param denylist denylist of accounts
-     * @param enableDenyList whether to enable denylist
      */
     struct CollectionFactoryStorage {
-        bool initialized;
-        address collectionImplementation;
         LibBitmap.Bitmap collections;
-        LibBitmap.Bitmap denylist;
-        bool enableDenyList;
     }
 
     /* ------------------------------------------------- */
@@ -135,11 +127,6 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
 
         CollectionFactoryStorage storage $ = _storage();
 
-        // check denylist
-        if ($.enableDenyList && $.denylist.get(uint256(uint160(msg.sender)))) {
-            revert ErrorsLib.CollectionFactory_DenyList();
-        }
-
         // set which collection beacon to create
         address beacon;
         if (collectionType == CollectionData.CollectionType.SingleEdition) {
@@ -171,46 +158,6 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
         }
 
         return collectionInstance;
-    }
-
-    /* ------------------------------------------------- */
-    /* Admin                                             */
-    /* ------------------------------------------------- */
-
-    /**
-     * @notice set denylist to enabled or disabled
-     * @param enable whether to enable denylist
-     */
-    function setDenyList(bool enable) external onlyOwner {
-        _storage().enableDenyList = enable;
-    }
-
-    /**
-     * @notice add account to denylist
-     * @param account account to add to denylist
-     */
-    function addDenyList(address account) external onlyOwner {
-        _storage().denylist.set(uint256(uint160(account)));
-    }
-
-    /**
-     * @notice add multiple accounts to denylist
-     * @param accounts accounts to add to denylist
-     */
-    function addDenyList(address[] memory accounts) external onlyOwner {
-        CollectionFactoryStorage storage $ = _storage();
-
-        for (uint256 i = 0; i < accounts.length; i++) {
-            $.denylist.set(uint256(uint160(accounts[i])));
-        }
-    }
-
-    /**
-     * @notice remove account from denylist
-     * @param account account to remove from denylist
-     */
-    function removeDenylist(address account) external onlyOwner {
-        _storage().denylist.unset(uint256(uint160(account)));
     }
 
     /* -------------------------------------------- */
