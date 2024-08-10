@@ -40,16 +40,9 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /**
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
-     * @param editions set of editions
-     * @param owner owner of the contract
-     * @param enableDenyList whether to enable denylist
-     * @param denylist denylist of editions
      */
     struct RouxEditionFactoryStorage {
         LibBitmap.Bitmap editions;
-        address owner;
-        bool enableDenyList;
-        LibBitmap.Bitmap denylist;
     }
 
     /* -------------------------------------------- */
@@ -120,11 +113,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        // check denylist
-        if ($.enableDenyList && $.denylist.get(uint256(uint160(msg.sender)))) {
-            revert ErrorsLib.RouxEditionFactory_DenyList();
-        }
-
         // create edition instance
         address editionInstance =
             address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
@@ -139,46 +127,6 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         emit EventsLib.NewEdition(editionInstance);
 
         return editionInstance;
-    }
-
-    /* -------------------------------------------- */
-    /* admin                                        */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice set denylist to enabled or disabled
-     * @param enable whether to enable denylist
-     */
-    function setDenyList(bool enable) external onlyOwner {
-        _storage().enableDenyList = enable;
-    }
-
-    /**
-     * @notice add account to denylist
-     * @param account  account to add to denylist
-     */
-    function addDenyList(address account) external onlyOwner {
-        _storage().denylist.set(uint256(uint160(account)));
-    }
-
-    /**
-     * @notice overload add accounts to denylist
-     * @param accounts accounts to add to denylist
-     */
-    function addDenyList(address[] memory accounts) external onlyOwner {
-        RouxEditionFactoryStorage storage $ = _storage();
-
-        for (uint256 i = 0; i < accounts.length; i++) {
-            $.denylist.set(uint256(uint160(accounts[i])));
-        }
-    }
-
-    /**
-     * @notice remove account from denylist
-     * @param account  acuount to remove from denylist
-     */
-    function removeDenylist(address account) external onlyOwner {
-        _storage().denylist.unset(uint256(uint160(account)));
     }
 
     /* -------------------------------------------- */

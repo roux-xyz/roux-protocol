@@ -18,25 +18,6 @@ contract CollectionFactoryTest is CollectionBase {
         CollectionBase.setUp();
     }
 
-    /// @dev revert when denylisted
-    function test__RevertWhen_Denylisted() external {
-        vm.startPrank(users.deployer);
-        collectionFactory.setDenyList(true);
-        collectionFactory.addDenyList(user);
-        vm.stopPrank();
-
-        vm.prank(user);
-        vm.expectRevert(ErrorsLib.CollectionFactory_DenyList.selector);
-        collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams));
-    }
-
-    /// @dev only owner can add to denylist
-    function test__RevertWhen_OnlyOwner_AddToDenylist() external {
-        vm.prank(creator);
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        collectionFactory.addDenyList(users.creator_1);
-    }
-
     /// @dev already initialized
     function test__RevertWhen_AlreadyInitialized() external {
         assertEq(collectionFactory.getImplementation(), address(collectionFactoryImpl));
@@ -58,56 +39,12 @@ contract CollectionFactoryTest is CollectionBase {
         assertEq(collectionFactory.owner(), address(users.deployer));
     }
 
-    /// @dev disable denylist
-    function test__DisableDenylist() external {
-        vm.startPrank(users.deployer);
-        collectionFactory.setDenyList(true);
-        collectionFactory.addDenyList(user);
-        collectionFactory.setDenyList(false);
-        vm.stopPrank();
-
-        vm.prank(user);
-        address newCollection = collectionFactory.create(
-            CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams)
-        );
-
-        assertEq(collectionFactory.isCollection(newCollection), true);
-    }
-
     /// @dev transfer ownership
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
         collectionFactory.transferOwnership(creator);
 
         assertEq(collectionFactory.owner(), address(creator));
-    }
-
-    /// @dev add to denylist
-    function test__AddToDenylist() external {
-        vm.startPrank(users.deployer);
-        collectionFactory.setDenyList(true);
-        collectionFactory.addDenyList(users.creator_2);
-        vm.stopPrank();
-
-        vm.prank(users.creator_2);
-        vm.expectRevert(ErrorsLib.CollectionFactory_DenyList.selector);
-        collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams));
-    }
-
-    /// @dev remove from denylist
-    function test__RemoveFromDenylist() external {
-        vm.startPrank(users.deployer);
-        collectionFactory.setDenyList(true);
-        collectionFactory.addDenyList(users.creator_2);
-        collectionFactory.removeDenylist(users.creator_2);
-        vm.stopPrank();
-
-        vm.prank(users.creator_2);
-        address newCollection = collectionFactory.create(
-            CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams)
-        );
-
-        assertEq(collectionFactory.isCollection(newCollection), true);
     }
 
     /// @dev create single edition collection

@@ -17,27 +17,6 @@ contract RouxEditionFactoryTest is BaseTest {
         BaseTest.setUp();
     }
 
-    /// @dev revert when denylisted
-    function test__RevertWhen_Denylisted() external {
-        bytes memory params = abi.encode(CONTRACT_URI);
-
-        vm.startPrank(users.deployer);
-        factory.setDenyList(true);
-        factory.addDenyList(user);
-        vm.stopPrank();
-
-        vm.prank(user);
-        vm.expectRevert(ErrorsLib.RouxEditionFactory_DenyList.selector);
-        RouxEdition(factory.create(params));
-    }
-
-    /// @dev only owner can add to denylist
-    function test__RevertWhen_OnlyOwner_AddToDenylist() external {
-        vm.prank(creator);
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        factory.addDenyList(users.creator_1);
-    }
-
     /// @dev already initialized
     function test__RevertWhen_AlreadyInitialized() external {
         assertEq(factory.getImplementation(), address(factoryImpl));
@@ -58,55 +37,12 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.owner(), address(users.deployer));
     }
 
-    /// @dev disable denylist
-    function test__DisableDenylist() external {
-        vm.startPrank(users.deployer);
-        factory.setDenyList(true);
-        factory.addDenyList(user);
-        factory.setDenyList(false);
-        vm.stopPrank();
-
-        vm.prank(user);
-        bytes memory params = abi.encode(CONTRACT_URI);
-        address newEdition = factory.create(params);
-
-        assertEq(factory.isEdition(newEdition), true);
-    }
-
     /// @dev transfer ownership
     function test__TransferOwnership() external {
         vm.prank(users.deployer);
         factory.transferOwnership(creator);
 
         assertEq(factory.owner(), address(creator));
-    }
-
-    /// @dev add to denylist
-    function test__AddToDenylist() external {
-        vm.startPrank(users.deployer);
-        factory.setDenyList(true);
-        factory.addDenyList(users.creator_2);
-        vm.stopPrank();
-
-        vm.prank(users.creator_2);
-        bytes memory params = abi.encode(CONTRACT_URI);
-        vm.expectRevert(ErrorsLib.RouxEditionFactory_DenyList.selector);
-        factory.create(params);
-    }
-
-    /// @dev remove from denylist
-    function test__RemoveFromDenylist() external {
-        vm.startPrank(users.deployer);
-        factory.setDenyList(true);
-        factory.addDenyList(users.creator_2);
-        factory.removeDenylist(users.creator_2);
-        vm.stopPrank();
-
-        vm.prank(users.creator_2);
-        bytes memory params = abi.encode(CONTRACT_URI);
-        address newEdition = factory.create(params);
-
-        assertEq(factory.isEdition(newEdition), true);
     }
 
     /// @dev create
@@ -135,11 +71,6 @@ contract RouxEditionFactoryTest is BaseTest {
 
     /// @dev get editions
     function test__getEditions() external {
-        vm.startPrank(users.deployer);
-        factory.setDenyList(true);
-        factory.addDenyList(users.user_0);
-        vm.stopPrank();
-
         address[] memory editions = new address[](3);
         bytes memory params = abi.encode(CONTRACT_URI);
 

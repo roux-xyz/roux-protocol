@@ -395,12 +395,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev deploy edition
     function _deployEdition() internal returns (RouxEdition edition_) {
-        vm.startPrank(creator);
-
-        bytes memory params = abi.encode(CONTRACT_URI);
-        edition_ = RouxEdition(factory.create(params));
-
-        vm.stopPrank();
+        return _createEdition(creator);
     }
 
     /* -------------------------------------------- */
@@ -449,12 +444,20 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev create edition
     function _createEdition(address user_) internal returns (RouxEdition) {
-        vm.prank(user_);
+        vm.startPrank(user_);
+
+        bytes memory params = abi.encode(CONTRACT_URI);
+
+        // compute address
+        // address addr = factory.getAddress(user_, params);
 
         // create edition instance
-        bytes memory params = abi.encode(CONTRACT_URI);
         RouxEdition edition_ = RouxEdition(factory.create(params));
         vm.label({ account: address(edition), newLabel: "New Edition" });
+
+        // assertEq(addr, address(edition_));
+
+        vm.stopPrank();
 
         return edition_;
     }
