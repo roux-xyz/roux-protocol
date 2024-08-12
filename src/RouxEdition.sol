@@ -24,6 +24,17 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
+ * last mechanical art
+ *
+ * 3/4 oz mezcal
+ * 3/4 oz cynar
+ * 3/4 oz campari
+ * 3/4 oz punt e mes
+ *
+ * stir, strain, up, garnish with orange peel
+ */
+
+/**
  * @title roux edition
  * @author roux
  * @custom:version 1.0
@@ -336,14 +347,14 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /// @inheritdoc IRouxEdition
-    function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable nonReentrant {
+    function collectionMultiMint(address to, uint256 id, bytes calldata /* data */ ) external payable nonReentrant {
         // validate caller is a multi-edition collection
         if (!_collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         _validateMint(id, 1);
         _incrementTotalSupply(id, 1);
 
-        _mint(to, id, 1, data);
+        _mint(to, id, 1, "");
     }
 
     /* ------------------------------------------------- */
@@ -602,9 +613,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         EditionData.TokenData storage d = _storage().tokens[id];
 
         if (extension == address(0)) {
+            // standard mint w/o extension
             if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
             price = d.mintParams.defaultPrice * quantity;
         } else {
+            // mint w/ extension - check if extension is registered
             if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             price = IEditionExtension(extension).approveMint({
