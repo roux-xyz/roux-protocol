@@ -303,10 +303,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // process mints to validate and get total prices
         for (uint256 i = 0; i < ids.length; ++i) {
             prices[i] = _preProcessDirectMint(to, ids[i], quantities[i], extensions[i]);
-
-            unchecked {
-                totalPrice += prices[i];
-            }
+            totalPrice += prices[i];
         }
 
         if (totalPrice > 0) {
@@ -366,10 +363,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     function add(EditionData.AddParams calldata p) external onlyOwner nonReentrant returns (uint256) {
         RouxEditionStorage storage $ = _storage();
 
-        uint256 id;
-        unchecked {
-            id = ++$.tokenId;
-        }
+        uint256 id = ++$.tokenId;
 
         EditionData.TokenData storage d = $.tokens[id];
 
@@ -637,9 +631,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param quantity quantity
      */
     function _incrementTotalSupply(uint256 id, uint256 quantity) internal {
-        unchecked {
-            _storage().tokens[id].totalSupply += quantity.toUint128();
-        }
+        _storage().tokens[id].totalSupply += quantity.toUint128();
     }
 
     /**

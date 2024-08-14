@@ -215,18 +215,14 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         uint192 fee;
         if (_storage().platformFeeEnabled) {
             fee = ((amount * PLATFORM_FEE) / BASIS_POINT_SCALE).toUint192();
-            unchecked {
-                _storage().platformFeeBalance += fee;
-            }
+            _storage().platformFeeBalance += fee;
         }
 
         // handle referral fee
         uint192 referralFee;
         if (referrer != address(0)) {
             referralFee = ((amount * REFERRAL_FEE) / BASIS_POINT_SCALE).toUint192();
-            unchecked {
-                _storage().balance[referrer] += referralFee;
-            }
+            _storage().balance[referrer] += referralFee;
         }
 
         // disburse
@@ -242,9 +238,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         _transferPayment(msg.sender, amount);
 
         // record funds
-        unchecked {
-            _storage().balance[recipient] += amount;
-        }
+        _storage().balance[recipient] += amount;
 
         // from, to, amount
         emit EventsLib.FundsRecorded(msg.sender, recipient, amount);
@@ -327,7 +321,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // get storage
         ControllerStorage storage $ = _storage();
 
-        // cache mint fee balance
+        // cache platform fee balance
         uint256 amount = $.platformFeeBalance;
 
         // reset mint fee balance
@@ -430,9 +424,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         // if root, increment recipient's balance
         if (parentEdition == address(0)) {
             // increment recipient's balance
-            unchecked {
-                $.balance[recipient] += amount;
-            }
+            $.balance[recipient] += amount;
 
             // emit Deposited event
             emit EventsLib.Deposited(edition, tokenId, recipient, amount);
@@ -444,12 +436,11 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
             uint256 currentEditionShare = (amount * currentEditionProfitShare) / BASIS_POINT_SCALE;
             uint256 parentShare = amount - currentEditionShare;
 
-            unchecked {
-                // increment recipient's balance
-                $.balance[recipient] += currentEditionShare;
-                // increment the parent's pending balance
-                $.tokenPending[parentEdition][parentTokenId] += parentShare;
-            }
+            // increment recipient's balance
+            $.balance[recipient] += currentEditionShare;
+
+            // increment the parent's pending balance
+            $.tokenPending[parentEdition][parentTokenId] += parentShare;
 
             // emit Deposited event
             emit EventsLib.Deposited(edition, tokenId, recipient, currentEditionShare);

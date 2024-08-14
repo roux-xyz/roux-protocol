@@ -138,7 +138,7 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         d.parentEdition = parentEdition;
         d.parentTokenId = parentTokenId;
 
-        // set has child if not already set
+        // set has child if not already set - used to prevent metadata update when child already exists
         if (!_hasChild(parentEdition, parentTokenId)) {
             $.hasChild[parentEdition].set(parentTokenId);
         }

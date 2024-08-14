@@ -162,9 +162,7 @@ contract MultiEditionCollection is Collection {
 
         uint256 total;
         for (uint256 i = 0; i < $$.itemTargets.length; ++i) {
-            unchecked {
-                total += IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
-            }
+            total += IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
         }
 
         return total;
@@ -233,10 +231,7 @@ contract MultiEditionCollection is Collection {
         for (uint256 i = 0; i < length; ++i) {
             uint256 price_ = IRouxEdition($$.itemTargets[i]).defaultPrice($$.itemIds[i]);
             prices[i] = price_;
-
-            unchecked {
-                total += price_;
-            }
+            total += price_;
         }
 
         return (total, prices);
@@ -279,10 +274,8 @@ contract MultiEditionCollection is Collection {
             uint256 curatorReward = ((cost - referralReward) * CURATOR_FEE) / 10_000;
 
             // increment total rewards
-            unchecked {
-                totalReferralReward += referralReward;
-                totalCuratorReward += curatorReward;
-            }
+            totalReferralReward += referralReward;
+            totalCuratorReward += curatorReward;
 
             // send funds to controller
             _controller.disburse({

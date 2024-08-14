@@ -211,6 +211,7 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
     /**
      * @notice rescue underlying token
      * @param to address to send underlying token to
+     *
      * @dev underlying token balance and total supply should always be equal, unless underlying token
      *      is accidentally sent to this contract instead of calling `deposit`
      */
