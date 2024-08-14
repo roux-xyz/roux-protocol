@@ -20,6 +20,19 @@ import { BASIS_POINT_SCALE } from "src/libraries/ConstantsLib.sol";
 import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
+ * 100 year old cigar
+ *
+ * 1 3/4 oz ron zacapa 23
+ * 1/4 oz laphroaig
+ * 1/2 oz cynar
+ * 1/2 oz benedictine
+ * 1 dash angostura bitters
+ *
+ * rinse coupe with absinthe
+ * stir, strain, no garnish
+ */
+
+/**
  * @title controller
  * @author roux
  * @custom:version 1.0

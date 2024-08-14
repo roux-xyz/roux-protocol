@@ -34,6 +34,10 @@ interface IRouxMintPortal {
      * @param extension extension
      * @param referrer referrer
      * @param data additional data
+     *
+     * @dev if extension is zero, the default price will be used, if extension is provided,
+     *      the extension will be used to get the price, but not approve the mint. Mint is
+     *      still approved by the RouxEdition or Collection contract.
      */
     function mintEdition(
         IRouxEdition edition,
@@ -53,6 +57,10 @@ interface IRouxMintPortal {
      * @param extensions extensions
      * @param referrer referrer
      * @param data additional data
+     *
+     * @dev if extension is zero, the default price will be used, if extension is provided,
+     *      the extension will be used to get the price, but not approve the mint. Mint is
+     *      still approved by the RouxEdition or Collection contract.
      */
     function batchMintEdition(
         IRouxEdition edition,
@@ -70,6 +78,10 @@ interface IRouxMintPortal {
      * @param extension extension
      * @param referrer referrer
      * @param data additional data
+     *
+     * @dev if extension is zero, the default price will be used, if extension is provided,
+     *      the extension will be used to get the price, but not approve the mint. Mint is
+     *      still approved by the RouxEdition or Collection contract.
      */
     function mintCollection(
         ICollection collection,

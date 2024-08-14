@@ -56,6 +56,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         address payable curator_0;
         address payable admin;
         address payable split;
+        address payable usdcDepositor;
     }
 
     /* -------------------------------------------- */
@@ -133,7 +134,8 @@ abstract contract BaseTest is Test, Events, Defaults {
             creator_3: _createUser("creator_3"),
             curator_0: _createUser("curator_0"),
             admin: _createUser("admin"),
-            split: _createUser("split")
+            split: _createUser("split"),
+            usdcDepositor: _createUser("usdcDepositor")
         });
 
         // set default users
@@ -216,13 +218,13 @@ abstract contract BaseTest is Test, Events, Defaults {
         // upgrade edition beacon
         editionBeacon.upgradeTo(address(editionImpl));
 
+        // deploy mint portal
+        mintPortal = _deployMintPortal(address(mockUSDC), address(factory), address(collectionFactory));
+
         vm.stopPrank();
 
         // deploy test edition
         edition = _deployEdition();
-
-        // deploy mint portal
-        mintPortal = _deployMintPortal(address(mockUSDC), address(factory), address(collectionFactory));
 
         // add default token
         _addToken(edition);
@@ -351,7 +353,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy single edition collection beacon
-    function _deploySingleEditionCollectionBeacon(address singleEditionCollectionImpl_)
+    function _deploySingleEditionCollectionBeacon(
+        address singleEditionCollectionImpl_
+    )
         internal
         returns (UpgradeableBeacon singleEditionCollectionBeacon_)
     {
@@ -375,7 +379,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy multi edition collection beacon
-    function _deployMultiEditionCollectionBeacon(address multiEditionCollectionImpl_)
+    function _deployMultiEditionCollectionBeacon(
+        address multiEditionCollectionImpl_
+    )
         internal
         returns (UpgradeableBeacon multiEditionCollectionBeacon_)
     {
@@ -396,7 +402,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy collection factory proxy
-    function _deployCollectionFactoryProxy(address collectionFactoryImpl_)
+    function _deployCollectionFactoryProxy(
+        address collectionFactoryImpl_
+    )
         internal
         returns (CollectionFactory collectionFactory_)
     {

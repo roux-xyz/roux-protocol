@@ -11,8 +11,6 @@ import { Restricted1155 } from "src/abstracts/Restricted1155.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-import "forge-std/console.sol";
-
 contract Transfer_RouxMintPortal_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                       */

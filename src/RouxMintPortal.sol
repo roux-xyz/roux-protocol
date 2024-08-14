@@ -2,6 +2,8 @@
 pragma solidity 0.8.26;
 
 import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
+import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
+import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
 import { Restricted1155 } from "src/abstracts/Restricted1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
@@ -39,6 +41,13 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
     uint256 private constant rUSDC_ID = 1;
 
     /* -------------------------------------------- */
+    /* state                                        */
+    /* -------------------------------------------- */
+
+    /// @notice uri
+    string private _uri;
+
+    /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
 
@@ -71,6 +80,18 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
     }
 
     /* -------------------------------------------- */
+    /* view                                         */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice get the total supply of tokens
+     * @return total supply of tokens
+     */
+    function totalSupply() external view returns (uint256) {
+        return _restricted1155Storage().totalSupply[rUSDC_ID];
+    }
+
+    /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
@@ -95,7 +116,12 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
 
         // compute cost
-        uint256 cost = edition.defaultPrice(id) * quantity;
+        uint256 cost;
+        if (extension != address(0)) {
+            cost = IEditionExtension(extension).price(address(edition), id) * quantity;
+        } else {
+            cost = edition.defaultPrice(id) * quantity;
+        }
 
         // burn rUSDC
         _burn(msg.sender, rUSDC_ID, cost);
@@ -125,7 +151,11 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         // compute cost
         uint256 cost;
         for (uint256 i = 0; i < ids.length; ++i) {
-            cost += edition.defaultPrice(ids[i]) * quantities[i];
+            if (extensions[i] != address(0)) {
+                cost += IEditionExtension(extensions[i]).price(address(edition), ids[i]) * quantities[i];
+            } else {
+                cost += edition.defaultPrice(ids[i]) * quantities[i];
+            }
         }
 
         // burn rUSDC
@@ -152,7 +182,12 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         if (!_collectionFactory.isCollection(address(collection))) revert RouxMintPortal_InvalidCollection();
 
         // get cost
-        uint256 cost = collection.price();
+        uint256 cost;
+        if (extension != address(0)) {
+            cost = ICollectionExtension(extension).price();
+        } else {
+            cost = collection.price();
+        }
 
         // burn rUSDC
         _burn(msg.sender, rUSDC_ID, cost);
@@ -164,9 +199,9 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         collection.mint(msg.sender, extension, referrer, data);
     }
 
-    /// TODO: add uri
-    function uri(uint256) public pure override returns (string memory) {
-        return "https://api.roux.art/token/rUSDC";
+    /// @dev see {ERC1155-uri}
+    function uri(uint256) public view override returns (string memory) {
+        return _uri;
     }
 
     /* -------------------------------------------- */
@@ -180,10 +215,20 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
      *      is accidentally sent to this contract instead of calling `deposit`
      */
     function rescue(address to) external onlyOwner {
-        uint256 amount = IERC20(_underlying).balanceOf(address(this)) - _restricted1155Storage().totalSupply;
+        uint256 amount = IERC20(_underlying).balanceOf(address(this)) - _restricted1155Storage().totalSupply[rUSDC_ID];
 
         // transfer underlying token from caller to this contract
         _underlying.safeTransfer(to, amount);
+    }
+
+    /**
+     * @notice set uri
+     * @param newUri new uri
+     */
+    function setUri(string memory newUri) external onlyOwner {
+        _uri = newUri;
+
+        emit URI(newUri, 1);
     }
 
     /* -------------------------------------------- */

@@ -59,6 +59,7 @@ usage() {
     echo "  deploy-single-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  deploy-multi-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  deploy-collection-factory <singleEditionCollectionBeacon> <multiEditionCollectionBeacon>"
+    echo "  deploy-mint-portal <underlying> <edition-factory> <collection-factory>"
     echo "  upgrade-controller <proxyAddress> <registry> <currency>"
     echo "  upgrade-single-edition-collection <singleEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  upgrade-multi-edition-collection <multiEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
@@ -188,6 +189,16 @@ case $1 in
 
         echo "Deploying CollectionFactory"
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployCollectionFactory.s.sol:DeployCollectionFactory" "--sig run(address,address) $2 $3"
+        ;;
+    
+    "deploy-mint-portal")
+        if [ "$#" -ne 4 ]; then
+            echo "Invalid param count; Usage: $0 <command> <underlying> <edition-factory> <collection-factory>"
+            exit 1
+        fi
+
+        echo "Deploying MintPortal"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $2 $3 $4"
         ;;
 
     "upgrade-controller")

@@ -40,7 +40,7 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      * @custom:storage-location erc7201:restricted1155.restricted1155Storage
      */
     struct Restricted1155Storage {
-        uint256 totalSupply;
+        mapping(uint256 id => uint256 totalSupply) totalSupply;
     }
 
     /* -------------------------------------------- */
@@ -55,18 +55,6 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
         assembly {
             $.slot := RESTRICTED_1155_STORAGE_SLOT
         }
-    }
-
-    /* -------------------------------------------- */
-    /* view                                         */
-    /* -------------------------------------------- */
-
-    /**
-     * @notice get the total supply of tokens
-     * @return total supply of tokens
-     */
-    function totalSupply() external view returns (uint256) {
-        return _restricted1155Storage().totalSupply;
     }
 
     /* -------------------------------------------- */
@@ -111,7 +99,7 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      * @param data additional data
      */
     function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual override {
-        _restricted1155Storage().totalSupply += amount;
+        _restricted1155Storage().totalSupply[id] += amount;
 
         super._mint(to, id, amount, data);
     }
@@ -121,9 +109,11 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      * @param from address to burn tokens from
      * @param id token ID
      * @param amount amount of tokens to burn
+     *
+     * @dev will revert with underflow error if total supply is less than amount
      */
     function _burn(address from, uint256 id, uint256 amount) internal virtual override {
-        _restricted1155Storage().totalSupply -= amount;
+        _restricted1155Storage().totalSupply[id] -= amount;
 
         super._burn(from, id, amount);
     }

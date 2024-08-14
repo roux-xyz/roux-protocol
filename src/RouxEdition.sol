@@ -31,7 +31,8 @@ import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
  * 3/4 oz campari
  * 3/4 oz punt e mes
  *
- * stir, strain, up, garnish with orange peel
+ * stir, strain, up
+ * garnish with orange peel
  */
 
 /**
@@ -623,7 +624,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             price = IEditionExtension(extension).approveMint({
                 id: id,
                 quantity: quantity,
-                operator: msg.sender,
+                operator: msg.sender, // typically will be the RouxMintPortal
                 account: to,
                 data: ""
             });
