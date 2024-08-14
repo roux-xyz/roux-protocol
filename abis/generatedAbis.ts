@@ -532,15 +532,6 @@ export const collectionFactoryAbi = [
   },
   {
     type: 'function',
-    inputs: [
-      { name: 'accounts', internalType: 'address[]', type: 'address[]' },
-    ],
-    name: 'addAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
     inputs: [],
     name: 'cancelOwnershipHandover',
     outputs: [],
@@ -608,13 +599,6 @@ export const collectionFactoryAbi = [
   },
   {
     type: 'function',
-    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
-    name: 'removeAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
     inputs: [],
     name: 'renounceOwnership',
     outputs: [],
@@ -626,13 +610,6 @@ export const collectionFactoryAbi = [
     name: 'requestOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
-  },
-  {
-    type: 'function',
-    inputs: [{ name: 'enable', internalType: 'bool', type: 'bool' }],
-    name: 'setAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -759,7 +736,6 @@ export const collectionFactoryAbi = [
     inputs: [],
     name: 'CollectionFactory_InvalidCollectionType',
   },
-  { type: 'error', inputs: [], name: 'CollectionFactory_OnlyAllowlist' },
   {
     type: 'error',
     inputs: [
@@ -2381,7 +2357,7 @@ export const rouxEditionAbi = [
     inputs: [
       { name: 'to', internalType: 'address', type: 'address' },
       { name: 'id', internalType: 'uint256', type: 'uint256' },
-      { name: 'data', internalType: 'bytes', type: 'bytes' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
     ],
     name: 'collectionMultiMint',
     outputs: [],
@@ -3044,15 +3020,6 @@ export const rouxEditionFactoryAbi = [
   },
   {
     type: 'function',
-    inputs: [
-      { name: 'accounts', internalType: 'address[]', type: 'address[]' },
-    ],
-    name: 'addAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
     inputs: [],
     name: 'cancelOwnershipHandover',
     outputs: [],
@@ -3113,13 +3080,6 @@ export const rouxEditionFactoryAbi = [
   },
   {
     type: 'function',
-    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
-    name: 'removeAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
     inputs: [],
     name: 'renounceOwnership',
     outputs: [],
@@ -3131,13 +3091,6 @@ export const rouxEditionFactoryAbi = [
     name: 'requestOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
-  },
-  {
-    type: 'function',
-    inputs: [{ name: 'enable', internalType: 'bool', type: 'bool' }],
-    name: 'setAllowlist',
-    outputs: [],
-    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -3260,7 +3213,6 @@ export const rouxEditionFactoryAbi = [
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
   { type: 'error', inputs: [], name: 'NotInitializing' },
   { type: 'error', inputs: [], name: 'Reentrancy' },
-  { type: 'error', inputs: [], name: 'RouxEdition_OnlyAllowlist' },
   { type: 'error', inputs: [], name: 'Unauthorized' },
 ] as const
 

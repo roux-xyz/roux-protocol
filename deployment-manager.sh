@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Deploy roux protocol contracts to network
+# NOTE: The RouxEditionBeacon must be deployed with a No-Op implementation first.
+# This handles a circular dependency in the protocol. Once the CollectionFactory is
+# is deployed, the actual RouxEdition Implementation can be deployed, at which point
+# the RouxEditionBeacon must be upgraded to the new implementation.
+
 set -e
 
 # Function to convert to uppercase
@@ -33,6 +39,7 @@ run() {
                 forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
             else
                 echo "Running with account $ACCOUNT"
+                # We use both --account and --sender to ensure the signing account and simulated sender are the same
                 forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender $SENDER --broadcast -vvvv $args
             fi
             ;;
