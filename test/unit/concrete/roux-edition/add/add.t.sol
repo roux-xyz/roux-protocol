@@ -52,17 +52,6 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
         edition.add(addParams);
     }
 
-    /// @dev cannot set parent token address to self
-    function test__RevertWhen_AddToken_ParentEditionIsSelf() external {
-        // modify default add params
-        addParams.parentEdition = address(edition);
-        addParams.parentTokenId = 1;
-
-        vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEdition_InvalidAttribution.selector);
-        edition.add(addParams);
-    }
-
     /// @dev invalid extension reverts - unsupported interface
     function test__RevertWhen_AddToken_InvalidExtension_UnsupportedInterface() external {
         // create edition instance

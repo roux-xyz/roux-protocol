@@ -16,6 +16,7 @@ export default defineConfig({
         'MultiEditionCollection.sol/**',
         'RouxEditionFactory.sol/**',
         'CollectionFactory.sol/**',
+        'RouxMintPortal.sol/**',
       ],
     }),
   ],

@@ -14,6 +14,7 @@ import { ICollection } from "src/interfaces/ICollection.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /**
  * @title roux mint portal
@@ -23,6 +24,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
+    using LibBitmap for LibBitmap.Bitmap;
 
     /* -------------------------------------------- */
     /* immutable state                              */
@@ -40,12 +42,18 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
     /// @notice token id
     uint256 private constant rUSDC_ID = 1;
 
+    uint256 private constant FREE_EDITION_MINT_ID = 2;
+    uint256 private constant FREE_COLLECTION_MINT_ID = 3;
+
     /* -------------------------------------------- */
     /* state                                        */
     /* -------------------------------------------- */
 
     /// @notice uri
     string private _uri;
+
+    /// @notice approvals
+    mapping(address => LibBitmap.Bitmap) private _approvals;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -162,7 +170,7 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         _burn(msg.sender, rUSDC_ID, cost);
 
         // approve edition
-        _underlying.safeApprove(address(edition), cost);
+        _manageApprovals(address(edition));
 
         // mint to caller
         edition.batchMint(msg.sender, ids, quantities, extensions, referrer, data);
@@ -192,8 +200,8 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         // burn rUSDC
         _burn(msg.sender, rUSDC_ID, cost);
 
-        // approve collection
-        _underlying.safeApprove(address(collection), cost);
+        // approve if necessary
+        _manageApprovals(address(collection));
 
         // mint to caller
         collection.mint(msg.sender, extension, referrer, data);
@@ -248,5 +256,19 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
 
         // mint rUSDC to recipient
         _mint(to, id, amount, "");
+    }
+
+    /**
+     * @notice manage approvals
+     * @param contract_ contract address
+     *
+     * @dev if the contract has not been approved, approve the max for known contracts,
+     *      otherwise we can skip the unnecessary external call
+     */
+    function _manageApprovals(address contract_) internal {
+        if (!_approvals[contract_].get(uint256(uint160(contract_)))) {
+            _underlying.safeApprove(contract_, type(uint256).max);
+            _approvals[contract_].set(uint256(uint160(contract_)));
+        }
     }
 }
