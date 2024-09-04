@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Deploy roux protocol contracts to network
+# NOTE: The RouxEditionBeacon must be deployed with a No-Op implementation first.
+# This handles a circular dependency in the protocol. Once the CollectionFactory is
+# is deployed, the actual RouxEdition Implementation can be deployed, at which point
+# the RouxEditionBeacon must be upgraded to the new implementation.
+
 set -e
 
 # Function to convert to uppercase
@@ -33,6 +39,7 @@ run() {
                 forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
             else
                 echo "Running with account $ACCOUNT"
+                # We use both --account and --sender to ensure the signing account and simulated sender are the same
                 forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender $SENDER --broadcast -vvvv $args
             fi
             ;;
@@ -59,6 +66,7 @@ usage() {
     echo "  deploy-single-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  deploy-multi-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  deploy-collection-factory <singleEditionCollectionBeacon> <multiEditionCollectionBeacon>"
+    echo "  deploy-mint-portal <underlying> <edition-factory> <collection-factory>"
     echo "  upgrade-controller <proxyAddress> <registry> <currency>"
     echo "  upgrade-single-edition-collection <singleEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
     echo "  upgrade-multi-edition-collection <multiEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
@@ -188,6 +196,16 @@ case $1 in
 
         echo "Deploying CollectionFactory"
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployCollectionFactory.s.sol:DeployCollectionFactory" "--sig run(address,address) $2 $3"
+        ;;
+    
+    "deploy-mint-portal")
+        if [ "$#" -ne 4 ]; then
+            echo "Invalid param count; Usage: $0 <command> <underlying> <edition-factory> <collection-factory>"
+            exit 1
+        fi
+
+        echo "Deploying MintPortal"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $2 $3 $4"
         ;;
 
     "upgrade-controller")

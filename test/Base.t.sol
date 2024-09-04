@@ -24,6 +24,8 @@ import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
 import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 
+import { RouxMintPortal } from "src/RouxMintPortal.sol";
+
 import { Events } from "test/utils/Events.sol";
 import { Defaults } from "test/utils/Defaults.sol";
 
@@ -54,6 +56,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         address payable curator_0;
         address payable admin;
         address payable split;
+        address payable usdcDepositor;
     }
 
     /* -------------------------------------------- */
@@ -92,6 +95,10 @@ abstract contract BaseTest is Test, Events, Defaults {
     MultiEditionCollection internal multiEditionCollectionImpl;
     UpgradeableBeacon internal multiEditionCollectionBeacon;
 
+    // mint portal
+    RouxMintPortal internal mintPortalImpl;
+    RouxMintPortal internal mintPortal;
+
     // users
     Users internal users;
     address[] creatorArray = new address[](3);
@@ -127,7 +134,8 @@ abstract contract BaseTest is Test, Events, Defaults {
             creator_3: _createUser("creator_3"),
             curator_0: _createUser("curator_0"),
             admin: _createUser("admin"),
-            split: _createUser("split")
+            split: _createUser("split"),
+            usdcDepositor: _createUser("usdcDepositor")
         });
 
         // set default users
@@ -210,6 +218,9 @@ abstract contract BaseTest is Test, Events, Defaults {
         // upgrade edition beacon
         editionBeacon.upgradeTo(address(editionImpl));
 
+        // deploy mint portal
+        mintPortal = _deployMintPortal(address(mockUSDC), address(factory), address(collectionFactory));
+
         vm.stopPrank();
 
         // deploy test edition
@@ -224,6 +235,12 @@ abstract contract BaseTest is Test, Events, Defaults {
 
         vm.prank(users.user_1);
         mockUSDC.approve(address(edition), type(uint256).max);
+
+        vm.prank(user);
+        mockUSDC.approve(address(mintPortal), type(uint256).max);
+
+        vm.prank(users.user_1);
+        mockUSDC.approve(address(mintPortal), type(uint256).max);
     }
 
     /* -------------------------------------------- */
@@ -336,7 +353,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy single edition collection beacon
-    function _deploySingleEditionCollectionBeacon(address singleEditionCollectionImpl_)
+    function _deploySingleEditionCollectionBeacon(
+        address singleEditionCollectionImpl_
+    )
         internal
         returns (UpgradeableBeacon singleEditionCollectionBeacon_)
     {
@@ -360,7 +379,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy multi edition collection beacon
-    function _deployMultiEditionCollectionBeacon(address multiEditionCollectionImpl_)
+    function _deployMultiEditionCollectionBeacon(
+        address multiEditionCollectionImpl_
+    )
         internal
         returns (UpgradeableBeacon multiEditionCollectionBeacon_)
     {
@@ -381,7 +402,9 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy collection factory proxy
-    function _deployCollectionFactoryProxy(address collectionFactoryImpl_)
+    function _deployCollectionFactoryProxy(
+        address collectionFactoryImpl_
+    )
         internal
         returns (CollectionFactory collectionFactory_)
     {
@@ -396,6 +419,26 @@ abstract contract BaseTest is Test, Events, Defaults {
     /// @dev deploy edition
     function _deployEdition() internal returns (RouxEdition edition_) {
         return _createEdition(creator);
+    }
+
+    /// @dev deploy mint portal
+    function _deployMintPortal(
+        address underlying,
+        address editionFactory,
+        address collectionFactory_
+    )
+        internal
+        returns (RouxMintPortal mintPortal_)
+    {
+        mintPortalImpl = new RouxMintPortal(underlying, editionFactory, collectionFactory_);
+        vm.label({ account: address(mintPortalImpl), newLabel: "MintPortalImpl" });
+
+        // encode init data
+        bytes memory initData = abi.encodeWithSelector(mintPortalImpl.initialize.selector);
+
+        // deploy RouxMintPortal proxy
+        mintPortal_ = RouxMintPortal(address(new ERC1967Proxy(address(mintPortalImpl), initData)));
+        vm.label({ account: address(mintPortal_), newLabel: "MintPortalProxy" });
     }
 
     /* -------------------------------------------- */

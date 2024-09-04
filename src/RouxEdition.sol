@@ -24,6 +24,18 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
+ * last mechanical art
+ *
+ * 3/4 oz mezcal
+ * 3/4 oz cynar
+ * 3/4 oz campari
+ * 3/4 oz punt e mes
+ *
+ * stir, strain, up
+ * garnish with orange peel
+ */
+
+/**
  * @title roux edition
  * @author roux
  * @custom:version 1.0
@@ -291,10 +303,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // process mints to validate and get total prices
         for (uint256 i = 0; i < ids.length; ++i) {
             prices[i] = _preProcessDirectMint(to, ids[i], quantities[i], extensions[i]);
-
-            unchecked {
-                totalPrice += prices[i];
-            }
+            totalPrice += prices[i];
         }
 
         if (totalPrice > 0) {
@@ -336,14 +345,14 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /// @inheritdoc IRouxEdition
-    function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable nonReentrant {
+    function collectionMultiMint(address to, uint256 id, bytes calldata /* data */ ) external payable nonReentrant {
         // validate caller is a multi-edition collection
         if (!_collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         _validateMint(id, 1);
         _incrementTotalSupply(id, 1);
 
-        _mint(to, id, 1, data);
+        _mint(to, id, 1, "");
     }
 
     /* ------------------------------------------------- */
@@ -354,10 +363,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     function add(EditionData.AddParams calldata p) external onlyOwner nonReentrant returns (uint256) {
         RouxEditionStorage storage $ = _storage();
 
-        uint256 id;
-        unchecked {
-            id = ++$.tokenId;
-        }
+        uint256 id = ++$.tokenId;
 
         EditionData.TokenData storage d = $.tokens[id];
 
@@ -602,15 +608,17 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         EditionData.TokenData storage d = _storage().tokens[id];
 
         if (extension == address(0)) {
+            // standard mint w/o extension
             if (d.mintParams.gate) revert ErrorsLib.RouxEdition_GatedMint();
             price = d.mintParams.defaultPrice * quantity;
         } else {
+            // mint w/ extension - check if extension is registered
             if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             price = IEditionExtension(extension).approveMint({
                 id: id,
                 quantity: quantity,
-                operator: msg.sender,
+                operator: msg.sender, // typically will be the RouxMintPortal
                 account: to,
                 data: ""
             });
@@ -623,9 +631,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param quantity quantity
      */
     function _incrementTotalSupply(uint256 id, uint256 quantity) internal {
-        unchecked {
-            _storage().tokens[id].totalSupply += quantity.toUint128();
-        }
+        _storage().tokens[id].totalSupply += quantity.toUint128();
     }
 
     /**
@@ -635,11 +641,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param parentTokenId parent token id
      */
     function _setRegistryData(uint256 id, address parentEdition, uint256 parentTokenId) internal {
-        // revert if not an edition or not a valid token, or edition is self
-        if (
-            !_editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)
-                || parentEdition == address(this)
-        ) {
+        // revert if not an edition or not a valid token
+        if (!_editionFactory.isEdition(parentEdition) || !IRouxEdition(parentEdition).exists(parentTokenId)) {
             revert ErrorsLib.RouxEdition_InvalidAttribution();
         }
 
