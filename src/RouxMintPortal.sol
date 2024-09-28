@@ -135,7 +135,7 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         _burn(msg.sender, rUSDC_ID, cost);
 
         // approve edition
-        _underlying.safeApprove(address(edition), cost);
+        _manageApprovals(address(edition));
 
         // mint to caller
         edition.mint(msg.sender, id, quantity, extension, referrer, data);
