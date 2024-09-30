@@ -77,6 +77,12 @@ library ErrorsLib {
     /// @notice invalid collection size
     error Collection_InvalidCollectionSize();
 
+    /// @notice mint not started
+    error Collection_MintNotStarted();
+
+    /// @notice mint ended
+    error Collection_MintEnded();
+
     /* ------------------------------------------------- */
     /* Registry                                          */
     /* ------------------------------------------------- */

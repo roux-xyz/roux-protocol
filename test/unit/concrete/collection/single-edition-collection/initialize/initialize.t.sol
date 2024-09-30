@@ -27,7 +27,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
     function test__RevertWhen_AlreadyInitialized() external {
         // encode params
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        singleEditionCollection.initialize(abi.encode(singleEditionCollectionParams));
+        singleEditionCollection.initialize(singleEditionCollectionParams);
     }
 
     /// @dev reverts when collection size is too large
@@ -45,9 +45,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
 
         vm.prank(collectionAdmin);
         vm.expectRevert(ErrorsLib.Collection_InvalidCollectionSize.selector);
-        SingleEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
-        );
+        SingleEditionCollection(collectionFactory.createSingle(params));
     }
 
     /* -------------------------------------------- */
@@ -78,9 +76,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
 
         // create collection
         vm.prank(collectionAdmin);
-        SingleEditionCollection collectionInstance = SingleEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
-        );
+        SingleEditionCollection collectionInstance = SingleEditionCollection(collectionFactory.createSingle(params));
 
         // assert collection state
         assertEq(collectionInstance.name(), COLLECTION_NAME);

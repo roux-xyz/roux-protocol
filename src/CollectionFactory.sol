@@ -12,6 +12,8 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
+import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
 
 /**
  * @title collection factory
@@ -62,9 +64,9 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /* ------------------------------------------------- */
 
     /**
-     * @notice constructor
-     * @param singleEditionCollectionBeacon single edition collection beacon
-     * @param multiEditionCollectionBeacon multi edition collection beacon
+     * @notice Initializes the CollectionFactory with the given beacons.
+     * @param singleEditionCollectionBeacon Beacon address for single edition collections.
+     * @param multiEditionCollectionBeacon Beacon address for multi-edition collections.
      */
     constructor(address singleEditionCollectionBeacon, address multiEditionCollectionBeacon) {
         // disable initialization of implementation contract
@@ -96,7 +98,7 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /* ------------------------------------------------- */
 
     /**
-     * @notice Get CollectionFactoryStorage storage location
+     * @notice get CollectionFactoryStorage storage location
      * @return $ CollectionFactory storage location
      */
     function _storage() internal pure returns (CollectionFactoryStorage storage $) {
@@ -109,7 +111,11 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /* view                                              */
     /* ------------------------------------------------- */
 
-    /// @inheritdoc ICollectionFactory
+    /**
+     * @notice checks if an address is a collection created by this factory
+     * @param collection The address to check
+     * @return true if the address is a collection, false otherwise
+     */
     function isCollection(address collection) external view returns (bool) {
         return _storage().collections.get(uint256(uint160(collection)));
     }
@@ -118,66 +124,94 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
     /* write                                             */
     /* ------------------------------------------------- */
 
-    /// @inheritdoc ICollectionFactory
-    function create(CollectionData.CollectionType collectionType, bytes calldata params) external returns (address) {
-        // disable multi edition collections for now
-        // if (collectionType == CollectionData.CollectionType.MultiEdition) {
-        //     revert("Multi edition collections are disabled");
-        // }
+    /**
+     * @notice create new single edition collection
+     * @param params parameters for creating the single edition collection
+     * @return collectionInstance the address of the newly created collection
+     */
+    function createSingle(CollectionData.SingleEditionCreateParams calldata params)
+        external
+        returns (address collectionInstance)
+    {
+        // create the collection instance using the single edition beacon
+        collectionInstance = address(
+            new BeaconProxy(
+                _singleEditionCollectionBeacon,
+                abi.encodeWithSelector(SingleEditionCollection.initialize.selector, params)
+            )
+        );
 
-        CollectionFactoryStorage storage $ = _storage();
+        // set curator, transfer ownership to the caller, and register the new collection
+        _processCreate(collectionInstance);
 
-        // set which collection beacon to create
-        address beacon;
-        if (collectionType == CollectionData.CollectionType.SingleEdition) {
-            beacon = _singleEditionCollectionBeacon;
-        } else if (collectionType == CollectionData.CollectionType.MultiEdition) {
-            beacon = _multiEditionCollectionBeacon;
-        } else {
-            revert ErrorsLib.CollectionFactory_InvalidCollectionType();
-        }
-
-        // create collection instance
-        address collectionInstance =
-            address(new BeaconProxy(beacon, abi.encodeWithSignature("initialize(bytes)", params)));
-
-        // set curator
-        ICollection(collectionInstance).setCurator(msg.sender);
-
-        // transfer ownership to caller
-        Ownable(collectionInstance).transferOwnership(msg.sender);
-
-        // add to collections mapping
-        $.collections.set(uint256(uint160(collectionInstance)));
-
-        // emit event
-        if (collectionType == CollectionData.CollectionType.SingleEdition) {
-            emit EventsLib.NewSingleEditionCollection(collectionInstance);
-        } else {
-            emit EventsLib.NewMultiEditionCollection(collectionInstance);
-        }
+        // emit an event for the new collection
+        emit EventsLib.NewSingleEditionCollection(collectionInstance);
 
         return collectionInstance;
     }
 
-    /* -------------------------------------------- */
-    /* proxy                                        */
-    /* -------------------------------------------- */
+    /**
+     * @notice creates a new multi-edition collection
+     * @param params parameters for creating the multi-edition collection
+     * @return collectionInstance the address of the newly created collection
+     */
+    function createMulti(CollectionData.MultiEditionCreateParams calldata params)
+        external
+        returns (address collectionInstance)
+    {
+        // create the collection instance using the multi-edition beacon
+        collectionInstance = address(
+            new BeaconProxy(
+                _multiEditionCollectionBeacon,
+                abi.encodeWithSelector(MultiEditionCollection.initialize.selector, params)
+            )
+        );
+
+        // set curator, transfer ownership to the caller, and register the new collection
+        _processCreate(collectionInstance);
+
+        // emit an event for the new collection
+        emit EventsLib.NewMultiEditionCollection(collectionInstance);
+
+        return collectionInstance;
+    }
+
+    /* ------------------------------------------------- */
+    /* proxy                                             */
+    /* ------------------------------------------------- */
 
     /**
-     * @notice get proxy implementation
-     * @return implementation address
+     * @notice gets the implementation address of the proxy
+     * @return the implementation address
      */
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
     }
 
     /**
-     * @notice upgrade proxy
-     * @param newImplementation new implementation contract
-     * @param data optional calldata
+     * @notice upgrades the proxy to a new implementation
+     * @param newImplementation the new implementation address
+     * @param data optional data to call on the new implementation
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
+    }
+
+    /* ------------------------------------------------- */
+    /* internal                                          */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice process create calls
+     */
+    function _processCreate(address collectionInstance) internal {
+        CollectionFactoryStorage storage $ = _storage();
+
+        // set the curator and transfer ownership to the caller
+        ICollection(collectionInstance).setCurator(msg.sender);
+        Ownable(collectionInstance).transferOwnership(msg.sender);
+
+        // register the new collection
+        $.collections.set(uint256(uint160(collectionInstance)));
     }
 }

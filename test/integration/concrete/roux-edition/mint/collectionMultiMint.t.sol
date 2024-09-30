@@ -1,4 +1,4 @@
-    // SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
@@ -13,7 +13,7 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 
 contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
-    /* setup                                       */
+    /* setup                                        */
     /* -------------------------------------------- */
     MultiEditionCollection maliciousCollection;
 
@@ -38,6 +38,52 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
         maliciousCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
     }
 
+    /// @dev reverts when minting before mintStart
+    function test__RevertWhen_MintBeforeMintStart() external {
+        // set mintStart to a future timestamp
+        uint40 futureMintStart = uint40(block.timestamp + 1 hours);
+
+        // modify the collection parameters before creation
+        multiEditionCollectionParams.mintStart = futureMintStart;
+
+        // create a new collection with the updated parameters
+        MultiEditionCollection collection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
+
+        // register the collection in the edition contract
+        vm.prank(collectionAdmin);
+        edition.setCollection(address(collection), true);
+
+        // attempt to mint before mintStart
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.Collection_MintNotStarted.selector);
+        collection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+    }
+
+    /// @dev reverts when minting after mintEnd
+    function test__RevertWhen_MintAfterMintEnd() external {
+        // set mintEnd to current timestamp (immediate end)
+        uint40 immediateMintEnd = uint40(block.timestamp);
+
+        // modify the collection parameters before creation
+        multiEditionCollectionParams.mintStart = uint40(block.timestamp);
+        multiEditionCollectionParams.mintEnd = immediateMintEnd;
+
+        // create a new collection with the updated parameters
+        MultiEditionCollection collection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
+
+        // register the collection in the edition contract
+        vm.prank(collectionAdmin);
+        edition.setCollection(address(collection), true);
+
+        // advance time by 1 second to ensure we're past mintEnd
+        vm.warp(block.timestamp + 1);
+
+        // attempt to mint after mintEnd
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.Collection_MintEnded.selector);
+        collection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -60,14 +106,14 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
         assertEq(multiEditionCollection.balanceOf(user), 1);
 
         // assert erc6551 account balance
-        assertEq(multiEditionItemTargets[0].balanceOf(erc6551account, 1), 1);
-        assertEq(multiEditionItemTargets[1].balanceOf(erc6551account, 1), 1);
-        assertEq(multiEditionItemTargets[2].balanceOf(erc6551account, 1), 1);
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            assertEq(multiEditionItemTargets[i].balanceOf(erc6551account, multiEditionItemIds[i]), 1);
+        }
 
         // assert total supply
-        assertEq(multiEditionItemTargets[0].totalSupply(1), 2);
-        assertEq(multiEditionItemTargets[1].totalSupply(1), 2);
-        assertEq(multiEditionItemTargets[2].totalSupply(1), 2);
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            assertEq(multiEditionItemTargets[i].totalSupply(multiEditionItemIds[i]), 2);
+        }
     }
 
     /* -------------------------------------------- */
@@ -123,7 +169,7 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
             address(
                 new ERC1967Proxy(
                     address(maliciousCollectionImpl),
-                    abi.encodeWithSignature("initialize(bytes)", abi.encode(maliciousParams))
+                    abi.encodeWithSelector(MultiEditionCollection.initialize.selector, maliciousParams)
                 )
             )
         );

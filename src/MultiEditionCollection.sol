@@ -87,15 +87,11 @@ contract MultiEditionCollection is Collection {
 
     /**
      * @notice initialize collection
-     * @param params encoded parameters
+     * @param p parameters for initializing the collection
      */
-    function initialize(bytes calldata params) external initializer {
+    function initialize(CollectionData.MultiEditionCreateParams calldata p) external initializer {
         CollectionStorage storage $ = _collectionStorage();
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
-
-        // decode params
-        (CollectionData.MultiEditionCreateParams memory p) =
-            abi.decode(params, (CollectionData.MultiEditionCreateParams));
 
         // factory will transfer ownership to its caller
         _initializeOwner(msg.sender);
@@ -244,6 +240,9 @@ contract MultiEditionCollection is Collection {
     function _mint(address to, address referrer) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        if (block.timestamp < $$.mintParams.mintStart) revert ErrorsLib.Collection_MintNotStarted();
+        if (block.timestamp > $$.mintParams.mintEnd) revert ErrorsLib.Collection_MintEnded();
 
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;

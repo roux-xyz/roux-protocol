@@ -50,9 +50,7 @@ contract CollectionFactoryTest is CollectionBase {
     /// @dev create single edition collection
     function test__CreateSingleEditionCollection() external {
         vm.prank(collectionAdmin);
-        address newCollection = collectionFactory.create(
-            CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams)
-        );
+        address newCollection = collectionFactory.createSingle(singleEditionCollectionParams);
 
         assertEq(collectionFactory.isCollection(newCollection), true);
         assertTrue(SingleEditionCollection(newCollection).supportsInterface(type(ICollection).interfaceId));
@@ -61,9 +59,7 @@ contract CollectionFactoryTest is CollectionBase {
     /// @dev create multi edition collection
     function test__CreateMultiEditionCollection() external {
         vm.prank(curator);
-        address newCollection = collectionFactory.create(
-            CollectionData.CollectionType.MultiEdition, abi.encode(multiEditionCollectionParams)
-        );
+        address newCollection = collectionFactory.createMulti(multiEditionCollectionParams);
 
         assertEq(collectionFactory.isCollection(newCollection), true);
         assertTrue(MultiEditionCollection(newCollection).supportsInterface(type(ICollection).interfaceId));
@@ -72,9 +68,7 @@ contract CollectionFactoryTest is CollectionBase {
     /// @dev is collection true
     function test__IsCollection_True() external {
         vm.prank(collectionAdmin);
-        address newCollection = collectionFactory.create(
-            CollectionData.CollectionType.SingleEdition, abi.encode(singleEditionCollectionParams)
-        );
+        address newCollection = collectionFactory.createSingle(singleEditionCollectionParams);
 
         assertEq(collectionFactory.isCollection(newCollection), true);
     }

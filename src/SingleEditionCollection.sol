@@ -85,36 +85,33 @@ contract SingleEditionCollection is Collection {
 
     /**
      * @notice initialize collection
-     * @param params encoded parameters
+     * @param p parameters for initializing the collection
      *
      * @dev single edition collections creation is unvalidated because the collection must be
      *      registered by the underlying edition via `setCollection` before a token can be minted.
      *      edition owners should not register malicious or invalid collections.
      */
-    function initialize(bytes calldata params) external initializer {
+    function initialize(CollectionData.SingleEditionCreateParams calldata p) external initializer {
         CollectionStorage storage $ = _collectionStorage();
         SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
 
         // factory will transfer ownership to its caller
         _initializeOwner(msg.sender);
 
-        // decode params
-        (CollectionData.SingleEditionCreateParams memory p) =
-            abi.decode(params, (CollectionData.SingleEditionCreateParams));
-
         // set mintParams
-        _singleEditionCollectionStorage().mintParams =
+        $$.mintParams =
             CollectionData.SingleEditionMintParams({ price: p.price, mintStart: p.mintStart, mintEnd: p.mintEnd });
 
         // validate collection size
         if (p.itemIds.length > MAX_SINGLE_EDITION_COLLECTION_SIZE) {
             revert ErrorsLib.Collection_InvalidCollectionSize();
         }
+
         // set items
         $$.itemTarget = p.itemTarget;
         $$.itemIds = p.itemIds;
 
-        // set collection state vars
+        // set collection state variables
         $.name = p.name;
         $.symbol = p.symbol;
         $.uri = p.uri;
@@ -222,6 +219,9 @@ contract SingleEditionCollection is Collection {
     function _mint(address to, address referrer, uint256 cost) internal returns (uint256) {
         CollectionStorage storage $ = _collectionStorage();
         SingleEditionCollectionStorage storage $$ = _singleEditionCollectionStorage();
+
+        if (block.timestamp < $$.mintParams.mintStart) revert ErrorsLib.Collection_MintNotStarted();
+        if (block.timestamp > $$.mintParams.mintEnd) revert ErrorsLib.Collection_MintEnded();
 
         // increment token id
         uint256 collectionTokenId = ++$.tokenIds;

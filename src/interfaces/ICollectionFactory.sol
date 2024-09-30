@@ -5,12 +5,18 @@ import { CollectionData } from "src/types/DataTypes.sol";
 
 interface ICollectionFactory {
     /**
-     * @notice create a new edition
-     * @param collectionType collection type
+     * @notice create a new edition - single edition
      * @param params creation parameters - encode contractUri and init data
      * @return new edition instance
      */
-    function create(CollectionData.CollectionType collectionType, bytes calldata params) external returns (address);
+    function createSingle(CollectionData.SingleEditionCreateParams calldata params) external returns (address);
+
+    /**
+     * @notice create a new edition - multi edition
+     * @param params creation parameters - encode contractUri and init data
+     * @return new edition instance
+     */
+    function createMulti(CollectionData.MultiEditionCreateParams calldata params) external returns (address);
 
     /* -------------------------------------------- */
     /* view functions                               */
