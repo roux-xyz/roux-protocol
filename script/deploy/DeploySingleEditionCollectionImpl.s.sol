@@ -18,13 +18,20 @@ contract DeploySingleEditionCollectionImpl is BaseScript {
         broadcast
         returns (SingleEditionCollection singleEditionCollectionImpl, UpgradeableBeacon singleEditionCollectionBeacon)
     {
+        console.log("Arguments: ");
+        console.log("erc6551registry: %s", erc6551registry);
+        console.log("accountImplementation: %s", accountImplementation);
+        console.log("editionFactory: %s", editionFactory);
+        console.log("controller: %s", controller);
+        console.log("\n");
+
         console.log("Deploying SingleEditionCollection implementation...\n");
 
         // deploy implementation
         singleEditionCollectionImpl =
             new SingleEditionCollection(erc6551registry, accountImplementation, editionFactory, controller);
 
-        console.log("SingleEditionCollection Implementation: %s\n", address(singleEditionCollectionImpl));
+        console.log("New SingleEditionCollection Implementation: %s\n", address(singleEditionCollectionImpl));
         console.log("Deploying SingleEditionCollection beacon...\n");
 
         // deploy beacon

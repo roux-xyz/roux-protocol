@@ -19,6 +19,14 @@ contract UpgradeSingleEditionCollection is BaseScript {
         broadcast
         returns (SingleEditionCollection newSingleEditionCollectionImpl)
     {
+        console.log("Arguments: ");
+        console.log("singleEditionCollectionBeacon: %s", singleEditionCollectionBeacon);
+        console.log("erc6551registry: %s", erc6551registry);
+        console.log("accountImplementation: %s", accountImplementation);
+        console.log("editionFactory: %s", editionFactory);
+        console.log("controller: %s", controller);
+        console.log("\n");
+
         address currentImpl = UpgradeableBeacon(singleEditionCollectionBeacon).implementation();
         console.log("Current SingleEditionCollection Implementation: %s\n", currentImpl);
 

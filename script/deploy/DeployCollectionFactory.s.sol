@@ -16,6 +16,11 @@ contract DeployCollectionFactory is BaseScript {
         broadcast
         returns (CollectionFactory collectionFactoryImpl, CollectionFactory collectionFactoryProxy)
     {
+        console.log("Arguments: ");
+        console.log("singleEditionCollectionBeacon: %s", singleEditionCollectionBeacon);
+        console.log("multiEditionCollectionBeacon: %s", multiEditionCollectionBeacon);
+        console.log("\n");
+
         console.log("Deploying CollectionFactory implementation...\n");
 
         // deploy edition factory implementation contract
