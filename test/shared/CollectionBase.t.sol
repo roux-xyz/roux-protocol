@@ -180,9 +180,7 @@ abstract contract CollectionBase is BaseTest {
         params.itemIds = itemIds;
 
         vm.prank(collectionAdmin);
-        SingleEditionCollection collectionInstance = SingleEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
-        );
+        SingleEditionCollection collectionInstance = SingleEditionCollection(collectionFactory.createSingle(params));
 
         return collectionInstance;
     }
@@ -200,9 +198,7 @@ abstract contract CollectionBase is BaseTest {
         params.itemIds = itemIds;
 
         vm.prank(curator);
-        MultiEditionCollection collectionInstance = MultiEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params))
-        );
+        MultiEditionCollection collectionInstance = MultiEditionCollection(collectionFactory.createMulti(params));
 
         return collectionInstance;
     }

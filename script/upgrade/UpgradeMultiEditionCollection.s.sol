@@ -19,6 +19,14 @@ contract UpgradeMultiEditionCollection is BaseScript {
         broadcast
         returns (MultiEditionCollection newMultiEditionCollectionImpl)
     {
+        console.log("Arguments: ");
+        console.log("multiEditionCollectionBeacon: %s", multiEditionCollectionBeacon);
+        console.log("erc6551registry: %s", erc6551registry);
+        console.log("accountImplementation: %s", accountImplementation);
+        console.log("editionFactory: %s", editionFactory);
+        console.log("controller: %s", controller);
+        console.log("\n");
+
         address currentImpl = UpgradeableBeacon(multiEditionCollectionBeacon).implementation();
         console.log("Current MultiEditionCollection Implementation: %s\n", currentImpl);
 

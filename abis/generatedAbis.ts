@@ -550,14 +550,54 @@ export const collectionFactoryAbi = [
     type: 'function',
     inputs: [
       {
-        name: 'collectionType',
-        internalType: 'enum CollectionData.CollectionType',
-        type: 'uint8',
+        name: 'params',
+        internalType: 'struct CollectionData.MultiEditionCreateParams',
+        type: 'tuple',
+        components: [
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'symbol', internalType: 'string', type: 'string' },
+          {
+            name: 'collectionFeeRecipient',
+            internalType: 'address',
+            type: 'address',
+          },
+          { name: 'uri', internalType: 'string', type: 'string' },
+          { name: 'mintStart', internalType: 'uint40', type: 'uint40' },
+          { name: 'mintEnd', internalType: 'uint40', type: 'uint40' },
+          { name: 'itemTargets', internalType: 'address[]', type: 'address[]' },
+          { name: 'itemIds', internalType: 'uint256[]', type: 'uint256[]' },
+        ],
       },
-      { name: 'params', internalType: 'bytes', type: 'bytes' },
     ],
-    name: 'create',
-    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    name: 'createMulti',
+    outputs: [
+      { name: 'collectionInstance', internalType: 'address', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      {
+        name: 'params',
+        internalType: 'struct CollectionData.SingleEditionCreateParams',
+        type: 'tuple',
+        components: [
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'symbol', internalType: 'string', type: 'string' },
+          { name: 'uri', internalType: 'string', type: 'string' },
+          { name: 'price', internalType: 'uint128', type: 'uint128' },
+          { name: 'mintStart', internalType: 'uint40', type: 'uint40' },
+          { name: 'mintEnd', internalType: 'uint40', type: 'uint40' },
+          { name: 'itemTarget', internalType: 'address', type: 'address' },
+          { name: 'itemIds', internalType: 'uint256[]', type: 'uint256[]' },
+        ],
+      },
+    ],
+    name: 'createSingle',
+    outputs: [
+      { name: 'collectionInstance', internalType: 'address', type: 'address' },
+    ],
     stateMutability: 'nonpayable',
   },
   {
@@ -731,11 +771,6 @@ export const collectionFactoryAbi = [
     name: 'AddressEmptyCode',
   },
   { type: 'error', inputs: [], name: 'AlreadyInitialized' },
-  {
-    type: 'error',
-    inputs: [],
-    name: 'CollectionFactory_InvalidCollectionType',
-  },
   {
     type: 'error',
     inputs: [
@@ -1518,7 +1553,27 @@ export const multiEditionCollectionAbi = [
   },
   {
     type: 'function',
-    inputs: [{ name: 'params', internalType: 'bytes', type: 'bytes' }],
+    inputs: [
+      {
+        name: 'p',
+        internalType: 'struct CollectionData.MultiEditionCreateParams',
+        type: 'tuple',
+        components: [
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'symbol', internalType: 'string', type: 'string' },
+          {
+            name: 'collectionFeeRecipient',
+            internalType: 'address',
+            type: 'address',
+          },
+          { name: 'uri', internalType: 'string', type: 'string' },
+          { name: 'mintStart', internalType: 'uint40', type: 'uint40' },
+          { name: 'mintEnd', internalType: 'uint40', type: 'uint40' },
+          { name: 'itemTargets', internalType: 'address[]', type: 'address[]' },
+          { name: 'itemIds', internalType: 'uint256[]', type: 'uint256[]' },
+        ],
+      },
+    ],
     name: 'initialize',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -1930,6 +1985,8 @@ export const multiEditionCollectionAbi = [
   { type: 'error', inputs: [], name: 'Collection_InvalidCollectionSize' },
   { type: 'error', inputs: [], name: 'Collection_InvalidExtension' },
   { type: 'error', inputs: [], name: 'Collection_InvalidItems' },
+  { type: 'error', inputs: [], name: 'Collection_MintEnded' },
+  { type: 'error', inputs: [], name: 'Collection_MintNotStarted' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
@@ -3815,7 +3872,23 @@ export const singleEditionCollectionAbi = [
   },
   {
     type: 'function',
-    inputs: [{ name: 'params', internalType: 'bytes', type: 'bytes' }],
+    inputs: [
+      {
+        name: 'p',
+        internalType: 'struct CollectionData.SingleEditionCreateParams',
+        type: 'tuple',
+        components: [
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'symbol', internalType: 'string', type: 'string' },
+          { name: 'uri', internalType: 'string', type: 'string' },
+          { name: 'price', internalType: 'uint128', type: 'uint128' },
+          { name: 'mintStart', internalType: 'uint40', type: 'uint40' },
+          { name: 'mintEnd', internalType: 'uint40', type: 'uint40' },
+          { name: 'itemTarget', internalType: 'address', type: 'address' },
+          { name: 'itemIds', internalType: 'uint256[]', type: 'uint256[]' },
+        ],
+      },
+    ],
     name: 'initialize',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -4252,6 +4325,8 @@ export const singleEditionCollectionAbi = [
   { type: 'error', inputs: [], name: 'Collection_GatedMint' },
   { type: 'error', inputs: [], name: 'Collection_InvalidCollectionSize' },
   { type: 'error', inputs: [], name: 'Collection_InvalidExtension' },
+  { type: 'error', inputs: [], name: 'Collection_MintEnded' },
+  { type: 'error', inputs: [], name: 'Collection_MintNotStarted' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },

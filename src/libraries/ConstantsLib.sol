@@ -21,3 +21,9 @@ uint256 constant MAX_SINGLE_EDITION_COLLECTION_SIZE = 10;
 
 /// @dev maximum collection size
 uint256 constant MAX_MULTI_EDITION_COLLECTION_SIZE = 10;
+
+/// @dev erc6551 registry
+address constant ERC_6551_REGISTRY = 0x000000006551c19487814612e58FE06813775758;
+
+/// @dev usdc base sepolia
+address constant USDC_BASE_SEPOLIA = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;

@@ -206,9 +206,8 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
 
         // create single edition collection
         vm.prank(creator);
-        SingleEditionCollection singleEditionCollection_ = SingleEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.SingleEdition, abi.encode(params))
-        );
+        SingleEditionCollection singleEditionCollection_ =
+            SingleEditionCollection(collectionFactory.createSingle(params));
 
         vm.prank(creator);
         edition_.setCollection(address(singleEditionCollection_), true);

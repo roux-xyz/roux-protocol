@@ -27,7 +27,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
     function test__RevertWhen_AlreadyInitialized() external {
         // encode params
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        multiEditionCollection.initialize(abi.encode(multiEditionCollectionParams));
+        multiEditionCollection.initialize(multiEditionCollectionParams);
     }
 
     /// @dev reverts when collection size is too large
@@ -48,7 +48,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
 
         vm.prank(collectionAdmin);
         vm.expectRevert(ErrorsLib.Collection_InvalidCollectionSize.selector);
-        MultiEditionCollection(collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params)));
+        MultiEditionCollection(collectionFactory.createMulti(params));
     }
 
     /// @dev reverts when item targets and item ids are not the same length
@@ -68,7 +68,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
 
         vm.prank(collectionAdmin);
         vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
-        MultiEditionCollection(collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params)));
+        MultiEditionCollection(collectionFactory.createMulti(params));
     }
 
     /// @dev reverts when one of the items is gated
@@ -100,7 +100,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
 
         vm.prank(collectionAdmin);
         vm.expectRevert(ErrorsLib.Collection_InvalidItems.selector);
-        MultiEditionCollection(collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params)));
+        MultiEditionCollection(collectionFactory.createMulti(params));
     }
 
     /* -------------------------------------------- */
@@ -150,9 +150,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
 
         // create collection
         vm.prank(curator);
-        MultiEditionCollection collectionInstance = MultiEditionCollection(
-            collectionFactory.create(CollectionData.CollectionType.MultiEdition, abi.encode(params))
-        );
+        MultiEditionCollection collectionInstance = MultiEditionCollection(collectionFactory.createMulti(params));
 
         // assert collection state
         assertEq(collectionInstance.name(), COLLECTION_NAME);

@@ -18,6 +18,13 @@ contract DeployMultiEditionCollectionImpl is BaseScript {
         broadcast
         returns (MultiEditionCollection multiEditionCollectionImpl, UpgradeableBeacon multiEditionCollectionBeacon)
     {
+        console.log("Arguments: ");
+        console.log("erc6551registry: %s", erc6551registry);
+        console.log("accountImplementation: %s", accountImplementation);
+        console.log("editionFactory: %s", editionFactory);
+        console.log("controller: %s", controller);
+        console.log("\n");
+
         console.log("Deploying MultiEditionCollection implementation...\n");
 
         // deploy implementation

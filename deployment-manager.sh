@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 
-# Deploy roux protocol contracts to network
-# NOTE: The RouxEditionBeacon must be deployed with a No-Op implementation first.
-# This handles a circular dependency in the protocol. Once the CollectionFactory is
-# is deployed, the actual RouxEdition Implementation can be deployed, at which point
-# the RouxEditionBeacon must be upgraded to the new implementation.
-
+# Exit immediately if a command exits with a non-zero status
 set -e
 
 # Function to convert to uppercase
@@ -13,7 +8,65 @@ to_upper() {
     echo "$1" | tr '[:lower:]' '[:upper:]'
 }
 
-# deploy a contract
+# Load environment variables from .env file
+if [ -f .env ]; then
+    set -o allexport
+    source .env
+    set +o allexport
+    echo ".env file found and loaded."
+else
+    echo ".env file not found in the current directory."
+    exit 1
+fi
+
+# Debugging: Print loaded environment variables
+echo "Loaded environment variables:"
+echo "BASE_SEPOLIA_RPC_URL: $BASE_SEPOLIA_RPC_URL"
+echo "NETWORK: $NETWORK"
+echo "ACCOUNT: $ACCOUNT"
+echo "SENDER: $SENDER"
+
+# Path to your JSON file
+JSON_FILE="deployments/baseSepolia.json"
+
+# Check if JSON file exists
+if [ -f "$JSON_FILE" ]; then
+    echo "Parsing $JSON_FILE for deployment variables..."
+    
+    # Extract variables using jq and assign to bash variables
+    REGISTRY_IMPL=$(jq -r '.REGISTRY_IMPL' "$JSON_FILE")
+    REGISTRY_PROXY=$(jq -r '.REGISTRY_PROXY' "$JSON_FILE")
+    CONTROLLER_IMPL=$(jq -r '.CONTROLLER_IMPL' "$JSON_FILE")
+    CONTROLLER_PROXY=$(jq -r '.CONTROLLER_PROXY' "$JSON_FILE")
+    ERC_6551_ACCOUNT_IMPL=$(jq -r '.ERC_6551_ACCOUNT_IMPL' "$JSON_FILE")
+    ERC_6551_REGISTRY=$(jq -r '.ERC_6551_REGISTRY' "$JSON_FILE")
+    NO_OP_IMPL=$(jq -r '.NO_OP_IMPL' "$JSON_FILE")
+    ROUX_EDITION_BEACON=$(jq -r '.ROUX_EDITION_BEACON' "$JSON_FILE")
+    ROUX_EDITION_FACTORY_IMPL=$(jq -r '.ROUX_EDITION_FACTORY_IMPL' "$JSON_FILE")
+    ROUX_EDITION_FACTORY_PROXY=$(jq -r '.ROUX_EDITION_FACTORY_PROXY' "$JSON_FILE")
+    SINGLE_EDITION_COLLECTION_IMPL=$(jq -r '.SINGLE_EDITION_COLLECTION_IMPL' "$JSON_FILE")
+    SINGLE_EDITION_COLLECTION_BEACON=$(jq -r '.SINGLE_EDITION_COLLECTION_BEACON' "$JSON_FILE")
+    MULTI_EDITION_COLLECTION_IMPL=$(jq -r '.MULTI_EDITION_COLLECTION_IMPL' "$JSON_FILE")
+    MULTI_EDITION_COLLECTION_BEACON=$(jq -r '.MULTI_EDITION_COLLECTION_BEACON' "$JSON_FILE")
+    COLLECTION_FACTORY_IMPL=$(jq -r '.COLLECTION_FACTORY_IMPL' "$JSON_FILE")
+    COLLECTION_FACTORY_PROXY=$(jq -r '.COLLECTION_FACTORY_PROXY' "$JSON_FILE")
+    ROUX_MINT_PORTAL_IMPL=$(jq -r '.ROUX_MINT_PORTAL_IMPL' "$JSON_FILE")
+    ROUX_MINT_PORTAL_PROXY=$(jq -r '.ROUX_MINT_PORTAL_PROXY' "$JSON_FILE")
+    USDC_BASE_SEPOLIA=$(jq -r '.USDC_BASE_SEPOLIA' "$JSON_FILE")
+    
+    # Optional: Verify that variables are not empty
+    if [ -z "$REGISTRY_IMPL" ] || [ -z "$REGISTRY_PROXY" ] || [ -z "$CONTROLLER_IMPL" ] || [ -z "$CONTROLLER_PROXY" ] || [ -z "$ERC_6551_REGISTRY" ] || [ -z "$ERC_6551_ACCOUNT_IMPL" ] || [ -z "$NO_OP_IMPL" ] || [ -z "$ROUX_EDITION_BEACON" ] || [ -z "$ROUX_EDITION_FACTORY_IMPL" ] || [ -z "$ROUX_EDITION_FACTORY_PROXY" ] || [ -z "$SINGLE_EDITION_COLLECTION_IMPL" ] || [ -z "$SINGLE_EDITION_COLLECTION_BEACON" ] || [ -z "$MULTI_EDITION_COLLECTION_IMPL" ] || [ -z "$MULTI_EDITION_COLLECTION_BEACON" ] || [ -z "$COLLECTION_FACTORY_IMPL" ] || [ -z "$COLLECTION_FACTORY_PROXY" ] || [ -z "$ROUX_MINT_PORTAL_IMPL" ] || [ -z "$ROUX_MINT_PORTAL_PROXY" ] || [ -z "$USDC_BASE_SEPOLIA" ]; then
+        echo "Error: One or more variables are missing in $JSON_FILE."
+        exit 1
+    fi
+    
+    echo "Parsed deployment variables from $JSON_FILE"
+else
+    echo "JSON file $JSON_FILE not found!"
+    exit 1
+fi
+
+# Function to deploy a contract
 run() {
     local network="$1"
     local rpc_url_var="$2"
@@ -25,7 +78,6 @@ run() {
             echo "Running locally"
             forge script "$contract" --fork-url http://localhost:8545 --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d --broadcast -vvvv $args
             ;;
-
         "sepolia"|"mainnet"|"base_sepolia"|"base")
             local upper_network=$(to_upper "$network")
             local upper_rpc_url_var="${upper_network}_RPC_URL"
@@ -37,13 +89,18 @@ run() {
             echo "Running on $network"
             if [ ! -z $LEDGER_DERIVATION_PATH ]; then
                 forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
-            else
+            elif [ ! -z $ACCOUNT ]; then
                 echo "Running with account $ACCOUNT"
                 # We use both --account and --sender to ensure the signing account and simulated sender are the same
-                forge script "$contract" --rpc-url "$rpc_url" --account $ACCOUNT --sender $SENDER --broadcast -vvvv $args
+                forge script "$contract" --rpc-url "$rpc_url" --account "$ACCOUNT" --sender "$SENDER" --broadcast -vvvv $args
+            elif [ ! -z $PRIVATE_KEY ]; then
+                echo "Running with private key"
+                forge script "$contract" --rpc-url "$rpc_url" --private-key "$PRIVATE_KEY" --broadcast -vvvv $args
+            else
+                echo "No account specified. Please set ACCOUNT, PRIVATE_KEY, or configure a Ledger."
+                exit 1
             fi
             ;;
-
         *)
             echo "Invalid NETWORK value"
             exit 1
@@ -51,31 +108,33 @@ run() {
     esac
 }
 
+# Updated usage() function with correct variable names and minimized arguments
 usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
     echo "  deploy-registry"
-    echo "  deploy-controller <registry> <currency>"
+    echo "  deploy-controller"
     echo "  deploy-erc6551-account"
     echo "  deploy-no-op"
-    echo "  deploy-edition-beacon <no-op-impl>"
-    echo "  deploy-edition-factory <edition-beacon>"
-    echo "  deploy-edition-impl <edition-factory> <collection-factory> <controller> <registry>"
-    echo "  upgrade-edition-beacon <edition-beacon> <new-implementation>"
-    echo "  deploy-single-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
-    echo "  deploy-multi-edition-collection-impl <erc6551registry> <accountImplementation> <editionFactory> <controller>"
-    echo "  deploy-collection-factory <singleEditionCollectionBeacon> <multiEditionCollectionBeacon>"
-    echo "  deploy-mint-portal <underlying> <edition-factory> <collection-factory>"
-    echo "  upgrade-controller <proxyAddress> <registry> <currency>"
-    echo "  upgrade-single-edition-collection <singleEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
-    echo "  upgrade-multi-edition-collection <multiEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
+    echo "  deploy-edition-beacon"
+    echo "  deploy-edition-factory"
+    echo "  deploy-edition-impl"
+    echo "  upgrade-edition-beacon <new_implementation>"
+    echo "  deploy-single-edition-collection-impl"
+    echo "  deploy-multi-edition-collection-impl"
+    echo "  deploy-collection-factory"
+    echo "  deploy-mint-portal"
+    echo "  upgrade-controller"
+    echo "  upgrade-single-edition-collection"
+    echo "  upgrade-multi-edition-collection"
+    echo "  upgrade-collection-factory"
     echo ""
     echo "Options:"
     echo "  NETWORK: Set this environment variable to either 'local', 'sepolia', 'base_sepolia', 'base', or 'mainnet'"
 }
 
-### deployment manager ###
+### Deployment Manager ###
 
 DEPLOYMENTS_FILE="deployments/${NETWORK}.json"
 
@@ -90,7 +149,7 @@ case $1 in
 
     "deploy-registry")
         if [ "$#" -ne 1 ]; then
-            echo "Invalid param count; Usage: $0 <command>"
+            echo "Invalid param count; Usage: $0 deploy-registry"
             exit 1
         fi
 
@@ -99,18 +158,18 @@ case $1 in
         ;;
 
     "deploy-controller")
-        if [ "$#" -ne 3 ]; then
-            echo "Invalid param count; Usage: $0 <command> <registry> <currency>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-controller"
             exit 1
         fi
 
         echo "Deploying Controller"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployController.s.sol:DeployController" "--sig run(address,address) $2 $3"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployController.s.sol:DeployController" "--sig run(address,address) $REGISTRY_PROXY $USDC_BASE_SEPOLIA"
         ;;
 
     "deploy-erc6551-account")
         if [ "$#" -ne 1 ]; then
-            echo "Invalid param count; Usage: $0 <command>"
+            echo "Invalid param count; Usage: $0 deploy-erc6551-account"
             exit 1
         fi
 
@@ -120,7 +179,7 @@ case $1 in
 
     "deploy-no-op")
         if [ "$#" -ne 1 ]; then
-            echo "Invalid param count; Usage: $0 <command>"
+            echo "Invalid param count; Usage: $0 deploy-no-op"
             exit 1
         fi
 
@@ -129,113 +188,123 @@ case $1 in
         ;;
 
     "deploy-edition-beacon")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <no-op-impl>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-edition-beacon"
             exit 1
         fi
 
         echo "Deploying Edition Beacon"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionBeacon.s.sol:DeployEditionBeacon" "--sig run(address) $2"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionBeacon.s.sol:DeployEditionBeacon" "--sig run(address) $NO_OP_IMPL"
         ;;
 
     "deploy-edition-factory")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 <command> <edition-beacon>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-edition-factory"
             exit 1
         fi
 
         echo "Deploying EditionFactory"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $2"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $ROUX_EDITION_BEACON"
         ;;
 
     "deploy-edition-impl")
-        if [ "$#" -ne 5 ]; then
-            echo "Invalid param count; Usage: $0 <command> <edition-factory> <collection-factory> <controller> <registry>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-edition-impl"
             exit 1
         fi
 
         echo "Deploying Edition Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address,address) $2 $3 $4 $5"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address,address) $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
         ;;
 
     "upgrade-edition-beacon")
-        if [ "$#" -ne 3 ]; then
-            echo "Invalid param count; Usage: $0 <command> <edition-beacon> <new-implementation>"
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-edition-beacon <new_implementation>"
             exit 1
         fi
 
         echo "Upgrading Edition Beacon"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeEditionBeacon.s.sol:UpgradeEditionBeacon" "--sig run(address,address) $2 $3"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeEditionBeacon.s.sol:UpgradeEditionBeacon" "--sig run(address,address) $ROUX_EDITION_BEACON $2"
         ;;
 
     "deploy-single-edition-collection-impl")
-        if [ "$#" -ne 5 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-single-edition-collection-impl"
             exit 1
         fi
 
         echo "Deploying SingleEditionCollection Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeploySingleEditionCollectionImpl.s.sol:DeploySingleEditionCollectionImpl" "--sig run(address,address,address,address) $2 $3 $4 $5"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeploySingleEditionCollectionImpl.s.sol:DeploySingleEditionCollectionImpl" "--sig run(address,address,address,address) $ERC_6551_REGISTRY $ERC_6551_ACCOUNT_IMPL $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
         ;;
 
     "deploy-multi-edition-collection-impl")
-        if [ "$#" -ne 5 ]; then
-            echo "Invalid param count; Usage: $0 <command> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-multi-edition-collection-impl"
             exit 1
         fi
 
         echo "Deploying MultiEditionCollection Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMultiEditionCollectionImpl.s.sol:DeployMultiEditionCollectionImpl" "--sig run(address,address,address,address) $2 $3 $4 $5"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMultiEditionCollectionImpl.s.sol:DeployMultiEditionCollectionImpl" "--sig run(address,address,address,address) $ERC_6551_REGISTRY $ERC_6551_ACCOUNT_IMPL $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
         ;;
 
     "deploy-collection-factory")
-        if [ "$#" -ne 3 ]; then
-            echo "Invalid param count; Usage: $0 <command> <singleEditionCollectionBeacon> <multiEditionCollectionBeacon>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-collection-factory"
             exit 1
         fi
 
         echo "Deploying CollectionFactory"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployCollectionFactory.s.sol:DeployCollectionFactory" "--sig run(address,address) $2 $3"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployCollectionFactory.s.sol:DeployCollectionFactory" "--sig run(address,address) $SINGLE_EDITION_COLLECTION_BEACON $MULTI_EDITION_COLLECTION_BEACON"
         ;;
-    
+
     "deploy-mint-portal")
-        if [ "$#" -ne 4 ]; then
-            echo "Invalid param count; Usage: $0 <command> <underlying> <edition-factory> <collection-factory>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-mint-portal"
             exit 1
         fi
 
         echo "Deploying MintPortal"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $2 $3 $4"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $USDC_BASE_SEPOLIA $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY"
         ;;
 
     "upgrade-controller")
-        if [ "$#" -ne 4 ]; then
-            echo "Invalid param count; Usage: $0 <command> <proxyAddress> <registry> <currency>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-controller"
             exit 1
         fi
 
         echo "Upgrading Controller Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeController.s.sol:UpgradeController" "--sig run(address,address,address) $2 $3 $4"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeController.s.sol:UpgradeController" "--sig run(address,address,address) $CONTROLLER_PROXY $REGISTRY_PROXY $USDC_BASE_SEPOLIA"
         ;;
 
     "upgrade-single-edition-collection")
-        if [ "$#" -ne 6 ]; then
-            echo "Invalid param count; Usage: $0 <command> <singleEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-single-edition-collection"
             exit 1
         fi
 
         echo "Upgrading SingleEditionCollection Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeSingleEditionCollection.s.sol:UpgradeSingleEditionCollection" "--sig run(address,address,address,address,address) $2 $3 $4 $5 $6"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeSingleEditionCollection.s.sol:UpgradeSingleEditionCollection" "--sig run(address,address,address,address,address) $SINGLE_EDITION_COLLECTION_BEACON $ERC_6551_REGISTRY $ERC_6551_ACCOUNT_IMPL $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
         ;;
 
     "upgrade-multi-edition-collection")
-        if [ "$#" -ne 6 ]; then
-            echo "Invalid param count; Usage: $0 <command> <multiEditionCollectionBeacon> <erc6551registry> <accountImplementation> <editionFactory> <controller>"
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-multi-edition-collection"
             exit 1
         fi
 
         echo "Upgrading MultiEditionCollection Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeMultiEditionCollection.s.sol:UpgradeMultiEditionCollection" "--sig run(address,address,address,address,address) $2 $3 $4 $5 $6"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeMultiEditionCollection.s.sol:UpgradeMultiEditionCollection" "--sig run(address,address,address,address,address) $MULTI_EDITION_COLLECTION_BEACON $ERC_6551_REGISTRY $ERC_6551_ACCOUNT_IMPL $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
+        ;;
+
+    "upgrade-collection-factory")
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-collection-factory"
+            exit 1
+        fi
+
+        echo "Upgrading CollectionFactory Implementation"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeCollectionFactory.s.sol:UpgradeCollectionFactory" "--sig run(address,address,address) $COLLECTION_FACTORY_PROXY $SINGLE_EDITION_COLLECTION_BEACON $MULTI_EDITION_COLLECTION_BEACON"
         ;;
 
     *)
