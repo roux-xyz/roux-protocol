@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import { ICollection } from "src/interfaces/ICollection.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
@@ -200,7 +200,7 @@ contract MultiEditionCollection is Collection {
     {
         if (extension != address(0)) {
             if (!_isRegisteredExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
-            ICollectionExtension(extension).approveMint({ operator: msg.sender, account: to, data: data });
+            IExtension(extension).approveMint({ id: 0, quantity: 1, operator: msg.sender, account: to, data: data });
         } else {
             // check gate ~ if gate is enabled, must be minted via minter
             if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();

@@ -6,7 +6,7 @@ import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -472,7 +472,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         nonReentrant
     {
         // set sales params via extension
-        IEditionExtension(extension).setMintParams(id, params);
+        IExtension(extension).setMintParams(id, params);
     }
 
     /**
@@ -615,7 +615,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             // mint w/ extension - check if extension is registered
             if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
-            price = IEditionExtension(extension).approveMint({
+            price = IExtension(extension).approveMint({
                 id: id,
                 quantity: quantity,
                 operator: msg.sender, // typically will be the RouxMintPortal
@@ -672,7 +672,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             if (extension == address(0)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             // validate extension interface support
-            if (!IEditionExtension(extension).supportsInterface(type(IEditionExtension).interfaceId)) {
+            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
                 revert ErrorsLib.RouxEdition_InvalidExtension();
             }
 
@@ -684,7 +684,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         }
 
         // set mint params if provided
-        if (options.length > 0) IEditionExtension(extension).setMintParams(id, options);
+        if (options.length > 0) IExtension(extension).setMintParams(id, options);
 
         // emit event
         emit EventsLib.ExtensionSet(extension, id, enable);

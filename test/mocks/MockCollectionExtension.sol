@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.26;
 
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -10,7 +10,7 @@ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * @title MockCollectionExtension
  * @author Assistant
  */
-contract MockCollectionExtension is ICollectionExtension, OwnableRoles, ERC165 {
+contract MockCollectionExtension is IExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -43,12 +43,21 @@ contract MockCollectionExtension is ICollectionExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
 
     /// @dev get price
-    function price() external view returns (uint128) {
+    function price(address, /* target */ uint256 /* id */ ) external view returns (uint128) {
         return _mintParams.price;
     }
 
     /// @dev approve mint
-    function approveMint(address operator, address account, bytes calldata data) external returns (uint128) {
+    function approveMint(
+        uint256, /* id */
+        uint256, /* quantity */
+        address, /* operator */
+        address account,
+        bytes calldata /* data */
+    )
+        external
+        returns (uint256)
+    {
         if (account == address(0x12345678)) revert InvalidAccount();
         if (_minted[account]) revert AlreadyMinted();
         if (block.timestamp < _mintParams.mintStart || block.timestamp > _mintParams.mintEnd) {
@@ -64,7 +73,7 @@ contract MockCollectionExtension is ICollectionExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
 
     /// @dev set collection mint params
-    function setCollectionMintParams(bytes calldata params) external {
+    function setMintParams(uint256, /* id */ bytes calldata params) external {
         (uint128 price_, uint40 mintStart_, uint40 mintEnd_) = abi.decode(params, (uint128, uint40, uint40));
 
         _mintParams = MintParams({ price: price_, mintStart: mintStart_, mintEnd: mintEnd_ });
@@ -75,13 +84,7 @@ contract MockCollectionExtension is ICollectionExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
 
     /// @dev supports interface
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ICollectionExtension, ERC165)
-        returns (bool)
-    {
-        return interfaceId == type(ICollectionExtension).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IExtension, ERC165) returns (bool) {
+        return interfaceId == type(IExtension).interfaceId || super.supportsInterface(interfaceId);
     }
 }

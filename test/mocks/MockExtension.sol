@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.26;
 
-import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -11,7 +11,7 @@ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * @title FreeMintExtension
  * @author Roux
  */
-contract MockExtension is IEditionExtension, OwnableRoles, ERC165 {
+contract MockExtension is IExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -80,13 +80,7 @@ contract MockExtension is IEditionExtension, OwnableRoles, ERC165 {
     /* -------------------------------------------- */
 
     /// @dev supports interface
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(IEditionExtension, ERC165)
-        returns (bool)
-    {
-        return interfaceId == type(IEditionExtension).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IExtension, ERC165) returns (bool) {
+        return interfaceId == type(IExtension).interfaceId || super.supportsInterface(interfaceId);
     }
 }

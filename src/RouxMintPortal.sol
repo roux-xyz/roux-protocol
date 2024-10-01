@@ -2,8 +2,7 @@
 pragma solidity 0.8.26;
 
 import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
-import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { Restricted1155 } from "src/abstracts/Restricted1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
@@ -14,15 +13,27 @@ import { ICollection } from "src/interfaces/ICollection.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
+import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 /**
  * @title roux mint portal
  * @author roux
  * @custom:version 1.0
  * @custom:security-contact mp@roux.app
+ *
+ * @dev todo: make this extension -> pass itself through to edition
  */
-contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, OwnableRoles, ReentrancyGuard {
+contract RouxMintPortal is
+    IRouxMintPortal,
+    ERC165,
+    Restricted1155,
+    Initializable,
+    OwnableRoles,
+    ReentrancyGuard,
+    IExtension
+{
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
 
@@ -99,6 +110,11 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         return _restricted1155Storage().totalSupply[rUSDC_ID];
     }
 
+    /// @inheritdoc IExtension
+    function price(address, uint256) external pure returns (uint128) {
+        return 0;
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -124,9 +140,10 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
 
         // compute cost
+        // @dev extension gets called twice in this flow, here and in edition
         uint256 cost;
         if (extension != address(0)) {
-            cost = IEditionExtension(extension).price(address(edition), id) * quantity;
+            cost = IExtension(extension).price(address(edition), id) * quantity;
         } else {
             cost = edition.defaultPrice(id) * quantity;
         }
@@ -160,7 +177,7 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         uint256 cost;
         for (uint256 i = 0; i < ids.length; ++i) {
             if (extensions[i] != address(0)) {
-                cost += IEditionExtension(extensions[i]).price(address(edition), ids[i]) * quantities[i];
+                cost += IExtension(extensions[i]).price(address(edition), ids[i]) * quantities[i];
             } else {
                 cost += edition.defaultPrice(ids[i]) * quantities[i];
             }
@@ -192,7 +209,7 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         // get cost
         uint256 cost;
         if (extension != address(0)) {
-            cost = ICollectionExtension(extension).price();
+            cost = IExtension(extension).price(address(collection), 0);
         } else {
             cost = collection.price();
         }
@@ -207,9 +224,56 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         collection.mint(msg.sender, extension, referrer, data);
     }
 
+    /// @dev redeem free edition mint
+    function redeemEditionMint(address to, uint256 id, bytes calldata /* data */ ) external {
+        // mint to caller
+        IRouxEdition(msg.sender).mint({
+            to: to,
+            id: id,
+            quantity: 1,
+            extension: address(this),
+            referrer: msg.sender,
+            data: ""
+        });
+    }
+
+    /// @inheritdoc IExtension
+    function approveMint(
+        uint256, /* id */
+        uint256 quantity,
+        address, /* operator */
+        address account,
+        bytes calldata /* data */
+    )
+        external
+        returns (uint256)
+    {
+        // validate caller
+        if (!_editionFactory.isEdition(msg.sender) && !_collectionFactory.isCollection(address(msg.sender))) {
+            revert ErrorsLib.RouxMintPortal_InvalidCaller();
+        }
+
+        if (_editionFactory.isEdition(msg.sender)) {
+            // burn free edition mint tokens
+            _burn(account, FREE_EDITION_MINT_ID, quantity);
+        }
+
+        if (_collectionFactory.isCollection(address(msg.sender))) {
+            // burn free collection mint tokens
+            _burn(account, FREE_COLLECTION_MINT_ID, 1);
+        }
+
+        return 0;
+    }
+
     /// @dev see {ERC1155-uri}
     function uri(uint256) public view override returns (string memory) {
         return _uri;
+    }
+
+    /// @inheritdoc IExtension
+    function setMintParams(uint256, /* id */ bytes calldata /* params */ ) external pure {
+        revert ErrorsLib.RouxMintPortal_InvalidParams();
     }
 
     /* -------------------------------------------- */
@@ -238,6 +302,21 @@ contract RouxMintPortal is IRouxMintPortal, Restricted1155, Initializable, Ownab
         _uri = newUri;
 
         emit URI(newUri, 1);
+    }
+
+    /* -------------------------------------------- */
+    /* interface                                    */
+    /* -------------------------------------------- */
+
+    /// @inheritdoc IExtension
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(IExtension, ERC165, Restricted1155)
+        returns (bool)
+    {
+        return interfaceId == type(IExtension).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /* -------------------------------------------- */

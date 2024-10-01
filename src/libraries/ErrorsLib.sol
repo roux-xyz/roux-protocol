@@ -115,4 +115,14 @@ library ErrorsLib {
 
     /// @notice collection curator already set
     error Collection_CuratorAlreadySet();
+
+    /* ------------------------------------------------- */
+    /* RouxMintPortal                                    */
+    /* ------------------------------------------------- */
+
+    /// @notice invalid params
+    error RouxMintPortal_InvalidParams();
+
+    /// @notice invalid caller
+    error RouxMintPortal_InvalidCaller();
 }

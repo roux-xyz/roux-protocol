@@ -5,7 +5,7 @@ import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -123,6 +123,6 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
         uint256 tokenId_ = edition_.add(addParams);
 
         assertTrue(edition_.isRegisteredExtension(tokenId_, address(mockExtension)));
-        assertEq(IEditionExtension(address(mockExtension)).price(address(edition_), tokenId_), extPrice);
+        assertEq(IExtension(address(mockExtension)).price(address(edition_), tokenId_), extPrice);
     }
 }

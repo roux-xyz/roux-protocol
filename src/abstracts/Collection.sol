@@ -7,7 +7,7 @@ import { ICollection } from "src/interfaces/ICollection.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IController } from "src/interfaces/IController.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -215,7 +215,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
             if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
 
             // validate extension interface support
-            if (!ICollectionExtension(extension).supportsInterface(type(ICollectionExtension).interfaceId)) {
+            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
                 revert ErrorsLib.Collection_InvalidExtension();
             }
             $.extensions.set(uint256(uint160(extension)));
@@ -225,7 +225,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
 
         // update mint params
         if (enable && options.length > 0) {
-            ICollectionExtension(extension).setCollectionMintParams(options);
+            IExtension(extension).setMintParams({ id: 0, params: options });
         }
 
         emit EventsLib.ExtensionSet(extension, enable);
@@ -243,7 +243,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
         }
 
         // call extension with updated params
-        ICollectionExtension(extension).setCollectionMintParams(params);
+        IExtension(extension).setMintParams({ id: 0, params: params });
     }
 
     /**

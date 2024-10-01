@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-interface ICollectionExtension {
+interface IExtension {
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -12,14 +12,14 @@ interface ICollectionExtension {
     error InsufficientFunds();
 
     /**
-     * @notice invalid params length
-     */
-    error InvalidParamsLength();
-
-    /**
      * @notice invalid mint params
      */
     error InvalidMintParams();
+
+    /**
+     * @notice invalid params length
+     */
+    error InvalidParamsLength();
 
     /**
      * @notice already minted
@@ -27,7 +27,7 @@ interface ICollectionExtension {
     error AlreadyMinted();
 
     /**
-     * @notice batch id does not exist
+     * @notice mint params not set
      */
     error MintParamsNotSet();
 
@@ -37,30 +37,47 @@ interface ICollectionExtension {
 
     /**
      * @notice emitted when mint params are updated
-     * @param id edition id
+     * @param target target contract (edition or collection)
+     * @param id token id (0 for collections)
      * @param mintParams mint params
      */
-    event MintParamsUpdated(uint256 id, bytes mintParams);
+    event MintParamsUpdated(address indexed target, uint256 indexed id, bytes mintParams);
 
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
 
     /**
-     * @notice get collection price
+     * @notice get token or collection price
+     * @param target target contract (edition or collection)
+     * @param id token id (0 for collections)
+     * @return price
      */
-    function price() external view returns (uint128);
+    function price(address target, uint256 id) external view returns (uint128);
 
     /**
      * @notice approve mint
+     * @param id token id (0 for collections)
+     * @param quantity quantity (1 for collections)
      * @param operator operator
      * @param account account
-     * @param data data
+     * @param data additional data
+     * @return price or amount to pay
      */
-    function approveMint(address operator, address account, bytes calldata data) external returns (uint128);
+    function approveMint(
+        uint256 id,
+        uint256 quantity,
+        address operator,
+        address account,
+        bytes calldata data
+    )
+        external
+        returns (uint256);
 
     /**
      * @notice supports interface
+     * @param interfaceId interface id
+     * @return true if interface is supported
      */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
@@ -70,9 +87,10 @@ interface ICollectionExtension {
 
     /**
      * @notice set mint params
+     * @param id token id (0 for collections)
      * @param params mint params
      *
-     * @dev must be called via edition
+     * @dev must be called via edition or collection
      */
-    function setCollectionMintParams(bytes calldata params) external;
+    function setMintParams(uint256 id, bytes calldata params) external;
 }

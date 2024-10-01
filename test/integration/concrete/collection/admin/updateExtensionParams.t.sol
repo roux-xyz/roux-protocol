@@ -10,7 +10,7 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { MockCollectionExtension } from "test/mocks/MockCollectionExtension.sol";
 
 contract UpdateExtensionParams_Collection_Integration_Concrete_Test is CollectionBase {
@@ -67,7 +67,10 @@ contract UpdateExtensionParams_Collection_Integration_Concrete_Test is Collectio
         singleEditionCollection.updateExtensionParams(address(mockCollectionExtension), newParams);
 
         // Verify the new price was set
-        assertEq(MockCollectionExtension(address(mockCollectionExtension)).price(), newPrice);
+        assertEq(
+            MockCollectionExtension(address(mockCollectionExtension)).price(address(singleEditionCollection), 0),
+            newPrice
+        );
 
         vm.stopPrank();
     }
