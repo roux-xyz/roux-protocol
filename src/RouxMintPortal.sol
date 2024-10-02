@@ -37,6 +37,18 @@ contract RouxMintPortal is
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
 
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice RouxMintPortal storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxMintPortal.rouxMintPortalStorage")) - 1)) &
+     * ~bytes32(uint256(0xff));
+     */
+    bytes32 internal constant ROUX_MINT_PORTAL_STORAGE_SLOT =
+        0xba493600e1637ee3eb35d600336ab655f0ccd7614561e3120319798e27071400;
+
     /* -------------------------------------------- */
     /* immutable state                              */
     /* -------------------------------------------- */
@@ -50,21 +62,23 @@ contract RouxMintPortal is
     /// @notice collection factory
     ICollectionFactory internal immutable _collectionFactory;
 
-    /// @notice token id
+    /// @notice token ids
     uint256 private constant rUSDC_ID = 1;
-
     uint256 private constant FREE_EDITION_MINT_ID = 2;
     uint256 private constant FREE_COLLECTION_MINT_ID = 3;
 
-    /* -------------------------------------------- */
-    /* state                                        */
-    /* -------------------------------------------- */
+    /// @notice roles
+    uint256 private constant FREE_MINT_ROLE = 1;
 
-    /// @notice uri
-    string private _uri;
+    /* ------------------------------------------------- */
+    /* structures                                        */
+    /* ------------------------------------------------- */
 
-    /// @notice approvals
-    mapping(address => LibBitmap.Bitmap) private _approvals;
+    // /**
+    //  * @notice RouxMintPortal storage
+    //  * @custom:storage-location erc7201:rouxMintPortal.rouxMintPortalStorages
+    //  */
+    // struct RouxMintPortalStorage { }
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -98,6 +112,20 @@ contract RouxMintPortal is
         _initializeOwner(msg.sender);
     }
 
+    /* ------------------------------------------------- */
+    /* storage                                           */
+    /* ------------------------------------------------- */
+
+    // /**
+    //  * @notice get RouxEdition storage location
+    //  * @return $ RouxEdition storage location
+    //  */
+    // function _storage() internal pure returns (RouxMintPortalStorage storage $) {
+    //     assembly {
+    //         $.slot := ROUX_MINT_PORTAL_STORAGE_SLOT
+    //     }
+    // }
+
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
@@ -113,6 +141,12 @@ contract RouxMintPortal is
     /// @inheritdoc IExtension
     function price(address, uint256) external pure returns (uint128) {
         return 0;
+    }
+
+    /// @dev see {ERC1155-uri}
+    function uri(uint256) public view override returns (string memory) {
+        // todo return proper uri
+        return _restricted1155Storage().baseUri;
     }
 
     /* -------------------------------------------- */
@@ -266,11 +300,6 @@ contract RouxMintPortal is
         return 0;
     }
 
-    /// @dev see {ERC1155-uri}
-    function uri(uint256) public view override returns (string memory) {
-        return _uri;
-    }
-
     /// @inheritdoc IExtension
     function setMintParams(uint256, /* id */ bytes calldata /* params */ ) external pure {
         revert ErrorsLib.RouxMintPortal_InvalidParams();
@@ -299,7 +328,7 @@ contract RouxMintPortal is
      * @param newUri new uri
      */
     function setUri(string memory newUri) external onlyOwner {
-        _uri = newUri;
+        _restricted1155Storage().baseUri = newUri;
 
         emit URI(newUri, 1);
     }
@@ -345,9 +374,11 @@ contract RouxMintPortal is
      *      otherwise we can skip the unnecessary external call
      */
     function _manageApprovals(address contract_) internal {
-        if (!_approvals[contract_].get(uint256(uint160(contract_)))) {
+        Restricted1155Storage storage $$ = _restricted1155Storage();
+
+        if (!$$.approvals[contract_].get(uint256(uint160(contract_)))) {
             _underlying.safeApprove(contract_, type(uint256).max);
-            _approvals[contract_].set(uint256(uint160(contract_)));
+            $$.approvals[contract_].set(uint256(uint160(contract_)));
         }
     }
 }

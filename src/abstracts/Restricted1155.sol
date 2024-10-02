@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /**
  * @title restricted 1155
@@ -12,6 +13,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
  * @custom:version 1.0
  */
 abstract contract Restricted1155 is ERC1155, ERC165 {
+    using LibBitmap for LibBitmap.Bitmap;
     /* -------------------------------------------- */
     /* errors                                       */
     /* -------------------------------------------- */
@@ -40,7 +42,10 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      * @custom:storage-location erc7201:restricted1155.restricted1155Storage
      */
     struct Restricted1155Storage {
+        string baseUri;
+        string contractUri;
         mapping(uint256 id => uint256 totalSupply) totalSupply;
+        mapping(address => LibBitmap.Bitmap) approvals;
     }
 
     /* -------------------------------------------- */

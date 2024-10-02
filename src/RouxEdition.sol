@@ -480,11 +480,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param collection collection address
      * @param enable enable or disable collection
      *
-     * @dev bypases validation that token is ungated and exists; frontends should
+     * @dev bypasses validation that token is ungated and exists; frontends should
      *      validate that token exists before calling this function as convenience
      */
     function setCollection(address collection, bool enable) external onlyOwner {
-        // validate collection
         if (enable) {
             // validate extension is not zero
             if (collection == address(0)) revert ErrorsLib.RouxEdition_InvalidCollection();
