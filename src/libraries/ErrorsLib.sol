@@ -125,4 +125,13 @@ library ErrorsLib {
 
     /// @notice invalid caller
     error RouxMintPortal_InvalidCaller();
+
+    /// @notice invalid token
+    error RouxMintPortal_InvalidToken();
+
+    /// @notice gated mint
+    error RouxMintPortal_GatedMint();
+
+    /// @notice insufficient balance
+    error RouxMintPortal_InsufficientBalance();
 }

@@ -617,7 +617,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             price = IExtension(extension).approveMint({
                 id: id,
                 quantity: quantity,
-                operator: msg.sender, // typically will be the RouxMintPortal
+                operator: msg.sender,
                 account: to,
                 data: ""
             });

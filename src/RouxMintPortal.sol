@@ -16,15 +16,14 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-
+import { EventsLib } from "src/libraries/EventsLib.sol";
 /**
  * @title roux mint portal
  * @author roux
  * @custom:version 1.0
  * @custom:security-contact mp@roux.app
- *
- * @dev todo: make this extension -> pass itself through to edition
  */
+
 contract RouxMintPortal is
     IRouxMintPortal,
     ERC165,
@@ -36,18 +35,6 @@ contract RouxMintPortal is
 {
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
-
-    /* ------------------------------------------------- */
-    /* constants                                         */
-    /* ------------------------------------------------- */
-
-    /**
-     * @notice RouxMintPortal storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxMintPortal.rouxMintPortalStorage")) - 1)) &
-     * ~bytes32(uint256(0xff));
-     */
-    bytes32 internal constant ROUX_MINT_PORTAL_STORAGE_SLOT =
-        0xba493600e1637ee3eb35d600336ab655f0ccd7614561e3120319798e27071400;
 
     /* -------------------------------------------- */
     /* immutable state                              */
@@ -68,17 +55,7 @@ contract RouxMintPortal is
     uint256 private constant FREE_COLLECTION_MINT_ID = 3;
 
     /// @notice roles
-    uint256 private constant FREE_MINT_ROLE = 1;
-
-    /* ------------------------------------------------- */
-    /* structures                                        */
-    /* ------------------------------------------------- */
-
-    // /**
-    //  * @notice RouxMintPortal storage
-    //  * @custom:storage-location erc7201:rouxMintPortal.rouxMintPortalStorages
-    //  */
-    // struct RouxMintPortalStorage { }
+    uint256 private constant PROMOTIONAL_MINTER_ROLE = 1;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -110,21 +87,10 @@ contract RouxMintPortal is
     function initialize() external initializer {
         // set owner of proxy
         _initializeOwner(msg.sender);
+
+        // set token restrictions
+        setTokenRestriction(rUSDC_ID, true);
     }
-
-    /* ------------------------------------------------- */
-    /* storage                                           */
-    /* ------------------------------------------------- */
-
-    // /**
-    //  * @notice get RouxEdition storage location
-    //  * @return $ RouxEdition storage location
-    //  */
-    // function _storage() internal pure returns (RouxMintPortalStorage storage $) {
-    //     assembly {
-    //         $.slot := ROUX_MINT_PORTAL_STORAGE_SLOT
-    //     }
-    // }
 
     /* -------------------------------------------- */
     /* view                                         */
@@ -156,6 +122,8 @@ contract RouxMintPortal is
     /// @inheritdoc IRouxMintPortal
     function deposit(address to, uint256 amount) external nonReentrant {
         _deposit(to, rUSDC_ID, amount);
+
+        emit EventsLib.Deposit(to, rUSDC_ID, amount);
     }
 
     /// @inheritdoc IRouxMintPortal
@@ -183,7 +151,7 @@ contract RouxMintPortal is
         }
 
         // burn rUSDC
-        _burn(msg.sender, rUSDC_ID, cost);
+        if (cost > 0) _burn(msg.sender, rUSDC_ID, cost);
 
         // approve edition
         _manageApprovals(address(edition));
@@ -218,7 +186,7 @@ contract RouxMintPortal is
         }
 
         // burn rUSDC
-        _burn(msg.sender, rUSDC_ID, cost);
+        if (cost > 0) _burn(msg.sender, rUSDC_ID, cost);
 
         // approve edition
         _manageApprovals(address(edition));
@@ -249,7 +217,7 @@ contract RouxMintPortal is
         }
 
         // burn rUSDC
-        _burn(msg.sender, rUSDC_ID, cost);
+        if (cost > 0) _burn(msg.sender, rUSDC_ID, cost);
 
         // approve if necessary
         _manageApprovals(address(collection));
@@ -259,21 +227,30 @@ contract RouxMintPortal is
     }
 
     /// @dev redeem free edition mint
-    function redeemEditionMint(address to, uint256 id, bytes calldata /* data */ ) external {
-        // mint to caller
-        IRouxEdition(msg.sender).mint({
-            to: to,
-            id: id,
-            quantity: 1,
-            extension: address(this),
-            referrer: msg.sender,
-            data: ""
-        });
+    function redeemEditionMint(address edition, uint256 id, address referrer, bytes calldata data) external {
+        // validate edition
+        if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
+
+        // mint to caller, passing this contract as the extension
+        IRouxEdition(edition).mint(msg.sender, id, 1, address(this), referrer, data);
+
+        emit EventsLib.EditionMintRedemption(msg.sender, edition, id);
+    }
+
+    /// @dev redeem free collection mint
+    function redeemCollectionMint(address collection, address referrer, bytes calldata data) external {
+        // validate collection
+        if (!_collectionFactory.isCollection(address(collection))) revert RouxMintPortal_InvalidCollection();
+
+        // mint to caller, passing this contract as the extension
+        ICollection(collection).mint(msg.sender, address(this), referrer, data);
+
+        emit EventsLib.CollectionMintRedemption(msg.sender, collection);
     }
 
     /// @inheritdoc IExtension
     function approveMint(
-        uint256, /* id */
+        uint256 id,
         uint256 quantity,
         address, /* operator */
         address account,
@@ -282,22 +259,27 @@ contract RouxMintPortal is
         external
         returns (uint256)
     {
-        // validate caller
-        if (!_editionFactory.isEdition(msg.sender) && !_collectionFactory.isCollection(address(msg.sender))) {
-            revert ErrorsLib.RouxMintPortal_InvalidCaller();
-        }
-
         if (_editionFactory.isEdition(msg.sender)) {
+            // cannot mint gated tokens
+            if (IRouxEdition(msg.sender).isGated(id)) revert ErrorsLib.RouxMintPortal_GatedMint();
+
             // burn free edition mint tokens
             _burn(account, FREE_EDITION_MINT_ID, quantity);
+
+            return 0;
         }
 
         if (_collectionFactory.isCollection(address(msg.sender))) {
+            // cannot mint gated tokens
+            if (ICollection(msg.sender).isGated()) revert ErrorsLib.RouxMintPortal_GatedMint();
+
             // burn free collection mint tokens
             _burn(account, FREE_COLLECTION_MINT_ID, 1);
+
+            return 0;
         }
 
-        return 0;
+        revert ErrorsLib.RouxMintPortal_InvalidCaller();
     }
 
     /// @inheritdoc IExtension
@@ -331,6 +313,35 @@ contract RouxMintPortal is
         _restricted1155Storage().baseUri = newUri;
 
         emit URI(newUri, 1);
+    }
+
+    /**
+     * @notice mint free edition mint
+     * @param to recipient
+     * @param quantity quantity
+     */
+    function mintPromotionalTokens(
+        address to,
+        uint256 id,
+        uint256 quantity
+    )
+        external
+        onlyOwnerOrRoles(PROMOTIONAL_MINTER_ROLE)
+    {
+        if (id != FREE_EDITION_MINT_ID && id != FREE_COLLECTION_MINT_ID) revert ErrorsLib.RouxMintPortal_InvalidToken();
+
+        _mint(to, id, quantity, "");
+    }
+
+    /**
+     * @notice set token restriction
+     * @param id token id
+     * @param restricted whether the token is restricted
+     */
+    function setTokenRestriction(uint256 id, bool restricted) public virtual onlyOwner {
+        _setTokenRestriction(id, restricted);
+
+        emit EventsLib.TokenRestrictionSet(id, restricted);
     }
 
     /* -------------------------------------------- */
@@ -374,11 +385,11 @@ contract RouxMintPortal is
      *      otherwise we can skip the unnecessary external call
      */
     function _manageApprovals(address contract_) internal {
-        Restricted1155Storage storage $$ = _restricted1155Storage();
+        Restricted1155Storage storage $ = _restricted1155Storage();
 
-        if (!$$.approvals[contract_].get(uint256(uint160(contract_)))) {
+        if (!$.approvals[contract_].get(uint256(uint160(contract_)))) {
             _underlying.safeApprove(contract_, type(uint256).max);
-            $$.approvals[contract_].set(uint256(uint160(contract_)));
+            $.approvals[contract_].set(uint256(uint160(contract_)));
         }
     }
 }

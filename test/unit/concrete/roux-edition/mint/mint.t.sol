@@ -12,11 +12,11 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
 contract Mint_RouxEdition_Unit_Concrete_Test is BaseTest {
+    EditionData.AddParams addParams;
+
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
-
-    EditionData.AddParams addParams;
 
     function setUp() public override {
         BaseTest.setUp();

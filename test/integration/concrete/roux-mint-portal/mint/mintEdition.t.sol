@@ -16,12 +16,15 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256 tokenId = 1;
     uint256 quantity = 1;
 
+    EditionData.AddParams addParams;
+
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
 
     function setUp() public override {
         MintPortalBase.setUp();
+        addParams = defaultAddParams;
     }
 
     /* -------------------------------------------- */
@@ -29,23 +32,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     /* -------------------------------------------- */
 
     /// @dev test minting with insufficient rUSDC balance
-    function test__RevertWhen_MintEdition_InsufficientBalance_Underflow() external {
-        uint256 mintCost = edition.defaultPrice(tokenId) * quantity;
-        uint256 depositAmount = mintCost - 1;
-
-        _depositUsdc(user, depositAmount);
-
-        // attempt to mint with insufficient balance
-        vm.prank(user);
-        vm.expectRevert(stdError.arithmeticError);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
-    }
-
-    /// @dev test minting with insufficient rUSDC balance
     function test__RevertWhen_MintEdition_InsufficientBalance() external {
-        // unrelated deposit
-        _depositUsdc(users.user_1, TOKEN_PRICE);
-
         uint256 mintCost = edition.defaultPrice(tokenId) * quantity;
         uint256 depositAmount = mintCost - 1;
 
@@ -70,7 +57,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     }
 
     /// @dev extension reverts call to approve mint
-    function test__RevertWhen_Extension_ApproveMint_Reverts() external {
+    function test__RevertWhen_ApproveMint_InvalidExtension() external {
         address to = address(0x12345678);
         uint256 mintCost = edition.defaultPrice(tokenId);
 
@@ -95,7 +82,22 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     function test__RevertWhen_Mint_InvalidExtension() external {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
-        edition.mint(user, 1, 1, address(mockExtension), address(0), "");
+        mintPortal.mintEdition(IRouxEdition(address(edition)), 1, 1, address(mockExtension), address(0), "");
+    }
+
+    /// @dev reverts when minting gated edition
+    function test__RevertWhen_Mint_GatedEdition() external {
+        addParams.gate = true;
+
+        vm.prank(creator);
+        uint256 tokenId_ = edition.add(addParams);
+
+        uint256 mintCost = edition.defaultPrice(tokenId_);
+        _depositUsdc(user, mintCost);
+
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.RouxEdition_GatedMint.selector);
+        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId_, 1, address(0), address(0), "");
     }
 
     /* -------------------------------------------- */

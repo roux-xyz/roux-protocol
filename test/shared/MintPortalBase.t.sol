@@ -33,4 +33,10 @@ abstract contract MintPortalBase is CollectionBase {
         mintPortal.deposit(to, amount);
         vm.stopPrank();
     }
+
+    /// @dev mint promotional tokens
+    function _mintPromotionalTokens(address to, uint256 tokenId, uint256 quantity) internal {
+        vm.prank(users.deployer);
+        mintPortal.mintPromotionalTokens(to, tokenId, quantity);
+    }
 }

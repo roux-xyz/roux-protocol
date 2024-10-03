@@ -46,6 +46,7 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
         string contractUri;
         mapping(uint256 id => uint256 totalSupply) totalSupply;
         mapping(address => LibBitmap.Bitmap) approvals;
+        mapping(uint256 id => bool isRestricted) restrictedTokens;
     }
 
     /* -------------------------------------------- */
@@ -63,33 +64,73 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
     }
 
     /* -------------------------------------------- */
+    /* view                                         */
+    /* -------------------------------------------- */
+
+    /**
+     * @notice view function to get the total supply of a token
+     * @param id token ID
+     * @return total supply of token
+     */
+    function totalSupply(uint256 id) public view returns (uint256) {
+        return _restricted1155Storage().totalSupply[id];
+    }
+
+    /**
+     * @notice view function to get if a token is restricted
+     * @param id token ID
+     * @return true if token is restricted, false otherwise
+     */
+    function isRestricted(uint256 id) public view returns (bool) {
+        return _restricted1155Storage().restrictedTokens[id];
+    }
+
+    /* -------------------------------------------- */
     /* overrides                                    */
     /* -------------------------------------------- */
 
     /// @dev transfers not allowed
-    function safeTransferFrom(address, address, uint256, uint256, bytes calldata) public pure virtual override {
-        revert Restricted1155_TransferNotAllowed();
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    )
+        public
+        virtual
+        override
+    {
+        if (_restricted1155Storage().restrictedTokens[id]) {
+            revert Restricted1155_TransferNotAllowed();
+        }
+
+        super.safeTransferFrom(from, to, id, amount, data);
     }
 
     /// @dev transfers not allowed
     function safeBatchTransferFrom(
-        address,
-        address,
-        uint256[] calldata,
-        uint256[] calldata,
-        bytes calldata
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
     )
         public
-        pure
         virtual
         override
     {
-        revert Restricted1155_TransferNotAllowed();
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (_restricted1155Storage().restrictedTokens[ids[i]]) {
+                revert Restricted1155_TransferNotAllowed();
+            }
+        }
+        super.safeBatchTransferFrom(from, to, ids, amounts, data);
     }
 
     /// @dev transfers not allowed
-    function setApprovalForAll(address, bool) public pure virtual override {
-        revert Restricted1155_TransferNotAllowed();
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        super.setApprovalForAll(operator, approved);
     }
 
     /* -------------------------------------------- */
@@ -105,7 +146,6 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      */
     function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual override {
         _restricted1155Storage().totalSupply[id] += amount;
-
         super._mint(to, id, amount, data);
     }
 
@@ -114,14 +154,19 @@ abstract contract Restricted1155 is ERC1155, ERC165 {
      * @param from address to burn tokens from
      * @param id token ID
      * @param amount amount of tokens to burn
-     *
-     * @dev will revert with underflow error if total supply is less than amount
      */
     function _burn(address from, uint256 id, uint256 amount) internal virtual override {
-        _restricted1155Storage().totalSupply[id] -= amount;
-
         super._burn(from, id, amount);
+        _restricted1155Storage().totalSupply[id] -= amount;
     }
+
+    function _setTokenRestriction(uint256 id, bool restricted) internal {
+        _restricted1155Storage().restrictedTokens[id] = restricted;
+    }
+
+    /* -------------------------------------------- */
+    /* supports interface                           */
+    /* -------------------------------------------- */
 
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, ERC1155) returns (bool) {

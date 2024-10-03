@@ -45,27 +45,7 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
     /* -------------------------------------------- */
 
     /// @dev test batch minting with insufficient rUSDC balance
-    function test__RevertWhen_MintBatch_InsufficientBalance_Underflow() external {
-        uint256 mintCost =
-            edition.defaultPrice(tokenIds[0]) * quantities[0] + edition.defaultPrice(tokenIds[1]) * quantities[1];
-        uint256 depositAmount = mintCost - 1;
-
-        _depositUsdc(user, depositAmount);
-
-        // attempt to mint with insufficient balance
-        vm.prank(user);
-        vm.expectRevert(stdError.arithmeticError);
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
-    }
-
-    /// @dev test batch minting with insufficient rUSDC balance
     function test__RevertWhen_MintBatch_InsufficientBalance() external {
-        // unrelated deposit
-        vm.startPrank(users.user_1);
-        mockUSDC.approve(address(mintPortal), TOKEN_PRICE);
-        mintPortal.deposit(users.user_1, TOKEN_PRICE);
-        vm.stopPrank();
-
         uint256 mintCost =
             edition.defaultPrice(tokenIds[0]) * quantities[0] + edition.defaultPrice(tokenIds[1]) * quantities[1];
         uint256 depositAmount = mintCost - 1;

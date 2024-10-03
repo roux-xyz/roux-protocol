@@ -73,6 +73,15 @@ interface IRouxMintPortal {
         external;
 
     /**
+     * @notice redeem free edition mint
+     * @param edition edition address
+     * @param id token id
+     * @param referrer referrer
+     * @param data additional data
+     */
+    function redeemEditionMint(address edition, uint256 id, address referrer, bytes calldata data) external;
+
+    /**
      *
      * @param collection collection address
      * @param extension extension
