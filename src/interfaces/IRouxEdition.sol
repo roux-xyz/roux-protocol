@@ -191,4 +191,32 @@ interface IRouxEdition {
      *      - validates that token exists
      */
     function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable;
+
+    /**
+     * @notice admin mint tokens
+     * @param to token receiver
+     * @param id token id
+     * @param quantity number of tokens to mint
+     * @param data additional data
+     *
+     * @dev only callable by owner - bypasses all validations
+     */
+    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external;
+
+    /**
+     * @notice admin batch mint tokens
+     * @param to token receiver
+     * @param ids array of token ids
+     * @param quantities array of quantities
+     * @param data additional data
+     *
+     * @dev only callable by owner - bypasses all validations
+     */
+    function adminBatchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes calldata data
+    )
+        external;
 }

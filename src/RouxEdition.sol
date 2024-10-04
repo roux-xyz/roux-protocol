@@ -355,6 +355,37 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         _mint(to, id, 1, "");
     }
 
+    /// @inheritdoc IRouxEdition
+    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external onlyOwner {
+        _validateMint(id, quantity);
+        _incrementTotalSupply(id, quantity);
+
+        _mint(to, id, quantity, data);
+    }
+
+    /// @inheritdoc IRouxEdition
+    function adminBatchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes calldata data
+    )
+        external
+        onlyOwner
+    {
+        // validate array lengths
+        if (ids.length != quantities.length) {
+            revert ErrorsLib.RouxEdition_InvalidParams();
+        }
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            _validateMint(ids[i], quantities[i]);
+            _incrementTotalSupply(ids[i], quantities[i]);
+        }
+
+        _batchMint(to, ids, quantities, data);
+    }
+
     /* ------------------------------------------------- */
     /* admin                                             */
     /* ------------------------------------------------- */
