@@ -28,6 +28,7 @@ interface IRouxMintPortal {
 
     /**
      * @notice mint roux edition
+     * @param to token receiver
      * @param edition edition address
      * @param id token id
      * @param quantity quantity
@@ -40,6 +41,7 @@ interface IRouxMintPortal {
      *      still approved by the RouxEdition or Collection contract.
      */
     function mintEdition(
+        address to,
         IRouxEdition edition,
         uint256 id,
         uint256 quantity,
@@ -51,6 +53,7 @@ interface IRouxMintPortal {
 
     /**
      * @notice batch mint edition
+     * @param to token receiver
      * @param edition editions
      * @param ids ids
      * @param quantities quantities
@@ -63,6 +66,7 @@ interface IRouxMintPortal {
      *      still approved by the RouxEdition or Collection contract.
      */
     function batchMintEdition(
+        address to,
         IRouxEdition edition,
         uint256[] calldata ids,
         uint256[] calldata quantities,
@@ -82,7 +86,8 @@ interface IRouxMintPortal {
     function redeemEditionMint(address edition, uint256 id, address referrer, bytes calldata data) external;
 
     /**
-     *
+     * @notice mint collection
+     * @param to token receiver
      * @param collection collection address
      * @param extension extension
      * @param referrer referrer
@@ -93,6 +98,7 @@ interface IRouxMintPortal {
      *      still approved by the RouxEdition or Collection contract.
      */
     function mintCollection(
+        address to,
         ICollection collection,
         address extension,
         address referrer,

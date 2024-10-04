@@ -17,13 +17,13 @@ import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+
 /**
  * @title roux mint portal
  * @author roux
  * @custom:version 1.0
  * @custom:security-contact mp@roux.app
  */
-
 contract RouxMintPortal is
     IRouxMintPortal,
     ERC165,
@@ -128,6 +128,7 @@ contract RouxMintPortal is
 
     /// @inheritdoc IRouxMintPortal
     function mintEdition(
+        address to,
         IRouxEdition edition,
         uint256 id,
         uint256 quantity,
@@ -157,11 +158,12 @@ contract RouxMintPortal is
         _manageApprovals(address(edition));
 
         // mint to caller
-        edition.mint(msg.sender, id, quantity, extension, referrer, data);
+        edition.mint(to, id, quantity, extension, referrer, data);
     }
 
     /// @inheritdoc IRouxMintPortal
     function batchMintEdition(
+        address to,
         IRouxEdition edition,
         uint256[] calldata ids,
         uint256[] calldata quantities,
@@ -192,11 +194,12 @@ contract RouxMintPortal is
         _manageApprovals(address(edition));
 
         // mint to caller
-        edition.batchMint(msg.sender, ids, quantities, extensions, referrer, data);
+        edition.batchMint(to, ids, quantities, extensions, referrer, data);
     }
 
     /// @inheritdoc IRouxMintPortal
     function mintCollection(
+        address to,
         ICollection collection,
         address extension,
         address referrer,
@@ -223,10 +226,10 @@ contract RouxMintPortal is
         _manageApprovals(address(collection));
 
         // mint to caller
-        collection.mint(msg.sender, extension, referrer, data);
+        collection.mint(to, extension, referrer, data);
     }
 
-    /// @dev redeem free edition mint
+    /// @dev redeem free edition mint ~ can only mint token to self
     function redeemEditionMint(address edition, uint256 id, address referrer, bytes calldata data) external {
         // validate edition
         if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
@@ -237,7 +240,7 @@ contract RouxMintPortal is
         emit EventsLib.EditionMintRedemption(msg.sender, edition, id);
     }
 
-    /// @dev redeem free collection mint
+    /// @dev redeem free collection mint ~ can only mint token to self
     function redeemCollectionMint(address collection, address referrer, bytes calldata data) external {
         // validate collection
         if (!_collectionFactory.isCollection(address(collection))) revert RouxMintPortal_InvalidCollection();
