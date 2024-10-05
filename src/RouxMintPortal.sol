@@ -230,7 +230,15 @@ contract RouxMintPortal is
     }
 
     /// @dev redeem free edition mint ~ can only mint token to self
-    function redeemEditionMint(address edition, uint256 id, address referrer, bytes calldata data) external {
+    function redeemEditionMint(
+        address edition,
+        uint256 id,
+        address referrer,
+        bytes calldata data
+    )
+        external
+        nonReentrant
+    {
         // validate edition
         if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
 
@@ -241,7 +249,7 @@ contract RouxMintPortal is
     }
 
     /// @dev redeem free collection mint ~ can only mint token to self
-    function redeemCollectionMint(address collection, address referrer, bytes calldata data) external {
+    function redeemCollectionMint(address collection, address referrer, bytes calldata data) external nonReentrant {
         // validate collection
         if (!_collectionFactory.isCollection(address(collection))) revert RouxMintPortal_InvalidCollection();
 

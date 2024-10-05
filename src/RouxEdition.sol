@@ -356,7 +356,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /// @inheritdoc IRouxEdition
-    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external onlyOwner {
+    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external nonReentrant onlyOwner {
         _validateMint(id, quantity);
         _incrementTotalSupply(id, quantity);
 
@@ -371,6 +371,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         bytes calldata data
     )
         external
+        nonReentrant
         onlyOwner
     {
         // validate array lengths
