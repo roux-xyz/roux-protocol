@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 /// @dev platform fee | 250 bps | 2.5%
 uint256 constant PLATFORM_FEE = 250;

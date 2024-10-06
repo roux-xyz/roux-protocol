@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";

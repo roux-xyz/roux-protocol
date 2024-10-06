@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import { IExtension } from "src/interfaces/IExtension.sol";
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 /// @dev basis point scale
 uint256 constant BASIS_POINT_SCALE = 10_000;
