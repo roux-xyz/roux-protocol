@@ -12,6 +12,7 @@ import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 import { stdError } from "forge-std/Test.sol";
 import { MockExtension } from "test/mocks/MockExtension.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { MockMaliciousEdition_ApproveMint } from "test/mocks/malicious/MockMaliciousEdition_ApproveMint.sol";
 
 contract RedeemEditionMint_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256 tokenId = 1;
@@ -25,6 +26,8 @@ contract RedeemEditionMint_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256 constant DEPOSIT_AMOUNT = 100 * 10 ** 6;
 
     EditionData.AddParams addParams;
+
+    address maliciousEdition = address(new MockMaliciousEdition_ApproveMint());
 
     /* -------------------------------------------- */
     /* setup                                        */
@@ -58,8 +61,8 @@ contract RedeemEditionMint_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // attempt to mint with an invalid edition address
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(IRouxMintPortal.RouxMintPortal_InvalidEdition.selector));
-        mintPortal.redeemEditionMint(address(0x123), tokenId, address(0), "");
+        vm.expectRevert(abi.encodeWithSelector(ErrorsLib.RouxMintPortal_InvalidCaller.selector));
+        mintPortal.redeemEditionMint(maliciousEdition, tokenId, address(0), "");
     }
 
     /// @dev test approve mint with invalid caller
@@ -89,6 +92,24 @@ contract RedeemEditionMint_RouxMintPortal_Integration_Test is MintPortalBase {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxMintPortal_GatedMint.selector);
         mintPortal.redeemEditionMint(address(edition), tokenId_, address(0), "");
+    }
+
+    /// @dev test revert when extension is unset
+    function test__RevertWhen_RedeemEditionMint_ExtensionUnset() external {
+        // mint promotional tokens
+        _mintPromotionalTokens(user, FREE_EDITION_MINT_ID, quantity);
+
+        // unset the extension
+        vm.prank(creator);
+        edition.setExtension(tokenId, address(mintPortal), false, "");
+
+        // attempt to redeem edition mint
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
+        mintPortal.redeemEditionMint(address(edition), tokenId, address(0), "");
+
+        // verify that no minting occurred
+        assertEq(edition.balanceOf(user, tokenId), 0);
     }
 
     /* -------------------------------------------- */

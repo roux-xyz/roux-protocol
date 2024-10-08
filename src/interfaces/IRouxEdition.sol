@@ -50,6 +50,21 @@ interface IRouxEdition {
     function uri(uint256 id) external view returns (string memory);
 
     /**
+     * @notice get uri for a given token id and index
+     * @param id token id
+     * @param index uri index
+     * @return uri
+     */
+    function uri(uint256 id, uint256 index) external view returns (string memory);
+
+    /**
+     * @notice get current uri index for a given token id
+     * @param id token id
+     * @return current uri index
+     */
+    function currentUriIndex(uint256 id) external view returns (uint256);
+
+    /**
      * @notice contract uri
      * @return contract uri
      */
@@ -111,6 +126,13 @@ interface IRouxEdition {
      * @dev used by MultiEditionCollection to confirm token eligibility for multi collection inclusion
      */
     function multiCollectionMintEligible(uint256 id, address currency_) external view returns (bool);
+
+    /**
+     * @notice check if token has parent
+     * @param id token id
+     * @return true if token has parent
+     */
+    function hasParent(uint256 id) external view returns (bool);
 
     /* -------------------------------------------- */
     /* write functions                              */

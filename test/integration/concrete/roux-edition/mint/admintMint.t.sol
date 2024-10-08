@@ -54,6 +54,15 @@ contract AdminMint_RouxEdition_Unit_Concrete_Test is BaseTest {
         edition.adminMint(user, tokenId_, 1, "");
     }
 
+    /// @dev reverts when token has parent
+    function test__RevertWhen_AdminMint_TokenHasParent() external {
+        (RouxEdition fork_, uint256 tokenId_) = _createFork(edition, 1, creator);
+
+        vm.prank(creator);
+        vm.expectRevert(ErrorsLib.RouxEdition_HasParent.selector);
+        fork_.adminMint(user, tokenId_, 1, "");
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */

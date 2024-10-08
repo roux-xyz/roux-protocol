@@ -416,7 +416,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         ControllerStorage storage $ = _storage();
 
         // retrieve parent data
-        (address parentEdition, uint256 parentTokenId) = _registry.attribution(edition, tokenId);
+        (address parentEdition, uint256 parentTokenId,) = _registry.attribution(edition, tokenId);
 
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;

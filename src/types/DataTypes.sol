@@ -24,19 +24,21 @@ library EditionData {
     /**
      * @notice token data
      * @param creator creator
+     * @param hasParent whether the token has a parent
      * @param maxSupply max supply
      * @param totalSupply total supply
      * @param mintParams mint params
      * @param extensions enabled extensions
-     * @param uri token uri
+     * @param uris token uris
      */
     struct TokenData {
         address creator;
+        bool hasParent;
         uint128 totalSupply;
         uint128 maxSupply;
         MintParams mintParams;
         LibBitmap.Bitmap extensions;
-        string uri;
+        string[] uris;
     }
 
     /**

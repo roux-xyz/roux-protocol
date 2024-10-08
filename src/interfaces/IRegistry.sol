@@ -10,8 +10,11 @@ interface IRegistry {
      * @notice get attribution data
      * @param edition edition
      * @param tokenId token id
+     * @return parent edition
+     * @return parent token id
+     * @return index
      */
-    function attribution(address edition, uint256 tokenId) external view returns (address, uint256);
+    function attribution(address edition, uint256 tokenId) external view returns (address, uint256, uint256);
 
     /**
      * @notice get root edition for a given edition
@@ -23,13 +26,6 @@ interface IRegistry {
      */
     function root(address edition, uint256 tokenId) external view returns (address, uint256, uint256);
 
-    /**
-     * @notice check if edition has a child
-     * @param edition edition
-     * @param tokenId token id
-     */
-    function hasChild(address edition, uint256 tokenId) external view returns (bool);
-
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -39,9 +35,10 @@ interface IRegistry {
      * @param tokenId token id
      * @param parentEdition parent contract
      * @param parentTokenId parent token id
+     * @param index index
      *
      * @dev this should be called by the edition contract, as the attribution mapping
      *       is keyed by the edition contract address and token id
      */
-    function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external;
+    function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId, uint256 index) external;
 }

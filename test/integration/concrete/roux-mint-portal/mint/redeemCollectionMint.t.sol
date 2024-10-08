@@ -13,6 +13,7 @@ import { stdError } from "forge-std/Test.sol";
 import { MockExtension } from "test/mocks/MockExtension.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
+import { MockMaliciousCollection_ApproveMint } from "test/mocks/malicious/MockMaliciousCollection_ApproveMint.sol";
 
 contract RedeemCollectionMint_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256 tokenId = 1;
@@ -26,6 +27,8 @@ contract RedeemCollectionMint_RouxMintPortal_Integration_Test is MintPortalBase 
     uint256 constant DEPOSIT_AMOUNT = 100 * 10 ** 6;
 
     EditionData.AddParams addParams;
+
+    address maliciousCollection = address(new MockMaliciousCollection_ApproveMint());
 
     /* -------------------------------------------- */
     /* setup                                        */
@@ -59,8 +62,8 @@ contract RedeemCollectionMint_RouxMintPortal_Integration_Test is MintPortalBase 
 
         // attempt to mint with an invalid collection address
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(IRouxMintPortal.RouxMintPortal_InvalidCollection.selector));
-        mintPortal.redeemCollectionMint(address(0x123), address(0), "");
+        vm.expectRevert(abi.encodeWithSelector(ErrorsLib.RouxMintPortal_InvalidCaller.selector));
+        mintPortal.redeemCollectionMint(maliciousCollection, address(0), "");
     }
 
     /// @dev test approve mint with invalid caller
@@ -86,6 +89,24 @@ contract RedeemCollectionMint_RouxMintPortal_Integration_Test is MintPortalBase 
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxMintPortal_GatedMint.selector);
         mintPortal.redeemCollectionMint(address(singleEditionCollection), address(0), "");
+    }
+
+    /// @dev test revert when extension is unset
+    function test__RevertWhen_RedeemCollectionMint_ExtensionUnset() external {
+        // mint promotional tokens
+        _mintPromotionalTokens(user, FREE_COLLECTION_MINT_ID, quantity);
+
+        // unset the extension
+        vm.prank(collectionAdmin);
+        singleEditionCollection.setExtension(address(mintPortal), false, "");
+
+        // attempt to redeem collection mint
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.Collection_InvalidExtension.selector);
+        mintPortal.redeemCollectionMint(address(singleEditionCollection), address(0), "");
+
+        // verify that no minting occurred
+        assertEq(singleEditionCollection.balanceOf(user), 0);
     }
 
     /* -------------------------------------------- */

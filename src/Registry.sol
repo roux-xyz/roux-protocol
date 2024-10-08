@@ -40,20 +40,20 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
      * @notice registry data
      * @param parentEdition parent edition
      * @param parentTokenId parent token id
+     * @param index index
      */
     struct RegistryData {
         address parentEdition;
         uint256 parentTokenId;
+        uint256 index;
     }
 
     /**
      * @notice roux registry storage
      * @custom:storage-location erc7201:rouxRegistry.rouxRegistryStorage
-     * @param hasChild whether the edition has a child
      * @param registryData edition to token id to registry data
      */
     struct RouxRegistryStorage {
-        mapping(address edition => LibBitmap.Bitmap hasChild) hasChild;
         mapping(address edition => mapping(uint256 tokenId => RegistryData)) registryData;
     }
 
@@ -98,13 +98,14 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     /* ------------------------------------------------- */
 
     /// @inheritdoc IRegistry
-    function attribution(address edition, uint256 tokenId) external view returns (address, uint256) {
+    function attribution(address edition, uint256 tokenId) external view returns (address, uint256, uint256) {
         RouxRegistryStorage storage $ = _storage();
 
         address parentEdition = $.registryData[edition][tokenId].parentEdition;
         uint256 parentTokenId = $.registryData[edition][tokenId].parentTokenId;
+        uint256 index = $.registryData[edition][tokenId].index;
 
-        return (parentEdition, parentTokenId);
+        return (parentEdition, parentTokenId, index);
     }
 
     /// @inheritdoc IRegistry
@@ -113,17 +114,20 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
         return _root(edition, tokenId, 0);
     }
 
-    /// @inheritdoc IRegistry
-    function hasChild(address edition, uint256 tokenId) external view returns (bool) {
-        return _hasChild(edition, tokenId);
-    }
-
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IRegistry
-    function setRegistryData(uint256 tokenId, address parentEdition, uint256 parentTokenId) external nonReentrant {
+    function setRegistryData(
+        uint256 tokenId,
+        address parentEdition,
+        uint256 parentTokenId,
+        uint256 index
+    )
+        external
+        nonReentrant
+    {
         RouxRegistryStorage storage $ = _storage();
 
         // get current depth of parent edition and tokenId
@@ -137,11 +141,7 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
 
         d.parentEdition = parentEdition;
         d.parentTokenId = parentTokenId;
-
-        // set has child if not already set - used to prevent metadata update when child already exists
-        if (!_hasChild(parentEdition, parentTokenId)) {
-            $.hasChild[parentEdition].set(parentTokenId);
-        }
+        d.index = index;
 
         // emit event
         emit EventsLib.RegistryUpdated(msg.sender, tokenId, parentEdition, parentTokenId);
@@ -197,14 +197,5 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
                 $.registryData[edition][tokenId].parentEdition, $.registryData[edition][tokenId].parentTokenId, ++depth
             );
         }
-    }
-
-    /**
-     * @notice check if edition has a child
-     * @param edition edition
-     * @param tokenId token id
-     */
-    function _hasChild(address edition, uint256 tokenId) internal view returns (bool) {
-        return _storage().hasChild[edition].get(tokenId);
     }
 }

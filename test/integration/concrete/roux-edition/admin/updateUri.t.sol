@@ -18,15 +18,6 @@ contract UpdateUri_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* reverts                                      */
     /* -------------------------------------------- */
 
-    /// @dev reverts when not owner
-    function test__RevertWhen_UpdateUri_HasChild() external {
-        _createFork(edition, 1, users.creator_1);
-
-        vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEdition_UriFrozen.selector);
-        edition.updateUri(1, "https://new.com");
-    }
-
     /* -------------------------------------------- */
     /* reverts                                      */
     /* -------------------------------------------- */

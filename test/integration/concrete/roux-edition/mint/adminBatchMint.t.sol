@@ -75,6 +75,24 @@ contract AdminBatchMint_RouxEdition_Integration_Concrete_Test is BaseTest {
         edition.adminBatchMint(user, ids, quantities, "");
     }
 
+    /// @dev reverts when token has parent
+    function test__RevertWhen_AdminBatchMint_TokenHasParent() external {
+        (RouxEdition fork_, uint256 tokenId_) = _createFork(edition, 1, creator);
+
+        uint256[] memory ids_ = new uint256[](2);
+        uint256[] memory quantities_ = new uint256[](2);
+
+        ids_[0] = 1;
+        quantities_[0] = 1;
+
+        ids_[1] = tokenId_;
+        quantities_[1] = 1;
+
+        vm.prank(creator);
+        vm.expectRevert(ErrorsLib.RouxEdition_HasParent.selector);
+        fork_.adminBatchMint(user, ids, quantities, "");
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */

@@ -194,15 +194,27 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function uri(uint256 id) public view override(IRouxEdition, ERC1155) returns (string memory) {
-        string memory currentUri = _storage().tokens[id].uri;
+        // get length
+        uint256 urisLength = _storage().tokens[id].uris.length;
 
         // if current uri is set, return it
-        if (bytes(currentUri).length > 0) {
+        if (urisLength > 0) {
+            string memory currentUri = _storage().tokens[id].uris[urisLength - 1];
             return currentUri;
         } else {
             // otherwise return default uri
             return DEFAULT_TOKEN_URI;
         }
+    }
+
+    /// @inheritdoc IRouxEdition
+    function uri(uint256 id, uint256 index) external view returns (string memory) {
+        return _storage().tokens[id].uris[index];
+    }
+
+    /// @inheritdoc IRouxEdition
+    function currentUriIndex(uint256 id) external view returns (uint256) {
+        return _storage().tokens[id].uris.length - 1;
     }
 
     /// @inheritdoc IRouxEdition
@@ -245,6 +257,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         EditionData.TokenData storage d = _storage().tokens[id];
 
         return _exists(id) && !d.mintParams.gate && currency_ == _currency;
+    }
+
+    /// @inheritdoc IRouxEdition
+    function hasParent(uint256 id) external view returns (bool) {
+        return _storage().tokens[id].hasParent;
     }
 
     /* ------------------------------------------------- */
@@ -357,6 +374,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external nonReentrant onlyOwner {
+        // revert if fork
+        if (_storage().tokens[id].hasParent) revert ErrorsLib.RouxEdition_HasParent();
+
+        _validateMint(id, quantity);
         _validateMint(id, quantity);
         _incrementTotalSupply(id, quantity);
 
@@ -380,6 +401,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         }
 
         for (uint256 i = 0; i < ids.length; ++i) {
+            // revert if fork
+            if (_storage().tokens[ids[i]].hasParent) revert ErrorsLib.RouxEdition_HasParent();
+
             _validateMint(ids[i], quantities[i]);
             _incrementTotalSupply(ids[i], quantities[i]);
         }
@@ -406,8 +430,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // set mint params
         d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: p.gate });
 
+        // push uri to uri array
+        d.uris.push(p.tokenUri);
+
         // set token data
-        d.uri = p.tokenUri;
         d.maxSupply = p.maxSupply.toUint128();
         d.creator = msg.sender;
 
@@ -416,6 +442,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // optionally set registry data
         if (p.parentEdition != address(0) && p.parentTokenId != 0) {
+            d.hasParent = true;
             _setRegistryData(id, p.parentEdition, p.parentTokenId);
         }
 
@@ -439,21 +466,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @notice update uri
      * @param id token id to update
      * @param newUri new uri
-     *
-     * @dev once a child has been created, the uri is frozen and cannot be udpated.
-     *      - to prevent a malicious user from "freezing" an unrevealed token, we only
-     *        revert if a current uri has previously been set
      */
     function updateUri(uint256 id, string memory newUri) external onlyOwner {
-        // current uri
-        string memory currentUri = _storage().tokens[id].uri;
-
-        // verify child using existing metadata has not already been created
-        if (bytes(currentUri).length > 0 && _registry.hasChild(address(this), id)) {
-            revert ErrorsLib.RouxEdition_UriFrozen();
-        }
-
-        _storage().tokens[id].uri = newUri;
+        _storage().tokens[id].uris.push(newUri);
 
         emit URI(newUri, id);
     }
@@ -567,6 +582,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /**
      * @notice gate mint
      * @param id token id
+     *
+     * @dev cannot be undone
      */
     function disableGate(uint256 id) external onlyOwner {
         _storage().tokens[id].mintParams.gate = false;
@@ -677,8 +694,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             revert ErrorsLib.RouxEdition_InvalidAttribution();
         }
 
+        // get current index
+        uint256 idx = IRouxEdition(parentEdition).currentUriIndex(parentTokenId);
+
         // set registry data
-        _registry.setRegistryData(id, parentEdition, parentTokenId);
+        _registry.setRegistryData(id, parentEdition, parentTokenId, idx);
     }
 
     /**

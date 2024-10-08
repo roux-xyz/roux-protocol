@@ -239,9 +239,6 @@ contract RouxMintPortal is
         external
         nonReentrant
     {
-        // validate edition
-        if (!_editionFactory.isEdition(address(edition))) revert RouxMintPortal_InvalidEdition();
-
         // mint to caller, passing this contract as the extension
         IRouxEdition(edition).mint(msg.sender, id, 1, address(this), referrer, data);
 
@@ -250,9 +247,6 @@ contract RouxMintPortal is
 
     /// @dev redeem free collection mint ~ can only mint token to self
     function redeemCollectionMint(address collection, address referrer, bytes calldata data) external nonReentrant {
-        // validate collection
-        if (!_collectionFactory.isCollection(address(collection))) revert RouxMintPortal_InvalidCollection();
-
         // mint to caller, passing this contract as the extension
         ICollection(collection).mint(msg.sender, address(this), referrer, data);
 
