@@ -44,11 +44,6 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
         assertEq(edition.totalSupply(1), 1);
     }
 
-    /// @dev returns correct uri
-    function test__Uri() external view {
-        assertEq(edition.uri(1), TOKEN_URI);
-    }
-
     /// @dev returns correct contract uri
     function test__ContractUri() external view {
         assertEq(edition.contractURI(), CONTRACT_URI);

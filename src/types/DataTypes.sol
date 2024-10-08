@@ -38,12 +38,12 @@ library EditionData {
         uint128 maxSupply;
         MintParams mintParams;
         LibBitmap.Bitmap extensions;
-        string[] uris;
+        bytes32[] uris;
     }
 
     /**
      * @notice add params
-     * @param tokenUri token uri
+     * @param ipfsHash ipfsHash
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param defaultPrice base price - typically overriden by extension
@@ -55,7 +55,7 @@ library EditionData {
      * @param options additional options
      */
     struct AddParams {
-        string tokenUri;
+        bytes32 ipfsHash;
         uint256 maxSupply;
         address fundsRecipient;
         uint256 defaultPrice;

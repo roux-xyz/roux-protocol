@@ -21,6 +21,7 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { Base32 } from "src/libraries/Base32.sol";
 import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
@@ -199,8 +200,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // if current uri is set, return it
         if (urisLength > 0) {
-            string memory currentUri = _storage().tokens[id].uris[urisLength - 1];
-            return currentUri;
+            bytes32 digest = _storage().tokens[id].uris[urisLength - 1];
+            return _generateTokenUri(digest);
         } else {
             // otherwise return default uri
             return DEFAULT_TOKEN_URI;
@@ -209,7 +210,17 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function uri(uint256 id, uint256 index) external view returns (string memory) {
-        return _storage().tokens[id].uris[index];
+        // get length
+        uint256 urisLength = _storage().tokens[id].uris.length;
+
+        // if current uri is set, return it
+        if (urisLength > 0) {
+            bytes32 digest = _storage().tokens[id].uris[index];
+            return _generateTokenUri(digest);
+        } else {
+            // otherwise return default uri
+            return DEFAULT_TOKEN_URI;
+        }
     }
 
     /// @inheritdoc IRouxEdition
@@ -431,7 +442,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: p.gate });
 
         // push uri to uri array
-        d.uris.push(p.tokenUri);
+        d.uris.push(p.ipfsHash);
 
         // set token data
         d.maxSupply = p.maxSupply.toUint128();
@@ -465,12 +476,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /**
      * @notice update uri
      * @param id token id to update
-     * @param newUri new uri
+     * @param ipfsHash new uri
      */
-    function updateUri(uint256 id, string memory newUri) external onlyOwner {
-        _storage().tokens[id].uris.push(newUri);
+    function updateUri(uint256 id, bytes32 ipfsHash) external onlyOwner {
+        _storage().tokens[id].uris.push(ipfsHash);
 
-        emit URI(newUri, id);
+        emit URI(_generateTokenUri(ipfsHash), id);
     }
 
     /**
@@ -758,5 +769,23 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      */
     function _isRegisteredExtension(uint256 id, address extension) internal view returns (bool) {
         return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
+    }
+
+    function _generateTokenUri(bytes32 digest) internal pure returns (string memory) {
+        bytes memory cidBytes = new bytes(36);
+
+        cidBytes[0] = 0x01; // cid version 1
+        cidBytes[1] = 0x70; // multicodec dag-pb
+        cidBytes[2] = 0x12; // multihash function code for sha-256
+        cidBytes[3] = 0x20; // multihash digest size
+
+        // copy digest into cidBytes
+        for (uint256 i = 0; i < 32; i++) {
+            cidBytes[i + 4] = digest[i];
+        }
+
+        string memory encoded = Base32.encode(cidBytes);
+
+        return string(abi.encodePacked("ipfs://b", encoded));
     }
 }
