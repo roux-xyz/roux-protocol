@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import { BaseTest } from "test/Base.t.sol";
 import { GenerateTokenUriHarness } from "test/harness/GenerateTokenUriHarness.sol";
 
-contract GenerateTokenUri_Unit_Concrete_Test is BaseTest {
+contract Uri_Unit_Concrete_Test is BaseTest {
     GenerateTokenUriHarness public harness;
 
     function setUp() public override {
@@ -29,5 +29,21 @@ contract GenerateTokenUri_Unit_Concrete_Test is BaseTest {
         assertEq(
             harness.generateTokenUri(hashDigest), "ipfs://bafybeigrf2dwtpjkiovnigysyto3d55opf6qkdikx6d65onrqnfzwgdkfa"
         );
+    }
+
+    function test__Uri() public view {
+        assertEq(edition.uri(1), TOKEN_URI);
+    }
+
+    function test__AddUriToArray() public {
+        vm.prank(creator);
+        edition.updateUri(1, 0xC3C4733EC8AFFD06CF9E9FF50FFC6BCD2EC85A6170004BB709669C31DE94391A);
+
+        // uri returns most recently added uri
+        assertEq(edition.uri(1), "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
+
+        // overloaded uri with index returns uri at index
+        assertEq(edition.uri(1, 0), TOKEN_URI);
+        assertEq(edition.uri(1, 1), "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
     }
 }

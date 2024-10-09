@@ -26,4 +26,5 @@ uint256 constant MAX_MULTI_EDITION_COLLECTION_SIZE = 10;
 address constant ERC_6551_REGISTRY = 0x000000006551c19487814612e58FE06813775758;
 
 /// @dev usdc base sepolia
+/// todo: is this being used?
 address constant USDC_BASE_SEPOLIA = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
