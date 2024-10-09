@@ -54,12 +54,6 @@ if [ -f "$JSON_FILE" ]; then
     ROUX_MINT_PORTAL_PROXY=$(jq -r '.ROUX_MINT_PORTAL_PROXY' "$JSON_FILE")
     USDC_BASE_SEPOLIA=$(jq -r '.USDC_BASE_SEPOLIA' "$JSON_FILE")
     
-    # Optional: Verify that variables are not empty
-    if [ -z "$REGISTRY_IMPL" ] || [ -z "$REGISTRY_PROXY" ] || [ -z "$CONTROLLER_IMPL" ] || [ -z "$CONTROLLER_PROXY" ] || [ -z "$ERC_6551_REGISTRY" ] || [ -z "$ERC_6551_ACCOUNT_IMPL" ] || [ -z "$NO_OP_IMPL" ] || [ -z "$ROUX_EDITION_BEACON" ] || [ -z "$ROUX_EDITION_FACTORY_IMPL" ] || [ -z "$ROUX_EDITION_FACTORY_PROXY" ] || [ -z "$SINGLE_EDITION_COLLECTION_IMPL" ] || [ -z "$SINGLE_EDITION_COLLECTION_BEACON" ] || [ -z "$MULTI_EDITION_COLLECTION_IMPL" ] || [ -z "$MULTI_EDITION_COLLECTION_BEACON" ] || [ -z "$COLLECTION_FACTORY_IMPL" ] || [ -z "$COLLECTION_FACTORY_PROXY" ] || [ -z "$ROUX_MINT_PORTAL_IMPL" ] || [ -z "$ROUX_MINT_PORTAL_PROXY" ] || [ -z "$USDC_BASE_SEPOLIA" ]; then
-        echo "Error: One or more variables are missing in $JSON_FILE."
-        exit 1
-    fi
-    
     echo "Parsed deployment variables from $JSON_FILE"
 else
     echo "JSON file $JSON_FILE not found!"
@@ -108,7 +102,7 @@ run() {
     esac
 }
 
-# Updated usage() function with correct variable names and minimized arguments
+# usage, in deployment order
 usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
@@ -119,11 +113,11 @@ usage() {
     echo "  deploy-no-op"
     echo "  deploy-edition-beacon"
     echo "  deploy-edition-factory"
-    echo "  deploy-edition-impl"
-    echo "  upgrade-edition-beacon <new_implementation>"
     echo "  deploy-single-edition-collection-impl"
     echo "  deploy-multi-edition-collection-impl"
     echo "  deploy-collection-factory"
+    echo "  deploy-edition-impl"
+    echo "  upgrade-edition-beacon <new_implementation>"
     echo "  deploy-mint-portal"
     echo "  upgrade-controller"
     echo "  upgrade-single-edition-collection"
@@ -160,6 +154,12 @@ case $1 in
     "deploy-controller")
         if [ "$#" -ne 1 ]; then
             echo "Invalid param count; Usage: $0 deploy-controller"
+            exit 1
+        fi
+
+        # ensure required variables are set
+        if [ -z "$REGISTRY_PROXY" ] || [ -z "$USDC_BASE_SEPOLIA" ]; then
+            echo "Error: REGISTRY_PROXY or USDC_BASE_SEPOLIA is not set."
             exit 1
         fi
 
@@ -207,26 +207,6 @@ case $1 in
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $ROUX_EDITION_BEACON"
         ;;
 
-    "deploy-edition-impl")
-        if [ "$#" -ne 1 ]; then
-            echo "Invalid param count; Usage: $0 deploy-edition-impl"
-            exit 1
-        fi
-
-        echo "Deploying Edition Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address,address) $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
-        ;;
-
-    "upgrade-edition-beacon")
-        if [ "$#" -ne 2 ]; then
-            echo "Invalid param count; Usage: $0 upgrade-edition-beacon <new_implementation>"
-            exit 1
-        fi
-
-        echo "Upgrading Edition Beacon"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeEditionBeacon.s.sol:UpgradeEditionBeacon" "--sig run(address,address) $ROUX_EDITION_BEACON $2"
-        ;;
-
     "deploy-single-edition-collection-impl")
         if [ "$#" -ne 1 ]; then
             echo "Invalid param count; Usage: $0 deploy-single-edition-collection-impl"
@@ -265,6 +245,26 @@ case $1 in
 
         echo "Deploying MintPortal"
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $USDC_BASE_SEPOLIA $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY"
+        ;;
+
+    "deploy-edition-impl")
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 deploy-edition-impl"
+            exit 1
+        fi
+
+        echo "Deploying Edition Implementation"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionImpl.s.sol:DeployEditionImpl" "--sig run(address,address,address,address) $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY $CONTROLLER_PROXY $REGISTRY_PROXY"
+        ;;
+
+    "upgrade-edition-beacon")
+        if [ "$#" -ne 2 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-edition-beacon <new_implementation>"
+            exit 1
+        fi
+
+        echo "Upgrading Edition Beacon"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeEditionBeacon.s.sol:UpgradeEditionBeacon" "--sig run(address,address) $ROUX_EDITION_BEACON $2"
         ;;
 
     "upgrade-controller")
