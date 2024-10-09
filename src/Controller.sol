@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
@@ -416,7 +416,7 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
         ControllerStorage storage $ = _storage();
 
         // retrieve parent data
-        (address parentEdition, uint256 parentTokenId) = _registry.attribution(edition, tokenId);
+        (address parentEdition, uint256 parentTokenId,) = _registry.attribution(edition, tokenId);
 
         // get recipient
         address recipient = $.tokenConfig[edition][tokenId].fundsRecipient;

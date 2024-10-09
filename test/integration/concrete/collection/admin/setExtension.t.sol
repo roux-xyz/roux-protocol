@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
 import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
@@ -10,7 +10,7 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { ICollectionExtension } from "src/interfaces/ICollectionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 
 contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -43,7 +43,7 @@ contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
     function test__RevertWhen_SetExtension_InvalidExtension() external {
         vm.prank(creator);
         vm.expectRevert(ErrorsLib.Collection_InvalidExtension.selector);
-        singleEditionCollection.setExtension(address(mockExtension), true, "");
+        singleEditionCollection.setExtension(address(edition), true, "");
     }
 
     /* -------------------------------------------- */
@@ -76,6 +76,6 @@ contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
         );
 
         assertTrue(singleEditionCollection.isRegisteredExtension(address(mockCollectionExtension)));
-        assertEq(ICollectionExtension(address(mockCollectionExtension)).price(), customPrice);
+        assertEq(IExtension(address(mockCollectionExtension)).price(address(singleEditionCollection), 0), customPrice);
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { MintPortalBase } from "test/shared/MintPortalBase.t.sol";
@@ -19,6 +19,7 @@ contract MintCollection_RouxMintPortal_Integration_Test is MintPortalBase {
         usdcDepositor = users.usdcDepositor;
     }
 
+    /// @dev mint collection with default price
     function test__MintCollection() external {
         uint256 mintCost = singleEditionCollection.price();
 
@@ -35,7 +36,7 @@ contract MintCollection_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint collection
         vm.prank(user);
-        mintPortal.mintCollection(singleEditionCollection, address(0), address(0), "");
+        mintPortal.mintCollection(user, singleEditionCollection, address(0), address(0), "");
 
         // check balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -54,6 +55,7 @@ contract MintCollection_RouxMintPortal_Integration_Test is MintPortalBase {
         }
     }
 
+    /// @dev mint collection with referral
     function test__MintCollection_WithReferral() external {
         uint256 mintCost = singleEditionCollection.price();
         address referrer = address(users.user_1);
@@ -70,7 +72,7 @@ contract MintCollection_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // Mint collection with referral
         vm.prank(user);
-        mintPortal.mintCollection(singleEditionCollection, address(0), referrer, "");
+        mintPortal.mintCollection(user, singleEditionCollection, address(0), referrer, "");
 
         // Check balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -80,5 +82,29 @@ contract MintCollection_RouxMintPortal_Integration_Test is MintPortalBase {
         assertEq(mockUSDC.balanceOf(address(mintPortal)), initialPortalUSDCBalance);
         assertEq(controller.balance(creator), initialCreatorBalance + mintCost - referralFee);
         assertEq(controller.balance(referrer), initialReferrerBalance + referralFee);
+    }
+
+    /// @dev mint collection to another address
+    function test__MintCollection_ToAddress() external {
+        uint256 mintCost = singleEditionCollection.price();
+        address to = address(users.user_1);
+
+        // Initial balances
+        uint256 initialUsdDepositorUSDCBalance = mockUSDC.balanceOf(usdcDepositor);
+        uint256 initialPortalUSDCBalance = mockUSDC.balanceOf(address(mintPortal));
+
+        // deposit USDC and mint rUSDC
+        _depositUsdc(user, mintCost);
+
+        // mint collection
+        vm.prank(user);
+        mintPortal.mintCollection(to, singleEditionCollection, address(0), address(0), "");
+
+        // check balances after minting
+        assertEq(mintPortal.balanceOf(to, 1), 0);
+        assertEq(mintPortal.totalSupply(), 0);
+        assertEq(singleEditionCollection.balanceOf(to), 1);
+        assertEq(mockUSDC.balanceOf(usdcDepositor), initialUsdDepositorUSDCBalance - mintCost);
+        assertEq(mockUSDC.balanceOf(address(mintPortal)), initialPortalUSDCBalance);
     }
 }

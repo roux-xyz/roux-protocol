@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { CollectionData } from "src/types/DataTypes.sol";
 
@@ -199,4 +199,38 @@ library EventsLib {
      * @param instance collection instance
      */
     event NewMultiEditionCollection(address indexed instance);
+
+    /* ------------------------------------------------- */
+    /* RouxMintPortal                                    */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice token restriction set
+     * @param id token id
+     * @param restricted whether the token is restricted
+     */
+    event TokenRestrictionSet(uint256 indexed id, bool restricted);
+
+    /**
+     * @notice deposit
+     * @param to recipient
+     * @param id token id
+     * @param amount amount
+     */
+    event Deposit(address indexed to, uint256 indexed id, uint256 amount);
+
+    /**
+     * @notice edition mint redemption
+     * @param to recipient
+     * @param edition edition
+     * @param id token id
+     */
+    event EditionMintRedemption(address indexed to, address indexed edition, uint256 id);
+
+    /**
+     * @notice collection mint redemption
+     * @param to recipient
+     * @param collection collection
+     */
+    event CollectionMintRedemption(address indexed to, address indexed collection);
 }

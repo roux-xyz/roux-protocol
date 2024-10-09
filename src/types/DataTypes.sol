@@ -24,24 +24,26 @@ library EditionData {
     /**
      * @notice token data
      * @param creator creator
+     * @param hasParent whether the token has a parent
      * @param maxSupply max supply
      * @param totalSupply total supply
      * @param mintParams mint params
      * @param extensions enabled extensions
-     * @param uri token uri
+     * @param uris token uris
      */
     struct TokenData {
         address creator;
+        bool hasParent;
         uint128 totalSupply;
         uint128 maxSupply;
         MintParams mintParams;
         LibBitmap.Bitmap extensions;
-        string uri;
+        bytes32[] uris;
     }
 
     /**
      * @notice add params
-     * @param tokenUri token uri
+     * @param ipfsHash ipfsHash
      * @param maxSupply max supply
      * @param fundsRecipient funds recipient
      * @param defaultPrice base price - typically overriden by extension
@@ -53,7 +55,7 @@ library EditionData {
      * @param options additional options
      */
     struct AddParams {
-        string tokenUri;
+        bytes32 ipfsHash;
         uint256 maxSupply;
         address fundsRecipient;
         uint256 defaultPrice;

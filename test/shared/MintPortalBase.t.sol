@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
@@ -32,5 +32,11 @@ abstract contract MintPortalBase is CollectionBase {
         mockUSDC.approve(address(mintPortal), amount);
         mintPortal.deposit(to, amount);
         vm.stopPrank();
+    }
+
+    /// @dev mint promotional tokens
+    function _mintPromotionalTokens(address to, uint256 tokenId, uint256 quantity) internal {
+        vm.prank(users.deployer);
+        mintPortal.mintPromotionalTokens(to, tokenId, quantity);
     }
 }

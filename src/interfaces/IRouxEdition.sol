@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { IController } from "src/interfaces/IController.sol";
 import { EditionData } from "src/types/DataTypes.sol";
@@ -48,6 +48,21 @@ interface IRouxEdition {
      * @return uri
      */
     function uri(uint256 id) external view returns (string memory);
+
+    /**
+     * @notice get uri for a given token id and index
+     * @param id token id
+     * @param index uri index
+     * @return uri
+     */
+    function uri(uint256 id, uint256 index) external view returns (string memory);
+
+    /**
+     * @notice get current uri index for a given token id
+     * @param id token id
+     * @return current uri index
+     */
+    function currentUriIndex(uint256 id) external view returns (uint256);
 
     /**
      * @notice contract uri
@@ -111,6 +126,13 @@ interface IRouxEdition {
      * @dev used by MultiEditionCollection to confirm token eligibility for multi collection inclusion
      */
     function multiCollectionMintEligible(uint256 id, address currency_) external view returns (bool);
+
+    /**
+     * @notice check if token has parent
+     * @param id token id
+     * @return true if token has parent
+     */
+    function hasParent(uint256 id) external view returns (bool);
 
     /* -------------------------------------------- */
     /* write functions                              */
@@ -191,4 +213,32 @@ interface IRouxEdition {
      *      - validates that token exists
      */
     function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable;
+
+    /**
+     * @notice admin mint tokens
+     * @param to token receiver
+     * @param id token id
+     * @param quantity number of tokens to mint
+     * @param data additional data
+     *
+     * @dev only callable by owner - bypasses all validations
+     */
+    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external;
+
+    /**
+     * @notice admin batch mint tokens
+     * @param to token receiver
+     * @param ids array of token ids
+     * @param quantities array of quantities
+     * @param data additional data
+     *
+     * @dev only callable by owner - bypasses all validations
+     */
+    function adminBatchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes calldata data
+    )
+        external;
 }

@@ -779,7 +779,7 @@ export const collectionFactoryAbi = [
     name: 'ERC1967InvalidImplementation',
   },
   { type: 'error', inputs: [], name: 'ERC1967NonPayable' },
-  { type: 'error', inputs: [], name: 'FailedCall' },
+  { type: 'error', inputs: [], name: 'FailedInnerCall' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
@@ -1382,6 +1382,11 @@ export const controllerAbi = [
     inputs: [{ name: 'target', internalType: 'address', type: 'address' }],
     name: 'AddressEmptyCode',
   },
+  {
+    type: 'error',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'AddressInsufficientBalance',
+  },
   { type: 'error', inputs: [], name: 'AlreadyInitialized' },
   { type: 'error', inputs: [], name: 'Controller_InvalidArrayLength' },
   { type: 'error', inputs: [], name: 'Controller_InvalidFundsRecipient' },
@@ -1395,7 +1400,7 @@ export const controllerAbi = [
     name: 'ERC1967InvalidImplementation',
   },
   { type: 'error', inputs: [], name: 'ERC1967NonPayable' },
-  { type: 'error', inputs: [], name: 'FailedCall' },
+  { type: 'error', inputs: [], name: 'FailedInnerCall' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
@@ -2017,6 +2022,7 @@ export const registryAbi = [
     outputs: [
       { name: '', internalType: 'address', type: 'address' },
       { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
     ],
     stateMutability: 'view',
   },
@@ -2070,16 +2076,6 @@ export const registryAbi = [
       { name: 'roles', internalType: 'uint256', type: 'uint256' },
     ],
     name: 'hasAnyRole',
-    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    inputs: [
-      { name: 'edition', internalType: 'address', type: 'address' },
-      { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
-    ],
-    name: 'hasChild',
     outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
     stateMutability: 'view',
   },
@@ -2164,6 +2160,7 @@ export const registryAbi = [
       { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
       { name: 'parentEdition', internalType: 'address', type: 'address' },
       { name: 'parentTokenId', internalType: 'uint256', type: 'uint256' },
+      { name: 'index', internalType: 'uint256', type: 'uint256' },
     ],
     name: 'setRegistryData',
     outputs: [],
@@ -2316,7 +2313,7 @@ export const registryAbi = [
     name: 'ERC1967InvalidImplementation',
   },
   { type: 'error', inputs: [], name: 'ERC1967NonPayable' },
-  { type: 'error', inputs: [], name: 'FailedCall' },
+  { type: 'error', inputs: [], name: 'FailedInnerCall' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
@@ -2349,7 +2346,7 @@ export const rouxEditionAbi = [
         internalType: 'struct EditionData.AddParams',
         type: 'tuple',
         components: [
-          { name: 'tokenUri', internalType: 'string', type: 'string' },
+          { name: 'ipfsHash', internalType: 'bytes32', type: 'bytes32' },
           { name: 'maxSupply', internalType: 'uint256', type: 'uint256' },
           { name: 'fundsRecipient', internalType: 'address', type: 'address' },
           { name: 'defaultPrice', internalType: 'uint256', type: 'uint256' },
@@ -2364,6 +2361,30 @@ export const rouxEditionAbi = [
     ],
     name: 'add',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'ids', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: 'quantities', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'adminBatchMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'quantity', internalType: 'uint256', type: 'uint256' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'adminMint',
+    outputs: [],
     stateMutability: 'nonpayable',
   },
   {
@@ -2471,6 +2492,13 @@ export const rouxEditionAbi = [
   {
     type: 'function',
     inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
+    name: 'currentUriIndex',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
     name: 'defaultMintParams',
     outputs: [
       {
@@ -2533,6 +2561,13 @@ export const rouxEditionAbi = [
       { name: 'roles', internalType: 'uint256', type: 'uint256' },
     ],
     name: 'hasAnyRole',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
+    name: 'hasParent',
     outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
     stateMutability: 'view',
   },
@@ -2795,7 +2830,7 @@ export const rouxEditionAbi = [
     type: 'function',
     inputs: [
       { name: 'id', internalType: 'uint256', type: 'uint256' },
-      { name: 'newUri', internalType: 'string', type: 'string' },
+      { name: 'ipfsHash', internalType: 'bytes32', type: 'bytes32' },
     ],
     name: 'updateUri',
     outputs: [],
@@ -2804,6 +2839,16 @@ export const rouxEditionAbi = [
   {
     type: 'function',
     inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
+    name: 'uri',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'index', internalType: 'uint256', type: 'uint256' },
+    ],
     name: 'uri',
     outputs: [{ name: '', internalType: 'string', type: 'string' }],
     stateMutability: 'view',
@@ -3046,6 +3091,7 @@ export const rouxEditionAbi = [
   { type: 'error', inputs: [], name: 'NotOwnerNorApproved' },
   { type: 'error', inputs: [], name: 'Reentrancy' },
   { type: 'error', inputs: [], name: 'RouxEdition_GatedMint' },
+  { type: 'error', inputs: [], name: 'RouxEdition_HasParent' },
   { type: 'error', inputs: [], name: 'RouxEdition_InvalidAttribution' },
   { type: 'error', inputs: [], name: 'RouxEdition_InvalidCaller' },
   { type: 'error', inputs: [], name: 'RouxEdition_InvalidCollection' },
@@ -3053,7 +3099,6 @@ export const rouxEditionAbi = [
   { type: 'error', inputs: [], name: 'RouxEdition_InvalidParams' },
   { type: 'error', inputs: [], name: 'RouxEdition_InvalidTokenId' },
   { type: 'error', inputs: [], name: 'RouxEdition_MaxSupplyExceeded' },
-  { type: 'error', inputs: [], name: 'RouxEdition_UriFrozen' },
   {
     type: 'error',
     inputs: [],
@@ -3264,7 +3309,7 @@ export const rouxEditionFactoryAbi = [
     name: 'ERC1967InvalidImplementation',
   },
   { type: 'error', inputs: [], name: 'ERC1967NonPayable' },
-  { type: 'error', inputs: [], name: 'FailedCall' },
+  { type: 'error', inputs: [], name: 'FailedInnerCall' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
@@ -3285,6 +3330,19 @@ export const rouxMintPortalAbi = [
       { name: 'editionFactory_', internalType: 'address', type: 'address' },
       { name: 'collectionFactory_', internalType: 'address', type: 'address' },
     ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'quantity', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'address', type: 'address' },
+      { name: 'account', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'approveMint',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'nonpayable',
   },
   {
@@ -3312,6 +3370,7 @@ export const rouxMintPortalAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
       {
         name: 'edition',
         internalType: 'contract IRouxEdition',
@@ -3402,7 +3461,15 @@ export const rouxMintPortalAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
+    name: 'isRestricted',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
       {
         name: 'collection',
         internalType: 'contract ICollection',
@@ -3419,6 +3486,7 @@ export const rouxMintPortalAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
       {
         name: 'edition',
         internalType: 'contract IRouxEdition',
@@ -3431,6 +3499,17 @@ export const rouxMintPortalAbi = [
       { name: 'data', internalType: 'bytes', type: 'bytes' },
     ],
     name: 'mintEdition',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'quantity', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'mintPromotionalTokens',
     outputs: [],
     stateMutability: 'nonpayable',
   },
@@ -3449,6 +3528,39 @@ export const rouxMintPortalAbi = [
     name: 'ownershipHandoverExpiresAt',
     outputs: [{ name: 'result', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'price',
+    outputs: [{ name: '', internalType: 'uint128', type: 'uint128' }],
+    stateMutability: 'pure',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'collection', internalType: 'address', type: 'address' },
+      { name: 'referrer', internalType: 'address', type: 'address' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'redeemCollectionMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'edition', internalType: 'address', type: 'address' },
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'referrer', internalType: 'address', type: 'address' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'redeemEditionMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -3498,38 +3610,58 @@ export const rouxMintPortalAbi = [
   {
     type: 'function',
     inputs: [
-      { name: '', internalType: 'address', type: 'address' },
-      { name: '', internalType: 'address', type: 'address' },
-      { name: '', internalType: 'uint256[]', type: 'uint256[]' },
-      { name: '', internalType: 'uint256[]', type: 'uint256[]' },
-      { name: '', internalType: 'bytes', type: 'bytes' },
+      { name: 'from', internalType: 'address', type: 'address' },
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'ids', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: 'amounts', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
     ],
     name: 'safeBatchTransferFrom',
     outputs: [],
-    stateMutability: 'pure',
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
     inputs: [
-      { name: '', internalType: 'address', type: 'address' },
-      { name: '', internalType: 'address', type: 'address' },
-      { name: '', internalType: 'uint256', type: 'uint256' },
-      { name: '', internalType: 'uint256', type: 'uint256' },
-      { name: '', internalType: 'bytes', type: 'bytes' },
+      { name: 'from', internalType: 'address', type: 'address' },
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'amount', internalType: 'uint256', type: 'uint256' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
     ],
     name: 'safeTransferFrom',
     outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'operator', internalType: 'address', type: 'address' },
+      { name: 'approved', internalType: 'bool', type: 'bool' },
+    ],
+    name: 'setApprovalForAll',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'setMintParams',
+    outputs: [],
     stateMutability: 'pure',
   },
   {
     type: 'function',
     inputs: [
-      { name: '', internalType: 'address', type: 'address' },
-      { name: '', internalType: 'bool', type: 'bool' },
+      { name: 'id', internalType: 'uint256', type: 'uint256' },
+      { name: 'restricted', internalType: 'bool', type: 'bool' },
     ],
-    name: 'setApprovalForAll',
+    name: 'setTokenRestriction',
     outputs: [],
-    stateMutability: 'pure',
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -3548,6 +3680,13 @@ export const rouxMintPortalAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'totalSupply',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'id', internalType: 'uint256', type: 'uint256' }],
     name: 'totalSupply',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
@@ -3595,6 +3734,50 @@ export const rouxMintPortalAbi = [
     type: 'event',
     anonymous: false,
     inputs: [
+      { name: 'to', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'collection',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'CollectionMintRedemption',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address', indexed: true },
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: true },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'Deposit',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'edition',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: false },
+    ],
+    name: 'EditionMintRedemption',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
       {
         name: 'version',
         internalType: 'uint64',
@@ -3603,6 +3786,26 @@ export const rouxMintPortalAbi = [
       },
     ],
     name: 'Initialized',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'target',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: true },
+      {
+        name: 'mintParams',
+        internalType: 'bytes',
+        type: 'bytes',
+        indexed: false,
+      },
+    ],
+    name: 'MintParamsUpdated',
   },
   {
     type: 'event',
@@ -3667,6 +3870,20 @@ export const rouxMintPortalAbi = [
     type: 'event',
     anonymous: false,
     inputs: [
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: true },
+      {
+        name: 'restricted',
+        internalType: 'bool',
+        type: 'bool',
+        indexed: false,
+      },
+    ],
+    name: 'TokenRestrictionSet',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
       {
         name: 'operator',
         internalType: 'address',
@@ -3723,17 +3940,26 @@ export const rouxMintPortalAbi = [
   },
   { type: 'error', inputs: [], name: 'AccountBalanceOverflow' },
   { type: 'error', inputs: [], name: 'AlreadyInitialized' },
+  { type: 'error', inputs: [], name: 'AlreadyMinted' },
   { type: 'error', inputs: [], name: 'ArrayLengthsMismatch' },
   { type: 'error', inputs: [], name: 'InsufficientBalance' },
+  { type: 'error', inputs: [], name: 'InsufficientFunds' },
   { type: 'error', inputs: [], name: 'InvalidInitialization' },
+  { type: 'error', inputs: [], name: 'InvalidMintParams' },
+  { type: 'error', inputs: [], name: 'InvalidParamsLength' },
+  { type: 'error', inputs: [], name: 'MintParamsNotSet' },
   { type: 'error', inputs: [], name: 'NewOwnerIsZeroAddress' },
   { type: 'error', inputs: [], name: 'NoHandoverRequest' },
   { type: 'error', inputs: [], name: 'NotInitializing' },
   { type: 'error', inputs: [], name: 'NotOwnerNorApproved' },
   { type: 'error', inputs: [], name: 'Reentrancy' },
   { type: 'error', inputs: [], name: 'Restricted1155_TransferNotAllowed' },
+  { type: 'error', inputs: [], name: 'RouxMintPortal_GatedMint' },
+  { type: 'error', inputs: [], name: 'RouxMintPortal_InvalidCaller' },
   { type: 'error', inputs: [], name: 'RouxMintPortal_InvalidCollection' },
   { type: 'error', inputs: [], name: 'RouxMintPortal_InvalidEdition' },
+  { type: 'error', inputs: [], name: 'RouxMintPortal_InvalidParams' },
+  { type: 'error', inputs: [], name: 'RouxMintPortal_InvalidToken' },
   {
     type: 'error',
     inputs: [],

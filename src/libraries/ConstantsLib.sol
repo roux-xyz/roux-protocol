@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 /// @dev basis point scale
 uint256 constant BASIS_POINT_SCALE = 10_000;
@@ -26,4 +26,5 @@ uint256 constant MAX_MULTI_EDITION_COLLECTION_SIZE = 10;
 address constant ERC_6551_REGISTRY = 0x000000006551c19487814612e58FE06813775758;
 
 /// @dev usdc base sepolia
+/// todo: is this being used?
 address constant USDC_BASE_SEPOLIA = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;

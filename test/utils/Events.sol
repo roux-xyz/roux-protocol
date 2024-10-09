@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import "src/libraries/EventsLib.sol";
 
 contract Events {
-    /// @dev see {IEditionExtension}
+    /// @dev see {IExtension}
     event MintParamsUpdated(address indexed edition, uint256 indexed id, bytes mintParams);
 
     /// @dev see {IERC1155}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { RouxEdition } from "src/RouxEdition.sol";
@@ -42,11 +42,6 @@ contract View_RouxEdition_Unit_Concrete_Test is BaseTest {
     function test__TotalSupply() external view {
         // token minted to creator on add in setup
         assertEq(edition.totalSupply(1), 1);
-    }
-
-    /// @dev returns correct uri
-    function test__Uri() external view {
-        assertEq(edition.uri(1), TOKEN_URI);
     }
 
     /// @dev returns correct contract uri

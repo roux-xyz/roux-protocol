@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { MintPortalBase } from "test/shared/MintPortalBase.t.sol";
@@ -8,11 +8,14 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { stdError } from "forge-std/Test.sol";
+import { EditionData } from "src/types/DataTypes.sol";
 
 contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256[] tokenIds;
     uint256[] quantities;
     address[] extensions;
+
+    EditionData.AddParams addParams;
 
     /* -------------------------------------------- */
     /* setup                                        */
@@ -38,6 +41,8 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
         // Add another token to the edition
         vm.prank(creator);
         edition.add(defaultAddParams);
+
+        addParams = defaultAddParams;
     }
 
     /* -------------------------------------------- */
@@ -45,27 +50,7 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
     /* -------------------------------------------- */
 
     /// @dev test batch minting with insufficient rUSDC balance
-    function test__RevertWhen_MintBatch_InsufficientBalance_Underflow() external {
-        uint256 mintCost =
-            edition.defaultPrice(tokenIds[0]) * quantities[0] + edition.defaultPrice(tokenIds[1]) * quantities[1];
-        uint256 depositAmount = mintCost - 1;
-
-        _depositUsdc(user, depositAmount);
-
-        // attempt to mint with insufficient balance
-        vm.prank(user);
-        vm.expectRevert(stdError.arithmeticError);
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
-    }
-
-    /// @dev test batch minting with insufficient rUSDC balance
     function test__RevertWhen_MintBatch_InsufficientBalance() external {
-        // unrelated deposit
-        vm.startPrank(users.user_1);
-        mockUSDC.approve(address(mintPortal), TOKEN_PRICE);
-        mintPortal.deposit(users.user_1, TOKEN_PRICE);
-        vm.stopPrank();
-
         uint256 mintCost =
             edition.defaultPrice(tokenIds[0]) * quantities[0] + edition.defaultPrice(tokenIds[1]) * quantities[1];
         uint256 depositAmount = mintCost - 1;
@@ -75,7 +60,9 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
         // attempt to mint with insufficient balance
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ERC1155.InsufficientBalance.selector));
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
+        mintPortal.batchMintEdition(
+            user, IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), ""
+        );
     }
 
     /// @dev test batch minting with invalid edition
@@ -88,8 +75,12 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
         // attempt to mint with an invalid edition address
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(IRouxMintPortal.RouxMintPortal_InvalidEdition.selector));
-        mintPortal.batchMintEdition(IRouxEdition(address(0x123)), tokenIds, quantities, extensions, address(0), "");
+        mintPortal.batchMintEdition(
+            user, IRouxEdition(address(0x123)), tokenIds, quantities, extensions, address(0), ""
+        );
     }
+
+    // todo: test gated edition in batch mint
 
     /* -------------------------------------------- */
     /* integration tests                            */
@@ -113,7 +104,9 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // batch mint editions
         vm.prank(user);
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
+        mintPortal.batchMintEdition(
+            user, IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), ""
+        );
 
         // check rUSDC balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -159,7 +152,9 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // batch mint editions with extensions
         vm.prank(user);
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
+        mintPortal.batchMintEdition(
+            user, IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), ""
+        );
 
         // check rUSDC balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -203,7 +198,9 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // batch mint editions with mixed extensions
         vm.prank(user);
-        mintPortal.batchMintEdition(IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), "");
+        mintPortal.batchMintEdition(
+            user, IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), ""
+        );
 
         // check rUSDC balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -219,5 +216,32 @@ contract MintBatch_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // check controller balances
         assertEq(controller.balance(creator), mintCost);
+    }
+
+    /// @dev mint token to another address
+    function test__MintBatch_ToAddress() external {
+        uint256 mintCost =
+            edition.defaultPrice(tokenIds[0]) * quantities[0] + edition.defaultPrice(tokenIds[1]) * quantities[1];
+
+        // initial balances
+        uint256 initialUsdDepositorUSDCBalance = mockUSDC.balanceOf(usdcDepositor);
+        uint256 initialPortalUSDCBalance = mockUSDC.balanceOf(address(mintPortal));
+
+        // deposit USDC and mint rUSDC
+        _depositUsdc(user, mintCost);
+
+        // batch mint editions
+        vm.prank(user);
+        mintPortal.batchMintEdition(
+            users.user_2, IRouxEdition(address(edition)), tokenIds, quantities, extensions, address(0), ""
+        );
+
+        // check balances after minting
+        assertEq(mintPortal.balanceOf(users.user_2, 1), 0);
+        assertEq(mintPortal.totalSupply(), 0);
+        assertEq(edition.balanceOf(users.user_2, tokenIds[0]), 1);
+        assertEq(edition.balanceOf(users.user_2, tokenIds[1]), 2);
+        assertEq(mockUSDC.balanceOf(usdcDepositor), initialUsdDepositorUSDCBalance - mintCost);
+        assertEq(mockUSDC.balanceOf(address(mintPortal)), initialPortalUSDCBalance);
     }
 }

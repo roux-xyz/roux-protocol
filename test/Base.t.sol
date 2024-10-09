@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 
@@ -353,9 +353,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy single edition collection beacon
-    function _deploySingleEditionCollectionBeacon(
-        address singleEditionCollectionImpl_
-    )
+    function _deploySingleEditionCollectionBeacon(address singleEditionCollectionImpl_)
         internal
         returns (UpgradeableBeacon singleEditionCollectionBeacon_)
     {
@@ -379,9 +377,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy multi edition collection beacon
-    function _deployMultiEditionCollectionBeacon(
-        address multiEditionCollectionImpl_
-    )
+    function _deployMultiEditionCollectionBeacon(address multiEditionCollectionImpl_)
         internal
         returns (UpgradeableBeacon multiEditionCollectionBeacon_)
     {
@@ -402,9 +398,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev deploy collection factory proxy
-    function _deployCollectionFactoryProxy(
-        address collectionFactoryImpl_
-    )
+    function _deployCollectionFactoryProxy(address collectionFactoryImpl_)
         internal
         returns (CollectionFactory collectionFactory_)
     {
@@ -448,7 +442,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     /// @dev set default add params
     function _setDefaultAddParams() internal {
         defaultAddParams = EditionData.AddParams({
-            tokenUri: TOKEN_URI,
+            ipfsHash: IPFS_HASH_DIGEST,
             maxSupply: MAX_SUPPLY,
             fundsRecipient: creator,
             defaultPrice: TOKEN_PRICE,
@@ -581,7 +575,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         // create forked token with attribution
         uint256 tokenId = edition_.add(
             EditionData.AddParams({
-                tokenUri: TOKEN_URI,
+                ipfsHash: IPFS_HASH_DIGEST,
                 maxSupply: MAX_SUPPLY,
                 fundsRecipient: owner,
                 defaultPrice: TOKEN_PRICE,
@@ -620,7 +614,7 @@ abstract contract BaseTest is Test, Events, Defaults {
 
             // token params
             EditionData.AddParams memory tokenParams = EditionData.AddParams({
-                tokenUri: TOKEN_URI,
+                ipfsHash: IPFS_HASH_DIGEST,
                 maxSupply: MAX_SUPPLY,
                 fundsRecipient: user_,
                 defaultPrice: TOKEN_PRICE,

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
 import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IEditionExtension } from "src/interfaces/IEditionExtension.sol";
+import { IExtension } from "src/interfaces/IExtension.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -21,6 +21,7 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { Base32 } from "src/libraries/Base32.sol";
 import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 
 /**
@@ -194,15 +195,37 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function uri(uint256 id) public view override(IRouxEdition, ERC1155) returns (string memory) {
-        string memory currentUri = _storage().tokens[id].uri;
+        // get length
+        uint256 urisLength = _storage().tokens[id].uris.length;
 
         // if current uri is set, return it
-        if (bytes(currentUri).length > 0) {
-            return currentUri;
+        if (urisLength > 0) {
+            bytes32 digest = _storage().tokens[id].uris[urisLength - 1];
+            return _generateTokenUri(digest);
         } else {
             // otherwise return default uri
             return DEFAULT_TOKEN_URI;
         }
+    }
+
+    /// @inheritdoc IRouxEdition
+    function uri(uint256 id, uint256 index) external view returns (string memory) {
+        // get length
+        uint256 urisLength = _storage().tokens[id].uris.length;
+
+        // if current uri is set, return it
+        if (urisLength > 0) {
+            bytes32 digest = _storage().tokens[id].uris[index];
+            return _generateTokenUri(digest);
+        } else {
+            // otherwise return default uri
+            return DEFAULT_TOKEN_URI;
+        }
+    }
+
+    /// @inheritdoc IRouxEdition
+    function currentUriIndex(uint256 id) external view returns (uint256) {
+        return _storage().tokens[id].uris.length - 1;
     }
 
     /// @inheritdoc IRouxEdition
@@ -245,6 +268,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         EditionData.TokenData storage d = _storage().tokens[id];
 
         return _exists(id) && !d.mintParams.gate && currency_ == _currency;
+    }
+
+    /// @inheritdoc IRouxEdition
+    function hasParent(uint256 id) external view returns (bool) {
+        return _storage().tokens[id].hasParent;
     }
 
     /* ------------------------------------------------- */
@@ -355,6 +383,45 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         _mint(to, id, 1, "");
     }
 
+    /// @inheritdoc IRouxEdition
+    function adminMint(address to, uint256 id, uint256 quantity, bytes calldata data) external nonReentrant onlyOwner {
+        // revert if fork
+        if (_storage().tokens[id].hasParent) revert ErrorsLib.RouxEdition_HasParent();
+
+        _validateMint(id, quantity);
+        _validateMint(id, quantity);
+        _incrementTotalSupply(id, quantity);
+
+        _mint(to, id, quantity, data);
+    }
+
+    /// @inheritdoc IRouxEdition
+    function adminBatchMint(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory quantities,
+        bytes calldata data
+    )
+        external
+        nonReentrant
+        onlyOwner
+    {
+        // validate array lengths
+        if (ids.length != quantities.length) {
+            revert ErrorsLib.RouxEdition_InvalidParams();
+        }
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            // revert if fork
+            if (_storage().tokens[ids[i]].hasParent) revert ErrorsLib.RouxEdition_HasParent();
+
+            _validateMint(ids[i], quantities[i]);
+            _incrementTotalSupply(ids[i], quantities[i]);
+        }
+
+        _batchMint(to, ids, quantities, data);
+    }
+
     /* ------------------------------------------------- */
     /* admin                                             */
     /* ------------------------------------------------- */
@@ -374,8 +441,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // set mint params
         d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: p.gate });
 
+        // push uri to uri array
+        d.uris.push(p.ipfsHash);
+
         // set token data
-        d.uri = p.tokenUri;
         d.maxSupply = p.maxSupply.toUint128();
         d.creator = msg.sender;
 
@@ -384,6 +453,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
         // optionally set registry data
         if (p.parentEdition != address(0) && p.parentTokenId != 0) {
+            d.hasParent = true;
             _setRegistryData(id, p.parentEdition, p.parentTokenId);
         }
 
@@ -406,24 +476,12 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /**
      * @notice update uri
      * @param id token id to update
-     * @param newUri new uri
-     *
-     * @dev once a child has been created, the uri is frozen and cannot be udpated.
-     *      - to prevent a malicious user from "freezing" an unrevealed token, we only
-     *        revert if a current uri has previously been set
+     * @param ipfsHash new uri
      */
-    function updateUri(uint256 id, string memory newUri) external onlyOwner {
-        // current uri
-        string memory currentUri = _storage().tokens[id].uri;
+    function updateUri(uint256 id, bytes32 ipfsHash) external onlyOwner {
+        _storage().tokens[id].uris.push(ipfsHash);
 
-        // verify child using existing metadata has not already been created
-        if (bytes(currentUri).length > 0 && _registry.hasChild(address(this), id)) {
-            revert ErrorsLib.RouxEdition_UriFrozen();
-        }
-
-        _storage().tokens[id].uri = newUri;
-
-        emit URI(newUri, id);
+        emit URI(_generateTokenUri(ipfsHash), id);
     }
 
     /**
@@ -472,7 +530,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         nonReentrant
     {
         // set sales params via extension
-        IEditionExtension(extension).setMintParams(id, params);
+        IExtension(extension).setMintParams(id, params);
     }
 
     /**
@@ -480,11 +538,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      * @param collection collection address
      * @param enable enable or disable collection
      *
-     * @dev bypases validation that token is ungated and exists; frontends should
+     * @dev bypasses validation that token is ungated and exists; frontends should
      *      validate that token exists before calling this function as convenience
      */
     function setCollection(address collection, bool enable) external onlyOwner {
-        // validate collection
         if (enable) {
             // validate extension is not zero
             if (collection == address(0)) revert ErrorsLib.RouxEdition_InvalidCollection();
@@ -536,6 +593,8 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     /**
      * @notice gate mint
      * @param id token id
+     *
+     * @dev cannot be undone
      */
     function disableGate(uint256 id) external onlyOwner {
         _storage().tokens[id].mintParams.gate = false;
@@ -615,10 +674,10 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             // mint w/ extension - check if extension is registered
             if (!_isRegisteredExtension(id, extension)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
-            price = IEditionExtension(extension).approveMint({
+            price = IExtension(extension).approveMint({
                 id: id,
                 quantity: quantity,
-                operator: msg.sender, // typically will be the RouxMintPortal
+                operator: msg.sender,
                 account: to,
                 data: ""
             });
@@ -646,8 +705,11 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             revert ErrorsLib.RouxEdition_InvalidAttribution();
         }
 
+        // get current index
+        uint256 idx = IRouxEdition(parentEdition).currentUriIndex(parentTokenId);
+
         // set registry data
-        _registry.setRegistryData(id, parentEdition, parentTokenId);
+        _registry.setRegistryData(id, parentEdition, parentTokenId, idx);
     }
 
     /**
@@ -672,7 +734,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
             if (extension == address(0)) revert ErrorsLib.RouxEdition_InvalidExtension();
 
             // validate extension interface support
-            if (!IEditionExtension(extension).supportsInterface(type(IEditionExtension).interfaceId)) {
+            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
                 revert ErrorsLib.RouxEdition_InvalidExtension();
             }
 
@@ -684,7 +746,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         }
 
         // set mint params if provided
-        if (options.length > 0) IEditionExtension(extension).setMintParams(id, options);
+        if (options.length > 0) IExtension(extension).setMintParams(id, options);
 
         // emit event
         emit EventsLib.ExtensionSet(extension, id, enable);
@@ -707,5 +769,23 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      */
     function _isRegisteredExtension(uint256 id, address extension) internal view returns (bool) {
         return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
+    }
+
+    function _generateTokenUri(bytes32 digest) internal pure returns (string memory) {
+        bytes memory cidBytes = new bytes(36);
+
+        cidBytes[0] = 0x01; // cid version 1
+        cidBytes[1] = 0x70; // multicodec dag-pb
+        cidBytes[2] = 0x12; // multihash function code for sha-256
+        cidBytes[3] = 0x20; // multihash digest size
+
+        // copy digest into cidBytes
+        for (uint256 i = 0; i < 32; i++) {
+            cidBytes[i + 4] = digest[i];
+        }
+
+        string memory encoded = Base32.encode(cidBytes);
+
+        return string(abi.encodePacked("ipfs://b", encoded));
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { MintPortalBase } from "test/shared/MintPortalBase.t.sol";
@@ -16,12 +16,15 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     uint256 tokenId = 1;
     uint256 quantity = 1;
 
+    EditionData.AddParams addParams;
+
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
 
     function setUp() public override {
         MintPortalBase.setUp();
+        addParams = defaultAddParams;
     }
 
     /* -------------------------------------------- */
@@ -29,23 +32,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     /* -------------------------------------------- */
 
     /// @dev test minting with insufficient rUSDC balance
-    function test__RevertWhen_MintEdition_InsufficientBalance_Underflow() external {
-        uint256 mintCost = edition.defaultPrice(tokenId) * quantity;
-        uint256 depositAmount = mintCost - 1;
-
-        _depositUsdc(user, depositAmount);
-
-        // attempt to mint with insufficient balance
-        vm.prank(user);
-        vm.expectRevert(stdError.arithmeticError);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
-    }
-
-    /// @dev test minting with insufficient rUSDC balance
     function test__RevertWhen_MintEdition_InsufficientBalance() external {
-        // unrelated deposit
-        _depositUsdc(users.user_1, TOKEN_PRICE);
-
         uint256 mintCost = edition.defaultPrice(tokenId) * quantity;
         uint256 depositAmount = mintCost - 1;
 
@@ -54,7 +41,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
         // attempt to mint with insufficient balance
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(ERC1155.InsufficientBalance.selector));
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
     }
 
     /// @dev test minting with invalid edition
@@ -66,11 +53,11 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
         // attempt to mint with an invalid edition address
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(IRouxMintPortal.RouxMintPortal_InvalidEdition.selector));
-        mintPortal.mintEdition(IRouxEdition(address(0x123)), tokenId, quantity, address(0), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(0x123)), tokenId, quantity, address(0), address(0), "");
     }
 
     /// @dev extension reverts call to approve mint
-    function test__RevertWhen_Extension_ApproveMint_Reverts() external {
+    function test__RevertWhen_ApproveMint_InvalidExtension() external {
         address to = address(0x12345678);
         uint256 mintCost = edition.defaultPrice(tokenId);
 
@@ -84,7 +71,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
         // attempt to mint with extension that will revert
         vm.prank(to);
         vm.expectRevert(MockExtension.InvalidAccount.selector);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), address(0), "");
+        mintPortal.mintEdition(to, IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), address(0), "");
 
         // verify that no minting occurred
         assertEq(edition.balanceOf(to, tokenId), 0);
@@ -95,7 +82,22 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
     function test__RevertWhen_Mint_InvalidExtension() external {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
-        edition.mint(user, 1, 1, address(mockExtension), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), 1, 1, address(mockExtension), address(0), "");
+    }
+
+    /// @dev reverts when minting gated edition
+    function test__RevertWhen_Mint_GatedEdition() external {
+        addParams.gate = true;
+
+        vm.prank(creator);
+        uint256 tokenId_ = edition.add(addParams);
+
+        uint256 mintCost = edition.defaultPrice(tokenId_);
+        _depositUsdc(user, mintCost);
+
+        vm.prank(user);
+        vm.expectRevert(ErrorsLib.RouxEdition_GatedMint.selector);
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId_, 1, address(0), address(0), "");
     }
 
     /* -------------------------------------------- */
@@ -119,7 +121,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint edition
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), "");
 
         // check rUSDC balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -159,11 +161,11 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint edition
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, 1, address(0), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId, 1, address(0), address(0), "");
 
         // mint another edition
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition_)), tokenId, 1, address(0), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition_)), tokenId, 1, address(0), address(0), "");
 
         assertEq(mintPortal.balanceOf(user, 1), 0);
         assertEq(mintPortal.totalSupply(), 0);
@@ -196,7 +198,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint edition with referral
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, 1, address(0), users.user_1, "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId, 1, address(0), users.user_1, "");
 
         // check balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -226,7 +228,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint edition with extension
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), address(0), "");
+        mintPortal.mintEdition(user, IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), address(0), "");
 
         // check balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -258,7 +260,9 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
 
         // mint edition with extension and referral
         vm.prank(user);
-        mintPortal.mintEdition(IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), users.user_1, "");
+        mintPortal.mintEdition(
+            user, IRouxEdition(address(edition)), tokenId, 1, address(mockExtension), users.user_1, ""
+        );
 
         // check balances after minting
         assertEq(mintPortal.balanceOf(user, 1), 0);
@@ -297,7 +301,7 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
         // mint gated edition with extension
         vm.prank(user);
         mintPortal.mintEdition(
-            IRouxEdition(address(gatedEdition)), gatedTokenId, 1, address(mockExtension), address(0), ""
+            user, IRouxEdition(address(gatedEdition)), gatedTokenId, 1, address(mockExtension), address(0), ""
         );
 
         // check balances after minting
@@ -307,5 +311,30 @@ contract MintEdition_RouxMintPortal_Integration_Test is MintPortalBase {
         assertEq(mockUSDC.balanceOf(usdcDepositor), initialUsdDepositorUSDCBalance - mintCost);
         assertEq(mockUSDC.balanceOf(address(mintPortal)), initialPortalUSDCBalance);
         assertEq(controller.balance(users.creator_1), initialCreatorBalance + mintCost);
+    }
+
+    /// @dev mint token to another address
+    function test__MintEdition_ToAddress() external {
+        uint256 mintCost = edition.defaultPrice(tokenId) * quantity;
+
+        // initial balances
+        uint256 initialUsdDepositorUSDCBalance = mockUSDC.balanceOf(usdcDepositor);
+        uint256 initialPortalUSDCBalance = mockUSDC.balanceOf(address(mintPortal));
+
+        // deposit USDC and mint rUSDC
+        _depositUsdc(user, mintCost);
+
+        // mint edition
+        vm.prank(user);
+        mintPortal.mintEdition(
+            users.user_2, IRouxEdition(address(edition)), tokenId, quantity, address(0), address(0), ""
+        );
+
+        // check balances after minting
+        assertEq(mintPortal.balanceOf(users.user_2, 1), 0);
+        assertEq(mintPortal.totalSupply(), 0);
+        assertEq(edition.balanceOf(users.user_2, tokenId), 1);
+        assertEq(mockUSDC.balanceOf(usdcDepositor), initialUsdDepositorUSDCBalance - mintCost);
+        assertEq(mockUSDC.balanceOf(address(mintPortal)), initialPortalUSDCBalance);
     }
 }

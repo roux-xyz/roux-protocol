@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 library ErrorsLib {
     /* ------------------------------------------------- */
@@ -33,8 +33,8 @@ library ErrorsLib {
     /// @notice invalid extension
     error RouxEdition_InvalidExtension();
 
-    /// @notice uri is frozen
-    error RouxEdition_UriFrozen();
+    /// @notice token has parent
+    error RouxEdition_HasParent();
 
     /* ------------------------------------------------- */
     /* Controller                                        */
@@ -115,4 +115,23 @@ library ErrorsLib {
 
     /// @notice collection curator already set
     error Collection_CuratorAlreadySet();
+
+    /* ------------------------------------------------- */
+    /* RouxMintPortal                                    */
+    /* ------------------------------------------------- */
+
+    /// @notice invalid params
+    error RouxMintPortal_InvalidParams();
+
+    /// @notice invalid caller
+    error RouxMintPortal_InvalidCaller();
+
+    /// @notice invalid token
+    error RouxMintPortal_InvalidToken();
+
+    /// @notice gated mint
+    error RouxMintPortal_GatedMint();
+
+    /// @notice insufficient balance
+    error RouxMintPortal_InsufficientBalance();
 }

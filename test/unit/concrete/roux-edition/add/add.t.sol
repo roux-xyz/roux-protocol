@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 
@@ -134,10 +134,12 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev token uri is set after add
     function test__AddToken_UriIsSet() external {
-        string memory newUri = "https://test.uri.com";
+        bytes32 hashDigest = 0xC3C4733EC8AFFD06CF9E9FF50FFC6BCD2EC85A6170004BB709669C31DE94391A;
+
+        string memory newUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
 
         // modify default add params
-        addParams.tokenUri = newUri;
+        addParams.ipfsHash = hashDigest;
 
         // add token
         vm.prank(creator);
