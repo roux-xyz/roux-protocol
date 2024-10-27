@@ -36,6 +36,18 @@ contract RouxMintPortal is
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
 
+    /* ------------------------------------------------- */
+    /* constants                                         */
+    /* ------------------------------------------------- */
+
+    /// @notice token ids
+    uint256 private constant rUSDC_ID = 1;
+    uint256 private constant FREE_EDITION_MINT_ID = 2;
+    uint256 private constant FREE_COLLECTION_MINT_ID = 3;
+
+    /// @notice roles
+    uint256 private constant PROMOTIONAL_MINTER_ROLE = 1;
+
     /* -------------------------------------------- */
     /* immutable state                              */
     /* -------------------------------------------- */
@@ -48,14 +60,6 @@ contract RouxMintPortal is
 
     /// @notice collection factory
     ICollectionFactory internal immutable _collectionFactory;
-
-    /// @notice token ids
-    uint256 private constant rUSDC_ID = 1;
-    uint256 private constant FREE_EDITION_MINT_ID = 2;
-    uint256 private constant FREE_COLLECTION_MINT_ID = 3;
-
-    /// @notice roles
-    uint256 private constant PROMOTIONAL_MINTER_ROLE = 1;
 
     /* -------------------------------------------- */
     /* constructor                                  */
