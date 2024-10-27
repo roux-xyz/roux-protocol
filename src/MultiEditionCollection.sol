@@ -9,7 +9,8 @@ import { IController } from "src/interfaces/IController.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { ERC721 } from "solady/tokens/ERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -212,6 +213,40 @@ contract MultiEditionCollection is Collection {
         }
 
         return _mint(to, referrer, computedPrice, prices);
+    }
+
+    /**
+     * @notice convert mint
+     * @param to address to mint to
+     * @return collection token id
+     *
+     * @dev users holding the constituent tokens can convert them to the collection for no additional cost
+     */
+    function convertMint(address to) external returns (uint256) {
+        CollectionStorage storage $ = _collectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        if (block.timestamp < $$.mintParams.mintStart) revert ErrorsLib.Collection_MintNotStarted();
+        if (block.timestamp > $$.mintParams.mintEnd) revert ErrorsLib.Collection_MintEnded();
+
+        // increment token id
+        uint256 collectionTokenId = ++$.tokenIds;
+
+        // mint token bound account
+        address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
+
+        // mint
+        for (uint256 i = 0; i < $$.itemTargets.length; ++i) {
+            address edition = $$.itemTargets[i];
+            uint256 id = $$.itemIds[i];
+
+            // transfer token to tba
+            IERC1155(edition).safeTransferFrom(msg.sender, account, id, 1, "");
+        }
+
+        emit EventsLib.ConvertMint(to, collectionTokenId);
+
+        return collectionTokenId;
     }
 
     /* ------------------------------------------------- */
