@@ -394,7 +394,6 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         if (_storage().tokens[id].hasParent) revert ErrorsLib.RouxEdition_HasParent();
 
         _validateMint(id, quantity);
-        _validateMint(id, quantity);
         _incrementTotalSupply(id, quantity);
 
         _mint(to, id, quantity, data);
