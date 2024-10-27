@@ -267,6 +267,23 @@ contract MultiEditionCollection is Collection {
         _setExtension(extension, enable, options);
     }
     /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
+
+    /// @inheritdoc ICollection
+    function setExtension(address extension, bool enable, bytes calldata options) external override onlyOwner {
+        // fetch extension price
+        uint256 price_ = IExtension(extension).price(address(0), 0);
+
+        // get computed price
+        (uint256 computedPrice,) = _prices();
+
+        // revert if extension returns a different price
+        if (price_ != computedPrice) revert ErrorsLib.Collection_InvalidExtension();
+
+        _setExtension(extension, enable, options);
+    }
+    /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
 
