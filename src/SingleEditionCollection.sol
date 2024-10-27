@@ -192,6 +192,16 @@ contract SingleEditionCollection is Collection {
         return _mint(to, referrer, price_);
     }
 
+    /**
+     * @notice admin mint
+     * @param to address to mint to
+     *
+     * @dev singleEdition collection owner is owner of the underlying edition as well
+     */
+    function adminMint(address to) external onlyOwner {
+        _mint(to, address(0), 0);
+    }
+
     /* ------------------------------------------------- */
     /* admin                                             */
     /* ------------------------------------------------- */
