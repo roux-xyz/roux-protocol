@@ -159,6 +159,13 @@ library EventsLib {
      */
     event UriUpdated(string newUri);
 
+    /**
+     * @notice emitted when a collection is convertMinted
+     * @param to recipient
+     * @param collectionTokenId collection token id
+     */
+    event ConvertMint(address indexed to, uint256 indexed collectionTokenId);
+
     /* ------------------------------------------------- */
     /* Registry                                          */
     /* ------------------------------------------------- */
