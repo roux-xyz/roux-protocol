@@ -46,12 +46,19 @@ contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
         singleEditionCollection.setExtension(address(edition), true, "");
     }
 
+    /// @dev reverts when setting extension on multi edition collection with different price
+    function test__RevertWhen_SetExtension_MultiEdition_DifferentPrice() external {
+        vm.prank(curator);
+        vm.expectRevert(ErrorsLib.Collection_InvalidExtension.selector);
+        multiEditionCollection.setExtension(address(mockCollectionExtension), true, "");
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
     /// @dev successfully sets extension
-    function test__SetExtension() external {
+    function test__SetExtension_SingleEdition() external {
         vm.expectEmit({ emitter: address(singleEditionCollection) });
         emit EventsLib.ExtensionSet(address(mockCollectionExtension), true);
 

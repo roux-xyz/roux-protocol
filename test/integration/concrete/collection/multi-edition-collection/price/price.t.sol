@@ -66,5 +66,6 @@ contract Price_MultiEditionCollection_Integration_Concrete_Test is CollectionBas
         MultiEditionCollection multiEditionCollection_ = _createMultiEditionCollection(itemTargets, itemIds);
 
         assertEq(multiEditionCollection_.price(), total);
+        assertEq(multiEditionCollection_.price(), (TOKEN_PRICE + 3) + (TOKEN_PRICE + 6) + (TOKEN_PRICE + 9));
     }
 }

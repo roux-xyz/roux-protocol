@@ -83,6 +83,9 @@ library ErrorsLib {
     /// @notice mint ended
     error Collection_MintEnded();
 
+    /// @notice multi edition collection price mismatch
+    error Collection_InvalidPrice();
+
     /* ------------------------------------------------- */
     /* Registry                                          */
     /* ------------------------------------------------- */

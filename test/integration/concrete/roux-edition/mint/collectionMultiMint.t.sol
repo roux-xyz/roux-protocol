@@ -38,6 +38,13 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
         maliciousCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
     }
 
+    /// @dev reverts when collection owner is not edition owner
+    function test__RevertsWhen_CollectionOwnerNotEditionOwner() external {
+        vm.prank(creator);
+        vm.expectRevert(ErrorsLib.RouxEdition_InvalidCollection.selector);
+        edition.setCollection(address(maliciousCollection), true);
+    }
+
     /// @dev reverts when minting before mintStart
     function test__RevertWhen_MintBeforeMintStart() external {
         // set mintStart to a future timestamp
@@ -48,10 +55,6 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
 
         // create a new collection with the updated parameters
         MultiEditionCollection collection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
-
-        // register the collection in the edition contract
-        vm.prank(collectionAdmin);
-        edition.setCollection(address(collection), true);
 
         // attempt to mint before mintStart
         vm.prank(user);
@@ -70,10 +73,6 @@ contract CollectionMultiMint_RouxEdition_Integration_Concrete_Test is Collection
 
         // create a new collection with the updated parameters
         MultiEditionCollection collection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
-
-        // register the collection in the edition contract
-        vm.prank(collectionAdmin);
-        edition.setCollection(address(collection), true);
 
         // advance time by 1 second to ensure we're past mintEnd
         vm.warp(block.timestamp + 1);

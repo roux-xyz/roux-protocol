@@ -198,17 +198,39 @@ contract MultiEditionCollection is Collection {
         nonReentrant
         returns (uint256)
     {
+        // extensions cannot discount the computed price
+        (uint256 computedPrice, uint256[] memory prices) = _prices();
+
         if (extension != address(0)) {
             if (!_isRegisteredExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
+
+            // approve mint (extension price should be same as computed price in multi edition collection)
             IExtension(extension).approveMint({ id: 0, quantity: 1, operator: msg.sender, account: to, data: data });
         } else {
-            // check gate ~ if gate is enabled, must be minted via minter
+            // check gate ~ if gate is enabled, must be minted via extension
             if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();
         }
 
-        return _mint(to, referrer);
+        return _mint(to, referrer, computedPrice, prices);
     }
 
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
+
+    /// @inheritdoc ICollection
+    function setExtension(address extension, bool enable, bytes calldata options) external override onlyOwner {
+        // fetch extension price
+        uint256 price_ = IExtension(extension).price(address(0), 0);
+
+        // get computed price
+        (uint256 computedPrice,) = _prices();
+
+        // revert if extension returns a different price
+        if (price_ != computedPrice) revert ErrorsLib.Collection_InvalidExtension();
+
+        _setExtension(extension, enable, options);
+    }
     /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
@@ -236,8 +258,19 @@ contract MultiEditionCollection is Collection {
     /**
      * @notice internal function mint collection nft
      * @param to address to mint to
+     * @param referrer referrer
+     * @param totalCost computed price
+     * @param prices array of prices
      */
-    function _mint(address to, address referrer) internal returns (uint256) {
+    function _mint(
+        address to,
+        address referrer,
+        uint256 totalCost,
+        uint256[] memory prices
+    )
+        internal
+        returns (uint256)
+    {
         CollectionStorage storage $ = _collectionStorage();
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
@@ -250,11 +283,8 @@ contract MultiEditionCollection is Collection {
         // mint token bound account
         address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
 
-        // get prices
-        (uint256 totalPrice, uint256[] memory prices) = _prices();
-
         // transfer payment
-        $.currency.safeTransferFrom(msg.sender, address(this), totalPrice);
+        $.currency.safeTransferFrom(msg.sender, address(this), totalCost);
 
         // initialize rewards variables
         uint256 totalCuratorReward;

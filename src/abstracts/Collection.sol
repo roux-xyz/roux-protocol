@@ -201,37 +201,6 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     }
 
     /**
-     * @notice sets or unsets an extension for a collection
-     * @param extension extension address
-     * @param enable enable or disable extension
-     * @param options optional mint params
-     */
-    function setExtension(address extension, bool enable, bytes calldata options) external onlyOwner {
-        CollectionStorage storage $ = _collectionStorage();
-
-        // set extension
-        if (enable) {
-            // validate extension is not zero
-            if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
-
-            // validate extension interface support
-            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
-                revert ErrorsLib.Collection_InvalidExtension();
-            }
-            $.extensions.set(uint256(uint160(extension)));
-        } else {
-            $.extensions.unset(uint256(uint160(extension)));
-        }
-
-        // update mint params
-        if (enable && options.length > 0) {
-            IExtension(extension).setMintParams({ id: 0, params: options });
-        }
-
-        emit EventsLib.ExtensionSet(extension, enable);
-    }
-
-    /**
      * @notice updates the mint parameters for a collection extension
      * @param extension extension address
      * @param params updated extension mint params
@@ -294,6 +263,37 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      */
     function _isRegisteredExtension(address extension) internal view returns (bool) {
         return _collectionStorage().extensions.get(uint256(uint160(extension)));
+    }
+
+    /**
+     * @notice sets or unsets an extension for a collection
+     * @param extension extension address
+     * @param enable enable or disable extension
+     * @param options optional mint params
+     */
+    function _setExtension(address extension, bool enable, bytes calldata options) internal virtual {
+        CollectionStorage storage $ = _collectionStorage();
+
+        // set extension
+        if (enable) {
+            // validate extension is not zero
+            if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
+
+            // validate extension interface support
+            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
+                revert ErrorsLib.Collection_InvalidExtension();
+            }
+            $.extensions.set(uint256(uint160(extension)));
+        } else {
+            $.extensions.unset(uint256(uint160(extension)));
+        }
+
+        // update mint params
+        if (enable && options.length > 0) {
+            IExtension(extension).setMintParams({ id: 0, params: options });
+        }
+
+        emit EventsLib.ExtensionSet(extension, enable);
     }
 
     /* ------------------------------------------------- */

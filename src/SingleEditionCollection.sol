@@ -206,6 +206,11 @@ contract SingleEditionCollection is Collection {
         emit EventsLib.CollectionPriceUpdated(address(this), newPrice);
     }
 
+    /// @inheritdoc ICollection
+    function setExtension(address extension, bool enable, bytes calldata options) external override onlyOwner {
+        _setExtension(extension, enable, options);
+    }
+
     /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
@@ -237,20 +242,22 @@ contract SingleEditionCollection is Collection {
         uint256[] memory itemIds = $$.itemIds;
         address itemTarget = $$.itemTarget;
 
-        // validate tokens + disburse funds
-        uint256 derivedPrice = cost / itemIds.length;
-        uint256 currentValue = cost;
-        for (uint256 i = 0; i < itemIds.length; ++i) {
-            // cache id
-            uint256 id = itemIds[i];
+        // disburse funds
+        if (cost > 0) {
+            uint256 derivedPrice = cost / itemIds.length;
+            uint256 currentValue = cost;
+            for (uint256 i = 0; i < itemIds.length; ++i) {
+                // cache id
+                uint256 id = itemIds[i];
 
-            // calculate funds disbursement
-            uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
-            currentValue -= allocatedValue;
+                // calculate funds disbursement
+                uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
+                currentValue -= allocatedValue;
 
-            // send funds to controller
-            if (allocatedValue > 0) {
-                _controller.disburse({ edition: itemTarget, id: id, amount: allocatedValue, referrer: referrer });
+                // send funds to controller
+                if (allocatedValue > 0) {
+                    _controller.disburse({ edition: itemTarget, id: id, amount: allocatedValue, referrer: referrer });
+                }
             }
         }
 
