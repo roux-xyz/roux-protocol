@@ -33,12 +33,33 @@ contract UpdateUri_RouxEdition_Unit_Concrete_Test is BaseTest {
         bytes32 newHashDigest = 0xD12E8769BD2A43AAD41B12C4DDB1F7AE797D050D0ABF87EEB9B1834B9B186A28;
 
         string memory originalUri = edition.uri(1);
-        string memory newUri = "ipfs://bafybeigrf2dwtpjkiovnigysyto3d55opf6qkdikx6d65onrqnfzwgdkfa";
+        string memory newUri = "ipfs://bafkreigrf2dwtpjkiovnigysyto3d55opf6qkdikx6d65onrqnfzwgdkfa";
 
         vm.expectEmit({ emitter: address(edition) });
         emit URI(newUri, 1);
 
         vm.prank(creator);
+        edition.updateUri(1, newHashDigest);
+
+        assertEq(edition.uri(1), newUri);
+        assertNotEq(edition.uri(1), originalUri);
+    }
+
+    function test__UpdateUri_AsRoleSetter() external {
+        bytes32 newHashDigest = 0xD12E8769BD2A43AAD41B12C4DDB1F7AE797D050D0ABF87EEB9B1834B9B186A28;
+
+        string memory originalUri = edition.uri(1);
+        string memory newUri = "ipfs://bafkreigrf2dwtpjkiovnigysyto3d55opf6qkdikx6d65onrqnfzwgdkfa";
+
+        // Grant URI_SETTER_ROLE to user
+        vm.prank(creator);
+        edition.grantRoles(user, 1);
+
+        vm.expectEmit({ emitter: address(edition) });
+        emit URI(newUri, 1);
+
+        // Update URI as role holder
+        vm.prank(user);
         edition.updateUri(1, newHashDigest);
 
         assertEq(edition.uri(1), newUri);

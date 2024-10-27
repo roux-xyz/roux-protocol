@@ -8,6 +8,7 @@ import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IExtension } from "src/interfaces/IExtension.sol";
 import { ICollection } from "src/interfaces/ICollection.sol";
+import { Collection } from "src/abstracts/Collection.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
@@ -16,6 +17,7 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { TokenUriLib } from "src/libraries/TokenUriLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { EditionData } from "src/types/DataTypes.sol";
@@ -46,7 +48,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
-
+    using TokenUriLib for bytes32;
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -58,6 +60,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      */
     bytes32 internal constant ROUX_EDITION_STORAGE_SLOT =
         0xef2f5668c8b56b992983464f11901aec8635a37d61a520221ade259ca1a88200;
+
+    /// @notice roles
+    uint256 private constant URI_SETTER_ROLE = 1;
 
     /* ------------------------------------------------- */
     /* immutable state                                   */
@@ -201,7 +206,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // if current uri is set, return it
         if (urisLength > 0) {
             bytes32 digest = _storage().tokens[id].uris[urisLength - 1];
-            return _generateTokenUri(digest);
+            return digest.generateTokenUri();
         } else {
             // otherwise return default uri
             return DEFAULT_TOKEN_URI;
@@ -216,7 +221,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         // if current uri is set, return it
         if (urisLength > 0) {
             bytes32 digest = _storage().tokens[id].uris[index];
-            return _generateTokenUri(digest);
+            return digest.generateTokenUri();
         } else {
             // otherwise return default uri
             return DEFAULT_TOKEN_URI;
@@ -474,21 +479,22 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
     }
 
     /**
+     * a
      * @notice update uri
      * @param id token id to update
      * @param ipfsHash new uri
      */
-    function updateUri(uint256 id, bytes32 ipfsHash) external onlyOwner {
+    function updateUri(uint256 id, bytes32 ipfsHash) external onlyOwnerOrRoles(URI_SETTER_ROLE) {
         _storage().tokens[id].uris.push(ipfsHash);
 
-        emit URI(_generateTokenUri(ipfsHash), id);
+        emit URI(ipfsHash.generateTokenUri(), id);
     }
 
     /**
      * @notice update contract uri
      * @param newContractUri new contract uri
      */
-    function updateContractUri(string memory newContractUri) external onlyOwner {
+    function updateContractUri(string memory newContractUri) external onlyOwnerOrRoles(URI_SETTER_ROLE) {
         _storage().contractURI = newContractUri;
 
         emit EventsLib.ContractURIUpdated(newContractUri);
@@ -545,6 +551,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         if (enable) {
             // validate extension is not zero
             if (collection == address(0)) revert ErrorsLib.RouxEdition_InvalidCollection();
+
+            // owner of the collection must be the caller (safety check)
+            if (Collection(collection).owner() != msg.sender) revert ErrorsLib.RouxEdition_InvalidCollection();
 
             // validate extension interface support
             if (!ICollection(collection).supportsInterface(type(ICollection).interfaceId)) {
@@ -769,23 +778,5 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
      */
     function _isRegisteredExtension(uint256 id, address extension) internal view returns (bool) {
         return _storage().tokens[id].extensions.get(uint256(uint160(extension)));
-    }
-
-    function _generateTokenUri(bytes32 digest) internal pure returns (string memory) {
-        bytes memory cidBytes = new bytes(36);
-
-        cidBytes[0] = 0x01; // cid version 1
-        cidBytes[1] = 0x70; // multicodec dag-pb
-        cidBytes[2] = 0x12; // multihash function code for sha-256
-        cidBytes[3] = 0x20; // multihash digest size
-
-        // copy digest into cidBytes
-        for (uint256 i = 0; i < 32; i++) {
-            cidBytes[i + 4] = digest[i];
-        }
-
-        string memory encoded = Base32.encode(cidBytes);
-
-        return string(abi.encodePacked("ipfs://b", encoded));
     }
 }

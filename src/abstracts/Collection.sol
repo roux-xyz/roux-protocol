@@ -37,6 +37,9 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     bytes32 internal constant COLLECTION_STORAGE_SLOT =
         0x241c1d52679111588d51f8db5132d54ddcf0f237a8a14f5a3086ef7e730b9300;
 
+    /// @notice roles
+    uint256 private constant URI_SETTER_ROLE = 1;
+
     /* ------------------------------------------------- */
     /* immutable state                                   */
     /* ------------------------------------------------- */
@@ -219,7 +222,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @notice update uri
      * @param newUri new uri
      */
-    function updateUri(string calldata newUri) external onlyOwner {
+    function updateUri(string calldata newUri) external onlyOwnerOrRoles(URI_SETTER_ROLE) {
         _collectionStorage().uri = newUri;
 
         emit EventsLib.UriUpdated(newUri);
