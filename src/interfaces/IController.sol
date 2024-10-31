@@ -40,6 +40,12 @@ interface IController {
     function platformFeeBalance() external view returns (uint256);
 
     /**
+     * @notice is the platform fee enabled
+     * @return whether the platform fee is enabled
+     */
+    function platformFeeEnabled() external view returns (bool);
+
+    /**
      * @notice get the profit share for an edition and token ID
      * @param edition address of the edition
      * @param tokenId token ID

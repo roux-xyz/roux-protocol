@@ -183,6 +183,11 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
     }
 
     /// @inheritdoc IController
+    function platformFeeEnabled() external view returns (bool) {
+        return _storage().platformFeeEnabled;
+    }
+
+    /// @inheritdoc IController
     function profitShare(address edition, uint256 tokenId) external view returns (uint256) {
         return _storage().tokenConfig[edition][tokenId].profitShare;
     }
