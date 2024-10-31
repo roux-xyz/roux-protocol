@@ -386,20 +386,6 @@ export const collectionAbi = [
     anonymous: false,
     inputs: [
       {
-        name: 'extension',
-        internalType: 'address',
-        type: 'address',
-        indexed: true,
-      },
-      { name: 'enable', internalType: 'bool', type: 'bool', indexed: false },
-    ],
-    name: 'ExtensionSet',
-  },
-  {
-    type: 'event',
-    anonymous: false,
-    inputs: [
-      {
         name: 'version',
         internalType: 'uint64',
         type: 'uint64',
@@ -983,6 +969,13 @@ export const controllerAbi = [
   },
   {
     type: 'function',
+    inputs: [],
+    name: 'platformFeeEnabled',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [
       { name: 'edition', internalType: 'address', type: 'address' },
       { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
@@ -1500,6 +1493,13 @@ export const multiEditionCollectionAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: 'to', internalType: 'address', type: 'address' }],
+    name: 'convertMint',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     inputs: [],
     name: 'curator',
     outputs: [{ name: '', internalType: 'address', type: 'address' }],
@@ -1872,6 +1872,20 @@ export const multiEditionCollectionAbi = [
       },
     ],
     name: 'CollectionMinted',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'collectionTokenId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+    ],
+    name: 'ConvertMint',
   },
   {
     type: 'event',
@@ -3986,6 +4000,13 @@ export const singleEditionCollectionAbi = [
       { name: 'editionFactory', internalType: 'address', type: 'address' },
       { name: 'controller', internalType: 'address', type: 'address' },
     ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'to', internalType: 'address', type: 'address' }],
+    name: 'adminMint',
+    outputs: [],
     stateMutability: 'nonpayable',
   },
   {

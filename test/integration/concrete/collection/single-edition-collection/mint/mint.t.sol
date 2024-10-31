@@ -224,4 +224,13 @@ contract Mint_SingleEditionCollection_Integration_Concrete_Test is CollectionBas
         assertEq(singleEditionCollection_.totalSupply(), 1);
         assertEq(singleEditionCollection_.ownerOf(1), user);
     }
+
+    function test__AdminMintSuccessful() public {
+        vm.prank(collectionAdmin);
+        singleEditionCollection.adminMint(collectionAdmin);
+
+        assertEq(singleEditionCollection.ownerOf(1), collectionAdmin);
+        assertEq(singleEditionCollection.totalSupply(), 1);
+        assertEq(singleEditionCollection.balanceOf(collectionAdmin), 1);
+    }
 }

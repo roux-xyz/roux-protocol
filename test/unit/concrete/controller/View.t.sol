@@ -69,4 +69,18 @@ contract View_Controller_Unit_Concrete_Test is BaseTest {
     function test__FundsRecipient() external view {
         assertEq(controller.fundsRecipient(address(edition), 1), creator);
     }
+
+    /// @dev returns correct platform fee enabled
+    function test__PlatformFeeEnabled() external view {
+        assertEq(controller.platformFeeEnabled(), false);
+    }
+
+    /// @dev returns correct platform fee enabled status after platform fee is enabled
+    function test__PlatformFeeEnabled_True() external {
+        // enable platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        assertEq(controller.platformFeeEnabled(), true);
+    }
 }

@@ -136,7 +136,7 @@ contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     function test__AddToken_UriIsSet() external {
         bytes32 hashDigest = 0xC3C4733EC8AFFD06CF9E9FF50FFC6BCD2EC85A6170004BB709669C31DE94391A;
 
-        string memory newUri = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+        string memory newUri = "ipfs://bafkreigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
 
         // modify default add params
         addParams.ipfsHash = hashDigest;

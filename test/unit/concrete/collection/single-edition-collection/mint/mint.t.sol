@@ -8,6 +8,7 @@ import { RouxEdition } from "src/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 
 contract Mint_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -29,7 +30,7 @@ contract Mint_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
         singleEditionCollection.mint({ to: user, extension: address(mockExtension), referrer: address(0), data: "" });
     }
 
-    // @dev reverts when mint is gated and no extension is provided
+    /// @dev reverts when mint is gated and no extension is provided
     function test__RevertWhen_MintIsGatedAndNoExtension() external {
         // gate collection
         vm.prank(collectionAdmin);
@@ -40,7 +41,7 @@ contract Mint_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
         singleEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
     }
 
-    // @dev reverts when mint is gated and unregistered extension is provided
+    /// @dev reverts when mint is gated and unregistered extension is provided
     function test__RevertWhen_MintIsGatedAndUnregisteredExtension() external {
         // gate collection
         vm.prank(collectionAdmin);
@@ -49,5 +50,12 @@ contract Mint_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.Collection_InvalidExtension.selector);
         singleEditionCollection.mint({ to: user, extension: address(mockExtension), referrer: address(0), data: "" });
+    }
+
+    /// @dev revert when admin mint is called by non-owner
+    function test__RevertWhen_AdminMintCalledByNonOwner() external {
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        singleEditionCollection.adminMint(user);
     }
 }

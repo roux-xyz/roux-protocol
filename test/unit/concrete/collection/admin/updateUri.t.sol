@@ -48,4 +48,23 @@ contract UpdateUri_Collection_Unit_Concrete_Test is CollectionBase {
         assertEq(singleEditionCollection.tokenURI(1), newUri);
         assertNotEq(singleEditionCollection.tokenURI(1), originalUri);
     }
+
+    function test__UpdateUri_AsRoleSetter() external {
+        string memory originalUri = singleEditionCollection.tokenURI(0);
+        string memory newUri = "https://new.com";
+
+        // Grant URI_SETTER_ROLE to user
+        vm.prank(collectionAdmin);
+        singleEditionCollection.grantRoles(user, 1);
+
+        vm.expectEmit({ emitter: address(singleEditionCollection) });
+        emit EventsLib.UriUpdated(newUri);
+
+        // Update URI as role holder
+        vm.prank(user);
+        singleEditionCollection.updateUri(newUri);
+
+        assertEq(singleEditionCollection.tokenURI(1), newUri);
+        assertNotEq(singleEditionCollection.tokenURI(1), originalUri);
+    }
 }

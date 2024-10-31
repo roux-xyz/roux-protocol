@@ -192,6 +192,16 @@ contract SingleEditionCollection is Collection {
         return _mint(to, referrer, price_);
     }
 
+    /**
+     * @notice admin mint
+     * @param to address to mint to
+     *
+     * @dev singleEdition collection owner is owner of the underlying edition as well
+     */
+    function adminMint(address to) external onlyOwner {
+        _mint(to, address(0), 0);
+    }
+
     /* ------------------------------------------------- */
     /* admin                                             */
     /* ------------------------------------------------- */
@@ -204,6 +214,11 @@ contract SingleEditionCollection is Collection {
         _singleEditionCollectionStorage().mintParams.price = newPrice.toUint128();
 
         emit EventsLib.CollectionPriceUpdated(address(this), newPrice);
+    }
+
+    /// @inheritdoc ICollection
+    function setExtension(address extension, bool enable, bytes calldata options) external override onlyOwner {
+        _setExtension(extension, enable, options);
     }
 
     /* ------------------------------------------------- */
@@ -237,20 +252,22 @@ contract SingleEditionCollection is Collection {
         uint256[] memory itemIds = $$.itemIds;
         address itemTarget = $$.itemTarget;
 
-        // validate tokens + disburse funds
-        uint256 derivedPrice = cost / itemIds.length;
-        uint256 currentValue = cost;
-        for (uint256 i = 0; i < itemIds.length; ++i) {
-            // cache id
-            uint256 id = itemIds[i];
+        // disburse funds
+        if (cost > 0) {
+            uint256 derivedPrice = cost / itemIds.length;
+            uint256 currentValue = cost;
+            for (uint256 i = 0; i < itemIds.length; ++i) {
+                // cache id
+                uint256 id = itemIds[i];
 
-            // calculate funds disbursement
-            uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
-            currentValue -= allocatedValue;
+                // calculate funds disbursement
+                uint256 allocatedValue = currentValue < derivedPrice ? currentValue : derivedPrice;
+                currentValue -= allocatedValue;
 
-            // send funds to controller
-            if (allocatedValue > 0) {
-                _controller.disburse({ edition: itemTarget, id: id, amount: allocatedValue, referrer: referrer });
+                // send funds to controller
+                if (allocatedValue > 0) {
+                    _controller.disburse({ edition: itemTarget, id: id, amount: allocatedValue, referrer: referrer });
+                }
             }
         }
 

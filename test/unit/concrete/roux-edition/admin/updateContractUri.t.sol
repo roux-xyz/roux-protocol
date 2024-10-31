@@ -32,13 +32,32 @@ contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates uri
-    function test__UpdateContractUri() external useEditionAdmin(edition) {
+    function test__UpdateContractUri_AsOwner() external useEditionAdmin(edition) {
         string memory currentUri = edition.contractURI();
         string memory newUri = "https://new.com";
 
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.ContractURIUpdated(newUri);
 
+        edition.updateContractUri(newUri);
+
+        assertEq(edition.contractURI(), newUri);
+        assertNotEq(edition.contractURI(), currentUri);
+    }
+
+    function test__UpdateContractUri_AsRoleSetter() external {
+        string memory currentUri = edition.contractURI();
+        string memory newUri = "https://new.com";
+
+        // Grant URI_SETTER_ROLE to user
+        vm.prank(creator);
+        edition.grantRoles(user, 1);
+
+        vm.expectEmit({ emitter: address(edition) });
+        emit EventsLib.ContractURIUpdated(newUri);
+
+        // Update URI as role holder
+        vm.prank(user);
         edition.updateContractUri(newUri);
 
         assertEq(edition.contractURI(), newUri);

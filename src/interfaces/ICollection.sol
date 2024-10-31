@@ -78,6 +78,17 @@ interface ICollection is IERC165 {
      */
     function mint(address to, address extension, address referrer, bytes calldata data) external returns (uint256);
 
+    /**
+     * @notice sets or unsets an extension for a collection
+     * @param extension extension address
+     * @param enable enable or disable extension
+     * @param options optional mint params
+     *
+     * @dev on multi edition collections, the derived price from the constituent tokens will always be used - the
+     *      extension must return the correct price for the collection
+     */
+    function setExtension(address extension, bool enable, bytes calldata options) external;
+
     /* -------------------------------------------- */
     /* admin                                        */
     /* -------------------------------------------- */

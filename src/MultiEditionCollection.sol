@@ -9,7 +9,8 @@ import { IController } from "src/interfaces/IController.sol";
 import { Collection } from "src/abstracts/Collection.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { ERC721 } from "solady/tokens/ERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -198,17 +199,73 @@ contract MultiEditionCollection is Collection {
         nonReentrant
         returns (uint256)
     {
+        // extensions cannot discount the computed price
+        (uint256 computedPrice, uint256[] memory prices) = _prices();
+
         if (extension != address(0)) {
             if (!_isRegisteredExtension(extension)) revert ErrorsLib.Collection_InvalidExtension();
+
+            // approve mint (extension price should be same as computed price in multi edition collection)
             IExtension(extension).approveMint({ id: 0, quantity: 1, operator: msg.sender, account: to, data: data });
         } else {
-            // check gate ~ if gate is enabled, must be minted via minter
+            // check gate ~ if gate is enabled, must be minted via extension
             if (_collectionStorage().gate) revert ErrorsLib.Collection_GatedMint();
         }
 
-        return _mint(to, referrer);
+        return _mint(to, referrer, computedPrice, prices);
     }
 
+    /**
+     * @notice convert mint
+     * @param to address to mint to
+     * @return collection token id
+     *
+     * @dev users holding the constituent tokens can convert them to the collection for no additional cost
+     */
+    function convertMint(address to) external returns (uint256) {
+        CollectionStorage storage $ = _collectionStorage();
+        MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
+
+        if (block.timestamp < $$.mintParams.mintStart) revert ErrorsLib.Collection_MintNotStarted();
+        if (block.timestamp > $$.mintParams.mintEnd) revert ErrorsLib.Collection_MintEnded();
+
+        // increment token id
+        uint256 collectionTokenId = ++$.tokenIds;
+
+        // mint token bound account
+        address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
+
+        // mint
+        for (uint256 i = 0; i < $$.itemTargets.length; ++i) {
+            address edition = $$.itemTargets[i];
+            uint256 id = $$.itemIds[i];
+
+            // transfer token to tba
+            IERC1155(edition).safeTransferFrom(msg.sender, account, id, 1, "");
+        }
+
+        emit EventsLib.ConvertMint(to, collectionTokenId);
+
+        return collectionTokenId;
+    }
+
+    /* ------------------------------------------------- */
+    /* admin                                             */
+    /* ------------------------------------------------- */
+
+    /// @inheritdoc ICollection
+    function setExtension(address extension, bool enable, bytes calldata options) external override onlyOwner {
+        // fetch extension price
+        uint256 price_ = IExtension(extension).price(address(0), 0);
+
+        // get computed price
+        (uint256 computedPrice,) = _prices();
+
+        // revert if extension returns a different price
+        if (price_ != computedPrice) revert ErrorsLib.Collection_InvalidExtension();
+
+        _setExtension(extension, enable, options);
+    }
     /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
@@ -236,8 +293,19 @@ contract MultiEditionCollection is Collection {
     /**
      * @notice internal function mint collection nft
      * @param to address to mint to
+     * @param referrer referrer
+     * @param totalCost computed price
+     * @param prices array of prices
      */
-    function _mint(address to, address referrer) internal returns (uint256) {
+    function _mint(
+        address to,
+        address referrer,
+        uint256 totalCost,
+        uint256[] memory prices
+    )
+        internal
+        returns (uint256)
+    {
         CollectionStorage storage $ = _collectionStorage();
         MultiEditionCollectionStorage storage $$ = _multiEditionCollectionStorage();
 
@@ -250,11 +318,8 @@ contract MultiEditionCollection is Collection {
         // mint token bound account
         address account = _mintTba(to, collectionTokenId, ROUX_MULTI_EDITION_COLLECTION_SALT);
 
-        // get prices
-        (uint256 totalPrice, uint256[] memory prices) = _prices();
-
         // transfer payment
-        $.currency.safeTransferFrom(msg.sender, address(this), totalPrice);
+        $.currency.safeTransferFrom(msg.sender, address(this), totalCost);
 
         // initialize rewards variables
         uint256 totalCuratorReward;

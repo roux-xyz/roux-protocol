@@ -6,8 +6,11 @@ import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IController } from "src/interfaces/IController.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { TokenUriLib } from "src/libraries/TokenUriLib.sol";
 
 contract GenerateTokenUriHarness is RouxEdition {
+    using TokenUriLib for bytes32;
+
     constructor(
         address editionFactory_,
         address collectionFactory_,
@@ -18,6 +21,6 @@ contract GenerateTokenUriHarness is RouxEdition {
     { }
 
     function generateTokenUri(bytes32 digest) public pure returns (string memory) {
-        return _generateTokenUri(digest);
+        return digest.generateTokenUri();
     }
 }

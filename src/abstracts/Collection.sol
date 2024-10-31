@@ -37,6 +37,9 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     bytes32 internal constant COLLECTION_STORAGE_SLOT =
         0x241c1d52679111588d51f8db5132d54ddcf0f237a8a14f5a3086ef7e730b9300;
 
+    /// @notice roles
+    uint256 private constant URI_SETTER_ROLE = 1;
+
     /* ------------------------------------------------- */
     /* immutable state                                   */
     /* ------------------------------------------------- */
@@ -201,37 +204,6 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
     }
 
     /**
-     * @notice sets or unsets an extension for a collection
-     * @param extension extension address
-     * @param enable enable or disable extension
-     * @param options optional mint params
-     */
-    function setExtension(address extension, bool enable, bytes calldata options) external onlyOwner {
-        CollectionStorage storage $ = _collectionStorage();
-
-        // set extension
-        if (enable) {
-            // validate extension is not zero
-            if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
-
-            // validate extension interface support
-            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
-                revert ErrorsLib.Collection_InvalidExtension();
-            }
-            $.extensions.set(uint256(uint160(extension)));
-        } else {
-            $.extensions.unset(uint256(uint160(extension)));
-        }
-
-        // update mint params
-        if (enable && options.length > 0) {
-            IExtension(extension).setMintParams({ id: 0, params: options });
-        }
-
-        emit EventsLib.ExtensionSet(extension, enable);
-    }
-
-    /**
      * @notice updates the mint parameters for a collection extension
      * @param extension extension address
      * @param params updated extension mint params
@@ -250,7 +222,7 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      * @notice update uri
      * @param newUri new uri
      */
-    function updateUri(string calldata newUri) external onlyOwner {
+    function updateUri(string calldata newUri) external onlyOwnerOrRoles(URI_SETTER_ROLE) {
         _collectionStorage().uri = newUri;
 
         emit EventsLib.UriUpdated(newUri);
@@ -294,6 +266,37 @@ abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles
      */
     function _isRegisteredExtension(address extension) internal view returns (bool) {
         return _collectionStorage().extensions.get(uint256(uint160(extension)));
+    }
+
+    /**
+     * @notice sets or unsets an extension for a collection
+     * @param extension extension address
+     * @param enable enable or disable extension
+     * @param options optional mint params
+     */
+    function _setExtension(address extension, bool enable, bytes calldata options) internal virtual {
+        CollectionStorage storage $ = _collectionStorage();
+
+        // set extension
+        if (enable) {
+            // validate extension is not zero
+            if (extension == address(0)) revert ErrorsLib.Collection_InvalidExtension();
+
+            // validate extension interface support
+            if (!IExtension(extension).supportsInterface(type(IExtension).interfaceId)) {
+                revert ErrorsLib.Collection_InvalidExtension();
+            }
+            $.extensions.set(uint256(uint160(extension)));
+        } else {
+            $.extensions.unset(uint256(uint160(extension)));
+        }
+
+        // update mint params
+        if (enable && options.length > 0) {
+            IExtension(extension).setMintParams({ id: 0, params: options });
+        }
+
+        emit EventsLib.ExtensionSet(extension, enable);
     }
 
     /* ------------------------------------------------- */

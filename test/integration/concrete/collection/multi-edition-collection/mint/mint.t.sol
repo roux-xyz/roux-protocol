@@ -10,6 +10,9 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
 import { MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { ERC721 } from "solady/tokens/ERC721.sol";
+import { ERC1155 } from "solady/tokens/ERC1155.sol";
 
 contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -52,6 +55,28 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         startingBalanceEdition1FundsRecipient = _getUserControllerBalance(edition1FundsRecipient);
         startingBalanceEdition2FundsRecipient = _getUserControllerBalance(edition2FundsRecipient);
         startingBalanceEdition3FundsRecipient = _getUserControllerBalance(edition3FundsRecipient);
+    }
+
+    /* -------------------------------------------- */
+    /* reverts                                        */
+    /* -------------------------------------------- */
+
+    /// @dev reverts when user doesn't own all required tokens
+    function test__RevertWhen_ConvertMintMissingTokens() external {
+        // mint only first token to user
+        vm.prank(creator);
+        RouxEdition(multiEditionItemTargets[0]).adminMint(user, multiEditionItemIds[0], 1, "");
+
+        // approve multi edition collection to transfer tokens
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            vm.prank(user);
+            RouxEdition(multiEditionItemTargets[i]).setApprovalForAll(address(multiEditionCollection), true);
+        }
+
+        // attempt convert mint
+        vm.prank(user);
+        vm.expectRevert(ERC1155.InsufficientBalance.selector);
+        multiEditionCollection.convertMint(user);
     }
 
     /* -------------------------------------------- */
@@ -270,5 +295,41 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         assertEq(multiEditionCollection_.balanceOf(user), 1);
         assertEq(multiEditionCollection_.totalSupply(), 1);
         assertEq(multiEditionCollection_.ownerOf(1), user);
+    }
+
+    /// @dev successfully converts owned tokens to collection
+    function test__ConvertMint_MultiEditionCollection() external {
+        // get erc6551 account that will be created
+        address erc6551account = _getERC6551AccountMultiEdition(address(multiEditionCollection), 1);
+
+        // mint individual tokens to user first
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            vm.prank(RouxEdition(multiEditionItemTargets[i]).owner());
+            RouxEdition(multiEditionItemTargets[i]).adminMint(user, multiEditionItemIds[i], 1, "");
+        }
+
+        // approve multi edition collection to transfer tokens
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            vm.prank(user);
+            RouxEdition(multiEditionItemTargets[i]).setApprovalForAll(address(multiEditionCollection), true);
+        }
+
+        // emit erc1155 transfer event for collection NFT
+        vm.expectEmit({ emitter: address(multiEditionCollection) });
+        emit Transfer({ from: address(0), to: user, tokenId: 1 });
+
+        // convert mint
+        vm.prank(user);
+        multiEditionCollection.convertMint(user);
+
+        // assert collection token minted correctly
+        assertEq(multiEditionCollection.ownerOf(1), user);
+        assertEq(multiEditionCollection.totalSupply(), 1);
+        assertEq(multiEditionCollection.balanceOf(user), 1);
+
+        // assert tokens transferred to TBA
+        for (uint256 i = 0; i < multiEditionItemTargets.length; i++) {
+            assertEq(RouxEdition(multiEditionItemTargets[i]).balanceOf(erc6551account, multiEditionItemIds[i]), 1);
+        }
     }
 }
