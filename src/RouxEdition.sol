@@ -379,7 +379,7 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @inheritdoc IRouxEdition
     function collectionMultiMint(address to, uint256 id, bytes calldata /* data */ ) external payable nonReentrant {
-        // validate caller is a multi-edition collection
+        // validate caller is collection
         if (!_collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
         _validateMint(id, 1);
