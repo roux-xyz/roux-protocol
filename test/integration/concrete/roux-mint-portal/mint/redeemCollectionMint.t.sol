@@ -3,16 +3,16 @@ pragma solidity ^0.8.27;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { MintPortalBase } from "test/shared/MintPortalBase.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
-import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { IRouxMintPortal } from "src/periphery/interfaces/IRouxMintPortal.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 import { stdError } from "forge-std/Test.sol";
 import { MockExtension } from "test/mocks/MockExtension.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
 import { MockMaliciousCollection_ApproveMint } from "test/mocks/malicious/MockMaliciousCollection_ApproveMint.sol";
 
 contract RedeemCollectionMint_RouxMintPortal_Integration_Test is MintPortalBase {

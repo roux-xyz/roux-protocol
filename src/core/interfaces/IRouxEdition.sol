@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.27;
 
-import { IController } from "src/interfaces/IController.sol";
+import { IController } from "src/core/interfaces/IController.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
 interface IRouxEdition {

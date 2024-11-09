@@ -3,7 +3,7 @@ pragma solidity 0.8.27;
 
 import "forge-std/Script.sol";
 
-import { ERC6551Account } from "src/ERC6551Account.sol";
+import { ERC6551Account } from "src/core/ERC6551Account.sol";
 import { BaseScript } from "script/Base.s.sol";
 
 contract DeployERC6551Account is BaseScript {

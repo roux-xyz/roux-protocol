@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 

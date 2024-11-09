@@ -2,8 +2,8 @@
 pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { IRouxMintPortal } from "src/periphery/interfaces/IRouxMintPortal.sol";
 
 contract Deposit_RouxMintPortal_Unit_Fuzz_Test is BaseTest {
     /* -------------------------------------------- */

@@ -3,7 +3,7 @@ pragma solidity 0.8.27;
 
 import "forge-std/Script.sol";
 
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
 import { BaseScript } from "script/Base.s.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 

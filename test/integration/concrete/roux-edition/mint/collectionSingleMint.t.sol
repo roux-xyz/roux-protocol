@@ -3,12 +3,12 @@ pragma solidity ^0.8.27;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 import { ERC721 } from "solady/tokens/ERC721.sol";
 

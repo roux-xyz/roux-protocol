@@ -7,24 +7,24 @@ import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/Upgradea
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import { Controller } from "src/Controller.sol";
-import { IController } from "src/interfaces/IController.sol";
-import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { Registry } from "src/Registry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
-import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
-import { NoOp } from "src/NoOp.sol";
+import { Controller } from "src/core/Controller.sol";
+import { IController } from "src/core/interfaces/IController.sol";
+import { IRegistry } from "src/core/interfaces/IRegistry.sol";
+import { Registry } from "src/core/Registry.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
+import { NoOp } from "src/periphery/NoOp.sol";
 
-import { ERC6551Account } from "src/ERC6551Account.sol";
+import { ERC6551Account } from "src/core/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
 
-import { CollectionFactory } from "src/CollectionFactory.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
+import { CollectionFactory } from "src/core/CollectionFactory.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
 
-import { RouxMintPortal } from "src/RouxMintPortal.sol";
+import { RouxMintPortal } from "src/periphery/RouxMintPortal.sol";
 
 import { Events } from "test/utils/Events.sol";
 import { Defaults } from "test/utils/Defaults.sol";

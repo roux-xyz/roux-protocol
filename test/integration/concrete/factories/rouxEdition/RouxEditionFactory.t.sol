@@ -2,10 +2,10 @@
 pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
-import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

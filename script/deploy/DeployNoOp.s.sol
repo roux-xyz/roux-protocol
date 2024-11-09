@@ -2,7 +2,7 @@
 pragma solidity 0.8.27;
 
 import "forge-std/Script.sol";
-import { NoOp } from "src/NoOp.sol";
+import { NoOp } from "src/periphery/NoOp.sol";
 import { BaseScript } from "script/Base.s.sol";
 
 contract DeployNoOp is BaseScript {

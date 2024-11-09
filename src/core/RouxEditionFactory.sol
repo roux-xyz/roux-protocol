@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";

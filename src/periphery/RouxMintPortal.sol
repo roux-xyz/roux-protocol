@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { ICollectionFactory } from "src/core/interfaces/ICollectionFactory.sol";
+import { IRouxMintPortal } from "src/periphery/interfaces/IRouxMintPortal.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
 import { Restricted1155 } from "src/abstracts/Restricted1155.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { IController } from "src/core/interfaces/IController.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IController } from "src/interfaces/IController.sol";
-import { Collection } from "src/abstracts/Collection.sol";
+import { Collection } from "src/core/abstracts/Collection.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
