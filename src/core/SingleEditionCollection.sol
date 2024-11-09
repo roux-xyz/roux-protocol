@@ -20,10 +20,24 @@ import { ROUX_SINGLE_EDITION_COLLECTION_SALT, MAX_SINGLE_EDITION_COLLECTION_SIZE
 import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 
 /**
+ * a.m. radio
+ *
+ * 1 oz gin
+ * 1 oz campari
+ * 3/4 oz lemon juice
+ * 1/2 oz simple syrup
+ * 1/4 oz italicus bergamot liqueur
+ * 1/4 oz maraschino liqueur
+ * 2 dashes orange bitters
+ * pinch of salt
+ *
+ * shake / strain over rocks / no garnish
+ */
+
+/**
  * @title single edition collection
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract SingleEditionCollection is Collection {
     using SafeTransferLib for address;
@@ -41,6 +55,9 @@ contract SingleEditionCollection is Collection {
      */
     bytes32 internal constant SINGLE_EDITION_COLLECTION_STORAGE_SLOT =
         0xa6e0118951a25969bd3c1390bebbde8eb1379a4bbd50f1af4df5dda29b004500;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* structures                                        */

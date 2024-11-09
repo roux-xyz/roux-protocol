@@ -21,8 +21,9 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 /**
- * @title Collection
- * @custom:version 1.0
+ * @title collection
+ * @author roux
+ * @custom:security-contact security@roux.app
  */
 abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;

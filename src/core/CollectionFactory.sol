@@ -18,8 +18,7 @@ import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
 /**
  * @title collection factory
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract CollectionFactory is ICollectionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
@@ -35,6 +34,9 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      */
     bytes32 internal constant COLLECTION_FACTORY_STORAGE_SLOT =
         0xfee14c31ff75da4316c29dbb9be5262c4ac5f24d7a6cf9c42a613a69199feb00;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* immutable state                                   */

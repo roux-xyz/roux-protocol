@@ -35,8 +35,7 @@ import { PLATFORM_FEE, REFERRAL_FEE } from "src/libraries/FeesLib.sol";
 /**
  * @title controller
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCast for uint256;
@@ -63,6 +62,9 @@ contract Controller is IController, Initializable, OwnableRoles, ReentrancyGuard
      *      implementation must be upgraded to use the new controller implementation.
      */
     IERC20 internal immutable _currency;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* structures                                        */

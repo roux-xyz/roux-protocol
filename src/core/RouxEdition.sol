@@ -41,14 +41,14 @@ import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 /**
  * @title roux edition
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
     using TokenUriLib for bytes32;
+
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -63,6 +63,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @notice roles
     uint256 private constant URI_SETTER_ROLE = 1;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* immutable state                                   */

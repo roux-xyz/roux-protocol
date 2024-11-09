@@ -13,10 +13,21 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 import { MAX_CHILDREN } from "src/libraries/ConstantsLib.sol";
 
 /**
+ * variation on a theme
+ *
+ * 2 oz old tom gin
+ * 1/2 oz cherry heering
+ * +1/4 oz campari
+ * 1/2 tsp maraschino liqueur
+ * 2 dashes orange bitters
+ *
+ * stir / up / orange twist
+ */
+
+/**
  * @title registry
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
@@ -31,6 +42,9 @@ contract Registry is IRegistry, Initializable, OwnableRoles, ReentrancyGuard {
      */
     bytes32 internal constant ROUX_REGISTRY_STORAGE_SLOT =
         0x526b27153fa869a204893bc4926da2a9c5dc034df85df1046d3f9c814a26d100;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* structures                                        */

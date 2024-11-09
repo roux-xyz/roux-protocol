@@ -22,10 +22,23 @@ import { REFERRAL_FEE, CURATOR_FEE } from "src/libraries/FeesLib.sol";
 import { ROUX_MULTI_EDITION_COLLECTION_SALT, MAX_MULTI_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 
 /**
+ * sonic sunset
+ *
+ * 1 1/2 oz white rum
+ * 1/4 oz rhum agricole blanc
+ * 1/4 oz apricot eau de vie
+ * 3/4 oz lime juice
+ * 1/2 oz simple syrup
+ * 1/4 oz maraschino liqueur
+ * 2 dashes peychaud's bitters
+ *
+ * shake / strain / serve up / garnish with mint leaf
+ */
+
+/**
  * @title multi edition collection
- * @author rouxa
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @author roux
+ * @custom:security-contact security@roux.app
  */
 contract MultiEditionCollection is Collection {
     using SafeTransferLib for address;
@@ -42,6 +55,9 @@ contract MultiEditionCollection is Collection {
      */
     bytes32 internal constant MULTI_EDITION_COLLECTION_STORAGE_SLOT =
         0x80f0f9485e96d2fa1d83203f8bbee993202c4d0ad979d7d0de8ea7e7c4dcbd00;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* structures                                        */

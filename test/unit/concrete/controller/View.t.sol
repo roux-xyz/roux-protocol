@@ -18,6 +18,11 @@ contract View_Controller_Unit_Concrete_Test is BaseTest {
     /* view                                         */
     /* -------------------------------------------- */
 
+    /// @dev returns correct version
+    function test__Version() external view {
+        assertEq(controller.VERSION(), "1.0");
+    }
+
     /// @dev returns correct owner
     function test__Owner() external view {
         assertEq(controller.owner(), users.deployer);

@@ -19,10 +19,21 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
 /**
+ *  alligator monday
+ *
+ *  3/4 oz mezcal
+ *  3/4 oz fernet branca menta
+ *  3/4 oz lime juice
+ *  3/4 oz orgeat
+ *  pinch of salt
+ *
+ *  shake / strain over crushed ice / garnish with mint sprigs
+ */
+
+/**
  * @title roux mint portal
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract RouxMintPortal is
     IRouxMintPortal,
@@ -47,6 +58,9 @@ contract RouxMintPortal is
 
     /// @notice roles
     uint256 private constant PROMOTIONAL_MINTER_ROLE = 1;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* -------------------------------------------- */
     /* immutable state                              */
