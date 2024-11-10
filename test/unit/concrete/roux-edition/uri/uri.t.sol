@@ -3,12 +3,20 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { GenerateTokenUriHarness } from "test/harness/GenerateTokenUriHarness.sol";
+import { EditionData } from "src/types/DataTypes.sol";
 
 contract Uri_Unit_Concrete_Test is BaseTest {
     GenerateTokenUriHarness public harness;
 
+    /* -------------------------------------------- */
+    /* setup                                       */
+    /* -------------------------------------------- */
+    EditionData.AddParams addParams;
+
     function setUp() public override {
         BaseTest.setUp();
+
+        addParams = defaultAddParams;
 
         harness = new GenerateTokenUriHarness(address(0x1), address(0x2), address(0x3), address(0x4));
     }
@@ -38,6 +46,19 @@ contract Uri_Unit_Concrete_Test is BaseTest {
 
     function test__Uri() public view {
         assertEq(edition.uri(1), TOKEN_URI);
+    }
+
+    /// @dev test default uri with new token
+    function test__DefaultUri() public {
+        // modify default add params
+        addParams.ipfsHash = "";
+
+        // add token
+        vm.prank(creator);
+        uint256 tokenId = edition.add(addParams);
+
+        // default uri is set after add
+        assertEq(edition.uri(tokenId), "");
     }
 
     function test__AddUriToArray() public {

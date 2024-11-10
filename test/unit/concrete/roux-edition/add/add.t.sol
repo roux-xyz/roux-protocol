@@ -12,7 +12,7 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
 
 contract Add_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
-    /* setup                                       */
+    /* setup                                        */
     /* -------------------------------------------- */
 
     EditionData.AddParams addParams;

@@ -449,7 +449,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
         d.mintParams = EditionData.MintParams({ defaultPrice: p.defaultPrice.toUint128(), gate: p.gate });
 
         // push uri to uri array
-        d.uris.push(p.ipfsHash);
+        if (p.ipfsHash != bytes32(0)) {
+            d.uris.push(p.ipfsHash);
+        }
 
         // set token data
         d.maxSupply = p.maxSupply.toUint128();
