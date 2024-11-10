@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
-import { IController } from "src/interfaces/IController.sol";
-import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { Collection } from "src/abstracts/Collection.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { ICollectionFactory } from "src/core/interfaces/ICollectionFactory.sol";
+import { IController } from "src/core/interfaces/IController.sol";
+import { IRegistry } from "src/core/interfaces/IRegistry.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
+import { Collection } from "src/core/abstracts/Collection.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
@@ -41,14 +41,14 @@ import { DEFAULT_TOKEN_URI } from "src/libraries/ConstantsLib.sol";
 /**
  * @title roux edition
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRoles, ReentrancyGuard {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
     using TokenUriLib for bytes32;
+
     /* ------------------------------------------------- */
     /* constants                                         */
     /* ------------------------------------------------- */
@@ -63,6 +63,9 @@ contract RouxEdition is IRouxEdition, ERC1155, ERC165, Initializable, OwnableRol
 
     /// @notice roles
     uint256 private constant URI_SETTER_ROLE = 1;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* immutable state                                   */

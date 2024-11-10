@@ -2,7 +2,7 @@
 pragma solidity 0.8.27;
 
 import "forge-std/Script.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { BaseScript } from "script/Base.s.sol";
 
 contract DeployEditionImpl is BaseScript {

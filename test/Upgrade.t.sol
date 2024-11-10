@@ -2,15 +2,15 @@
 pragma solidity 0.8.27;
 
 import { BaseTest } from "./Base.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { Ownable as OpenZeppelinOwnable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { Controller } from "src/Controller.sol";
-import { Registry } from "src/Registry.sol";
-import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
+import { Controller } from "src/core/Controller.sol";
+import { Registry } from "src/core/Registry.sol";
+import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
 
 contract UpgradeTest is BaseTest {
     function setUp() public virtual override {

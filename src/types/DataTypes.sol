@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.25;
 
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 
 /* -------------------------------------------- */

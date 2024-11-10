@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.27;
 
-import { IExtension } from "src/interfaces/IExtension.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";

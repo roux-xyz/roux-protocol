@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
@@ -13,10 +13,18 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
 /**
+ * campari martini
+ *
+ * 3 oz campari
+ * pinch of salt
+ *
+ * stir / strain / up / garnish with orange twist
+ */
+
+/**
  * @title roux edition factory
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
@@ -32,6 +40,9 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
      */
     bytes32 internal constant ROUX_EDITION_FACTORY_STORAGE_SLOT =
         0x13ea773dc95198298e0d9b6bbd2aef489fb654cd1810ac18d17a86ab80293a00;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* -------------------------------------------- */
     /* structures                                   */

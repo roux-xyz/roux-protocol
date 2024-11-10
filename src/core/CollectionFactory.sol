@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
-import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
+import { ICollectionFactory } from "src/core/interfaces/ICollectionFactory.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
@@ -12,14 +12,13 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
 
 /**
  * @title collection factory
  * @author roux
- * @custom:version 1.0
- * @custom:security-contact mp@roux.app
+ * @custom:security-contact security@roux.app
  */
 contract CollectionFactory is ICollectionFactory, Initializable, Ownable, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;
@@ -35,6 +34,9 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      */
     bytes32 internal constant COLLECTION_FACTORY_STORAGE_SLOT =
         0xfee14c31ff75da4316c29dbb9be5262c4ac5f24d7a6cf9c42a613a69199feb00;
+
+    /// @notice version
+    string public constant VERSION = "1.0";
 
     /* ------------------------------------------------- */
     /* immutable state                                   */

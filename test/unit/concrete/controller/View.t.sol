@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
 contract View_Controller_Unit_Concrete_Test is BaseTest {
@@ -17,6 +17,11 @@ contract View_Controller_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* view                                         */
     /* -------------------------------------------- */
+
+    /// @dev returns correct version
+    function test__Version() external view {
+        assertEq(controller.VERSION(), "1.0");
+    }
 
     /// @dev returns correct owner
     function test__Owner() external view {

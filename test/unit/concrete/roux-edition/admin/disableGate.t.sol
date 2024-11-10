@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.27;
 
-import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";

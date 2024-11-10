@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.27;
 
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
+import { IRouxEditionFactory } from "src/core/interfaces/IRouxEditionFactory.sol";
+import { IController } from "src/core/interfaces/IController.sol";
 import { IERC6551Registry } from "erc6551/interfaces/IERC6551Registry.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { IRouxEditionFactory } from "src/interfaces/IRouxEditionFactory.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IController } from "src/interfaces/IController.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
@@ -21,8 +21,9 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 /**
- * @title Collection
- * @custom:version 1.0
+ * @title collection
+ * @author roux
+ * @custom:security-contact security@roux.app
  */
 abstract contract Collection is ICollection, ERC721, Initializable, OwnableRoles, ReentrancyGuard {
     using LibBitmap for LibBitmap.Bitmap;

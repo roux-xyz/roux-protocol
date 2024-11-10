@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.27;
 
-import { RouxEdition } from "src/RouxEdition.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
 contract MockMaliciousCollection_ApproveMint {

@@ -3,9 +3,9 @@ pragma solidity ^0.8.27;
 
 import { ERC1155 } from "solady/tokens/ERC1155.sol";
 import { MintPortalBase } from "test/shared/MintPortalBase.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
-import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { IRouxMintPortal } from "src/periphery/interfaces/IRouxMintPortal.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { REFERRAL_FEE } from "src/libraries/FeesLib.sol";

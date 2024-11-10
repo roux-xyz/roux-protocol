@@ -2,15 +2,15 @@
 pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
-import { RouxEditionFactory } from "src/RouxEditionFactory.sol";
-import { ERC6551Account } from "src/ERC6551Account.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
+import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
+import { ERC6551Account } from "src/core/ERC6551Account.sol";
 import { ERC6551Registry } from "erc6551/ERC6551Registry.sol";
-import { CollectionFactory } from "src/CollectionFactory.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
+import { CollectionFactory } from "src/core/CollectionFactory.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
 import { Events } from "test/utils/Events.sol";
 import { Defaults } from "test/utils/Defaults.sol";
 import { EditionData, CollectionData } from "src/types/DataTypes.sol";

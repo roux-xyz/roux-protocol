@@ -4,8 +4,8 @@ pragma solidity ^0.8.27;
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";

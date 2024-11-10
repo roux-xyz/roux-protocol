@@ -2,15 +2,15 @@
 pragma solidity ^0.8.27;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { IExtension } from "src/interfaces/IExtension.sol";
+import { IExtension } from "src/periphery/interfaces/IExtension.sol";
 
 contract SetExtension_Collection_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */

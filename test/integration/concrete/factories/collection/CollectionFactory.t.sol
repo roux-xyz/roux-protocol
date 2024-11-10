@@ -2,11 +2,11 @@
 pragma solidity ^0.8.27;
 
 import { CollectionBase } from "test/shared/CollectionBase.t.sol";
-import { ICollectionFactory } from "src/interfaces/ICollectionFactory.sol";
-import { ICollection } from "src/interfaces/ICollection.sol";
-import { CollectionFactory } from "src/CollectionFactory.sol";
-import { SingleEditionCollection } from "src/SingleEditionCollection.sol";
-import { MultiEditionCollection } from "src/MultiEditionCollection.sol";
+import { ICollectionFactory } from "src/core/interfaces/ICollectionFactory.sol";
+import { ICollection } from "src/core/interfaces/ICollection.sol";
+import { CollectionFactory } from "src/core/CollectionFactory.sol";
+import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
+import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";

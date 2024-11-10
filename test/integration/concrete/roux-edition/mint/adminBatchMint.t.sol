@@ -3,9 +3,9 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
-import { RouxEdition } from "src/RouxEdition.sol";
+import { RouxEdition } from "src/core/RouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 

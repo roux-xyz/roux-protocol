@@ -3,8 +3,8 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { IRouxEdition } from "src/interfaces/IRouxEdition.sol";
-import { IRouxMintPortal } from "src/interfaces/IRouxMintPortal.sol";
+import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
+import { IRouxMintPortal } from "src/periphery/interfaces/IRouxMintPortal.sol";
 import { Restricted1155 } from "src/abstracts/Restricted1155.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
