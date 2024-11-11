@@ -21,13 +21,15 @@ fi
 
 # Debugging: Print loaded environment variables
 echo "Loaded environment variables:"
+echo "BASE_RPC_URL: $BASE_RPC_URL"
 echo "BASE_SEPOLIA_RPC_URL: $BASE_SEPOLIA_RPC_URL"
 echo "NETWORK: $NETWORK"
 echo "ACCOUNT: $ACCOUNT"
 echo "SENDER: $SENDER"
+echo "KEYSTORE: $KEYSTORE"
 
 # Path to your JSON file
-JSON_FILE="deployments/baseSepolia.json"
+JSON_FILE="deployments/$NETWORK.json"
 
 # Check if JSON file exists
 if [ -f "$JSON_FILE" ]; then
@@ -52,9 +54,10 @@ if [ -f "$JSON_FILE" ]; then
     COLLECTION_FACTORY_PROXY=$(jq -r '.COLLECTION_FACTORY_PROXY' "$JSON_FILE")
     ROUX_MINT_PORTAL_IMPL=$(jq -r '.ROUX_MINT_PORTAL_IMPL' "$JSON_FILE")
     ROUX_MINT_PORTAL_PROXY=$(jq -r '.ROUX_MINT_PORTAL_PROXY' "$JSON_FILE")
-    USDC_BASE_SEPOLIA=$(jq -r '.USDC_BASE_SEPOLIA' "$JSON_FILE")
+    USDC_BASE=$(jq -r '.USDC_BASE' "$JSON_FILE")
     
     echo "Parsed deployment variables from $JSON_FILE"
+    echo "USDC_BASE: $USDC_BASE"
 else
     echo "JSON file $JSON_FILE not found!"
     exit 1
@@ -81,8 +84,9 @@ run() {
                 exit 1
             fi
             echo "Running on $network"
-            if [ ! -z $LEDGER_DERIVATION_PATH ]; then
-                forge script "$contract" --rpc-url "$rpc_url" --ledger --hd-paths $LEDGER_DERIVATION_PATH --sender $LEDGER_ADDRESS --broadcast -vvvv $args
+            if [ ! -z $KEYSTORE ]; then
+            echo "Running with keystore $KEYSTORE"
+            forge script "$contract" --rpc-url "$rpc_url" --keystore "$KEYSTORE" --sender "$SENDER" --broadcast --verify -vvvv $args
             elif [ ! -z $ACCOUNT ]; then
                 echo "Running with account $ACCOUNT"
                 # We use both --account and --sender to ensure the signing account and simulated sender are the same
@@ -158,13 +162,13 @@ case $1 in
         fi
 
         # ensure required variables are set
-        if [ -z "$REGISTRY_PROXY" ] || [ -z "$USDC_BASE_SEPOLIA" ]; then
-            echo "Error: REGISTRY_PROXY or USDC_BASE_SEPOLIA is not set."
+        if [ -z "$REGISTRY_PROXY" ] || [ -z "$USDC_BASE" ]; then
+            echo "Error: REGISTRY_PROXY or USDC_BASE is not set."
             exit 1
         fi
 
         echo "Deploying Controller"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployController.s.sol:DeployController" "--sig run(address,address) $REGISTRY_PROXY $USDC_BASE_SEPOLIA"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployController.s.sol:DeployController" "--sig run(address,address) $REGISTRY_PROXY $USDC_BASE"
         ;;
 
     "deploy-erc6551-account")
@@ -203,6 +207,12 @@ case $1 in
             exit 1
         fi
 
+        # ensure required variables are set
+        if [ -z "$ROUX_EDITION_BEACON" ]; then
+            echo "Error: Required variables are not set."
+            exit 1
+        fi
+
         echo "Deploying EditionFactory"
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $ROUX_EDITION_BEACON"
         ;;
@@ -210,6 +220,12 @@ case $1 in
     "deploy-single-edition-collection-impl")
         if [ "$#" -ne 1 ]; then
             echo "Invalid param count; Usage: $0 deploy-single-edition-collection-impl"
+            exit 1
+        fi
+
+        # ensure required variables are set
+        if [ -z "$ROUX_EDITION_BEACON" ] || [ -z "$ERC_6551_REGISTRY" ] || [ -z "$ERC_6551_ACCOUNT_IMPL" ] || [ -z "$ROUX_EDITION_FACTORY_PROXY" ] || [ -z "$CONTROLLER_PROXY" ]; then
+            echo "Error: Required variables are not set."
             exit 1
         fi
 
@@ -244,7 +260,7 @@ case $1 in
         fi
 
         echo "Deploying MintPortal"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $USDC_BASE_SEPOLIA $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployMintPortal.s.sol:DeployMintPortal" "--sig run(address,address,address) $USDC_BASE $ROUX_EDITION_FACTORY_PROXY $COLLECTION_FACTORY_PROXY"
         ;;
 
     "deploy-edition-impl")
@@ -274,7 +290,7 @@ case $1 in
         fi
 
         echo "Upgrading Controller Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeController.s.sol:UpgradeController" "--sig run(address,address,address) $CONTROLLER_PROXY $REGISTRY_PROXY $USDC_BASE_SEPOLIA"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeController.s.sol:UpgradeController" "--sig run(address,address,address) $CONTROLLER_PROXY $REGISTRY_PROXY $USDC_BASE"
         ;;
 
     "upgrade-single-edition-collection")
