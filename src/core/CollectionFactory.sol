@@ -14,6 +14,7 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
 import { SingleEditionCollection } from "src/core/SingleEditionCollection.sol";
 import { MultiEditionCollection } from "src/core/MultiEditionCollection.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
  * @title collection factory
@@ -56,9 +57,13 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      * @notice CollectionFactory storage
      * @custom:storage-location erc7201:collectionFactory.collectionFactoryStorage
      * @param collections set of collections
+     * @param deployerNonce mapping of deployer to nonce
+     * @param totalCollections total number of collections
      */
     struct CollectionFactoryStorage {
         LibBitmap.Bitmap collections;
+        mapping(address => uint256) deployerNonce;
+        uint256 totalCollections;
     }
 
     /* ------------------------------------------------- */
@@ -122,6 +127,11 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
         return _storage().collections.get(uint256(uint160(collection)));
     }
 
+    /// @inheritdoc ICollectionFactory
+    function totalCollections() external view returns (uint256) {
+        return _storage().totalCollections;
+    }
+
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
@@ -131,22 +141,32 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      * @param params parameters for creating the single edition collection
      * @return collectionInstance the address of the newly created collection
      */
-    function createSingle(CollectionData.SingleEditionCreateParams calldata params)
-        external
-        returns (address collectionInstance)
-    {
-        // create the collection instance using the single edition beacon
-        collectionInstance = address(
-            new BeaconProxy(
-                _singleEditionCollectionBeacon,
-                abi.encodeWithSelector(SingleEditionCollection.initialize.selector, params)
-            )
-        );
+    function createSingle(CollectionData.SingleEditionCreateParams calldata params) external returns (address) {
+        CollectionFactoryStorage storage $ = _storage();
 
-        // set curator, transfer ownership to the caller, and register the new collection
+        // get and increment the deployer's nonce
+        uint256 nonce = $.deployerNonce[msg.sender]++;
+
+        // calculate salt using msg.sender and their nonce
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, nonce));
+
+        // create initialization data for the proxy
+        bytes memory initData = abi.encodeWithSelector(SingleEditionCollection.initialize.selector, params);
+
+        // prepare the bytecode for the BeaconProxy contract
+        bytes memory proxyBytecode =
+            abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(_singleEditionCollectionBeacon, initData));
+
+        // deploy the proxy using Create2
+        address collectionInstance = Create2.deploy(0, salt, proxyBytecode);
+
+        // process the creation (set curator, transfer ownership, register the collection)
         _processCreate(collectionInstance);
 
-        // emit an event for the new collection
+        // increment total collections
+        $.totalCollections++;
+
+        // emit event for the new collection
         emit EventsLib.NewSingleEditionCollection(collectionInstance);
 
         return collectionInstance;
@@ -157,22 +177,32 @@ contract CollectionFactory is ICollectionFactory, Initializable, Ownable, Reentr
      * @param params parameters for creating the multi-edition collection
      * @return collectionInstance the address of the newly created collection
      */
-    function createMulti(CollectionData.MultiEditionCreateParams calldata params)
-        external
-        returns (address collectionInstance)
-    {
-        // create the collection instance using the multi-edition beacon
-        collectionInstance = address(
-            new BeaconProxy(
-                _multiEditionCollectionBeacon,
-                abi.encodeWithSelector(MultiEditionCollection.initialize.selector, params)
-            )
-        );
+    function createMulti(CollectionData.MultiEditionCreateParams calldata params) external returns (address) {
+        CollectionFactoryStorage storage $ = _storage();
 
-        // set curator, transfer ownership to the caller, and register the new collection
+        // get and increment the deployer's nonce
+        uint256 nonce = $.deployerNonce[msg.sender]++;
+
+        // calculate salt using msg.sender and their nonce
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, nonce));
+
+        // create initialization data for the proxy
+        bytes memory initData = abi.encodeWithSelector(MultiEditionCollection.initialize.selector, params);
+
+        // prepare the bytecode for the BeaconProxy contract
+        bytes memory proxyBytecode =
+            abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(_multiEditionCollectionBeacon, initData));
+
+        // deploy the proxy using Create2
+        address collectionInstance = Create2.deploy(0, salt, proxyBytecode);
+
+        // process the creation (set curator, transfer ownership, register the collection)
         _processCreate(collectionInstance);
 
-        // emit an event for the new collection
+        // increment total collections
+        $.totalCollections++;
+
+        // emit event for the new collection
         emit EventsLib.NewMultiEditionCollection(collectionInstance);
 
         return collectionInstance;

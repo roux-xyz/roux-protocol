@@ -28,4 +28,10 @@ interface ICollectionFactory {
      * @return whether the token is an edition
      */
     function isCollection(address token) external view returns (bool);
+
+    /**
+     * @notice get total collections
+     * @return total collections
+     */
+    function totalCollections() external view returns (uint256);
 }

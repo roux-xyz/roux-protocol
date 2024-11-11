@@ -13,6 +13,12 @@ interface IRouxEditionFactory {
      */
     function isEdition(address token) external view returns (bool);
 
+    /**
+     * @notice number of editions
+     * @return number of editions
+     */
+    function totalEditions() external view returns (uint256);
+
     /* ------------------------------------------------- */
     /* write functions                                   */
     /* ------------------------------------------------- */

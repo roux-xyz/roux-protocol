@@ -12,6 +12,8 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { CollectionData } from "src/types/DataTypes.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 contract CollectionFactoryTest is CollectionBase {
     function setUp() public virtual override {
@@ -37,6 +39,58 @@ contract CollectionFactoryTest is CollectionBase {
     /// @dev owner
     function test__Owner() external view {
         assertEq(collectionFactory.owner(), address(users.deployer));
+    }
+
+    /// @dev test create single deterministic
+    function test__CreateSingleDeterministic() external {
+        // calculate expected address for first deployment
+        uint256 nonce = 0;
+        bytes32 salt = keccak256(abi.encodePacked(users.creator_1, nonce));
+        bytes memory initData =
+            abi.encodeWithSelector(SingleEditionCollection.initialize.selector, singleEditionCollectionParams);
+        bytes memory proxyBytecode = abi.encodePacked(
+            type(BeaconProxy).creationCode, abi.encode(address(singleEditionCollectionBeacon), initData)
+        );
+
+        address expectedAddress = Create2.computeAddress(salt, keccak256(proxyBytecode), address(collectionFactory));
+
+        // deploy first collection
+        vm.prank(users.creator_1);
+        address actualAddress = collectionFactory.createSingle(singleEditionCollectionParams);
+
+        // verify address matches prediction
+        assertEq(actualAddress, expectedAddress);
+
+        // verify second deployment with same parameters but different nonce produces different address
+        vm.prank(users.creator_1);
+        address secondAddress = collectionFactory.createSingle(singleEditionCollectionParams);
+        assertTrue(secondAddress != actualAddress);
+    }
+
+    /// @dev test create multi deterministic
+    function test__CreateMultiDeterministic() external {
+        // calculate expected address for first deployment
+        uint256 nonce = 0;
+        bytes32 salt = keccak256(abi.encodePacked(users.creator_1, nonce));
+        bytes memory initData =
+            abi.encodeWithSelector(MultiEditionCollection.initialize.selector, multiEditionCollectionParams);
+        bytes memory proxyBytecode = abi.encodePacked(
+            type(BeaconProxy).creationCode, abi.encode(address(multiEditionCollectionBeacon), initData)
+        );
+
+        address expectedAddress = Create2.computeAddress(salt, keccak256(proxyBytecode), address(collectionFactory));
+
+        // deploy first collection
+        vm.prank(users.creator_1);
+        address actualAddress = collectionFactory.createMulti(multiEditionCollectionParams);
+
+        // verify address matches prediction
+        assertEq(actualAddress, expectedAddress);
+
+        // verify second deployment with same parameters but different nonce produces different address
+        vm.prank(users.creator_1);
+        address secondAddress = collectionFactory.createMulti(multiEditionCollectionParams);
+        assertTrue(secondAddress != actualAddress);
     }
 
     /// @dev transfer ownership
@@ -74,7 +128,7 @@ contract CollectionFactoryTest is CollectionBase {
     }
 
     /// @dev is collection false
-    function test__IsCollection_False() external {
+    function test__IsCollection_False() external view {
         assertFalse(collectionFactory.isCollection(address(creator)));
     }
 
@@ -91,5 +145,23 @@ contract CollectionFactoryTest is CollectionBase {
         vm.stopPrank();
 
         assertEq(collectionFactory.getImplementation(), address(newCollectionFactoryImpl));
+    }
+
+    /// @dev total collections
+    function test__TotalCollections() external {
+        assertEq(collectionFactory.totalCollections(), 2);
+
+        address[] memory collections = new address[](3);
+
+        vm.prank(collectionAdmin);
+        collections[0] = collectionFactory.createSingle(singleEditionCollectionParams);
+
+        vm.prank(curator);
+        collections[1] = collectionFactory.createMulti(multiEditionCollectionParams);
+
+        vm.prank(curator);
+        collections[2] = collectionFactory.createMulti(multiEditionCollectionParams);
+
+        assertEq(collectionFactory.totalCollections(), 5);
     }
 }

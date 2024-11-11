@@ -11,6 +11,8 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 contract RouxEditionFactoryTest is BaseTest {
     function setUp() public virtual override {
@@ -30,6 +32,32 @@ contract RouxEditionFactoryTest is BaseTest {
         factory.upgradeToAndCall(address(newFactoryImpl), initData);
 
         vm.stopPrank();
+    }
+
+    /// @dev test create deterministic
+    function test__CreateDeterministic() external {
+        bytes memory params = abi.encode(CONTRACT_URI);
+
+        // calculate expected address for first deployment
+        uint256 nonce = 0;
+        bytes32 salt = keccak256(abi.encodePacked(users.creator_1, nonce));
+        bytes memory initData = abi.encodeWithSignature("initialize(bytes)", params);
+        bytes memory proxyBytecode =
+            abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(editionBeacon), initData));
+
+        address expectedAddress = Create2.computeAddress(salt, keccak256(proxyBytecode), address(factory));
+
+        // deploy first edition
+        vm.prank(users.creator_1);
+        address actualAddress = factory.create(params);
+
+        // verify address matches prediction
+        assertEq(actualAddress, expectedAddress);
+
+        // verify second deployment with same parameters but different nonce produces different address
+        vm.prank(users.creator_1);
+        address secondAddress = factory.create(params);
+        assertTrue(secondAddress != actualAddress);
     }
 
     /// @dev owner
@@ -86,6 +114,25 @@ contract RouxEditionFactoryTest is BaseTest {
         for (uint256 i = 0; i < 3; i++) {
             assertEq(factory.isEdition(editions[i]), true);
         }
+    }
+
+    /// @dev total editions
+    function test__TotalEditions() external {
+        assertEq(factory.totalEditions(), 1);
+
+        address[] memory editions = new address[](3);
+        bytes memory params = abi.encode(CONTRACT_URI);
+
+        vm.prank(creator);
+        editions[0] = factory.create(params);
+
+        vm.prank(users.creator_1);
+        editions[1] = factory.create(params);
+
+        vm.prank(users.creator_2);
+        editions[2] = factory.create(params);
+
+        assertEq(factory.totalEditions(), 4);
     }
 
     /// @dev upgrade factory
