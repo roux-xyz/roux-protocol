@@ -519,6 +519,13 @@ export const collectionFactoryAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'cancelOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
@@ -556,9 +563,7 @@ export const collectionFactoryAbi = [
       },
     ],
     name: 'createMulti',
-    outputs: [
-      { name: 'collectionInstance', internalType: 'address', type: 'address' },
-    ],
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'nonpayable',
   },
   {
@@ -581,9 +586,7 @@ export const collectionFactoryAbi = [
       },
     ],
     name: 'createSingle',
-    outputs: [
-      { name: 'collectionInstance', internalType: 'address', type: 'address' },
-    ],
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'nonpayable',
   },
   {
@@ -636,6 +639,13 @@ export const collectionFactoryAbi = [
     name: 'requestOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'totalCollections',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -757,6 +767,16 @@ export const collectionFactoryAbi = [
     name: 'AddressEmptyCode',
   },
   { type: 'error', inputs: [], name: 'AlreadyInitialized' },
+  { type: 'error', inputs: [], name: 'Create2EmptyBytecode' },
+  { type: 'error', inputs: [], name: 'Create2FailedDeployment' },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'balance', internalType: 'uint256', type: 'uint256' },
+      { name: 'needed', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'Create2InsufficientBalance',
+  },
   {
     type: 'error',
     inputs: [
@@ -786,6 +806,13 @@ export const controllerAbi = [
       { name: 'currency_', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -1436,6 +1463,13 @@ export const multiEditionCollectionAbi = [
   },
   {
     type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [
       { name: 'account', internalType: 'address', type: 'address' },
       { name: 'id', internalType: 'uint256', type: 'uint256' },
@@ -2028,6 +2062,13 @@ export const registryAbi = [
   { type: 'constructor', inputs: [], stateMutability: 'nonpayable' },
   {
     type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [
       { name: 'edition', internalType: 'address', type: 'address' },
       { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
@@ -2351,6 +2392,13 @@ export const rouxEditionAbi = [
       { name: 'registry', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -3137,6 +3185,13 @@ export const rouxEditionFactoryAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'cancelOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
@@ -3207,6 +3262,13 @@ export const rouxEditionFactoryAbi = [
     name: 'requestOwnershipHandover',
     outputs: [],
     stateMutability: 'payable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'totalEditions',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -3315,6 +3377,16 @@ export const rouxEditionFactoryAbi = [
     name: 'AddressEmptyCode',
   },
   { type: 'error', inputs: [], name: 'AlreadyInitialized' },
+  { type: 'error', inputs: [], name: 'Create2EmptyBytecode' },
+  { type: 'error', inputs: [], name: 'Create2FailedDeployment' },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'balance', internalType: 'uint256', type: 'uint256' },
+      { name: 'needed', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'Create2InsufficientBalance',
+  },
   {
     type: 'error',
     inputs: [
@@ -3345,6 +3417,13 @@ export const rouxMintPortalAbi = [
       { name: 'collectionFactory_', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -4001,6 +4080,13 @@ export const singleEditionCollectionAbi = [
       { name: 'controller', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'VERSION',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
