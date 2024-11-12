@@ -9,6 +9,7 @@ import { CollectionData, EditionData } from "src/types/DataTypes.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { MAX_SINGLE_EDITION_COLLECTION_SIZE } from "src/libraries/ConstantsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 
 contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
@@ -44,7 +45,7 @@ contract Initialize_SingleEditionCollection_Unit_Concrete_Test is CollectionBase
         params.itemIds = newItemIds;
 
         vm.prank(collectionAdmin);
-        vm.expectRevert(ErrorsLib.Collection_InvalidCollectionSize.selector);
+        vm.expectRevert(Create2.Create2FailedDeployment.selector);
         SingleEditionCollection(collectionFactory.createSingle(params));
     }
 

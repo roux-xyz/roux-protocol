@@ -11,6 +11,7 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
  * campari martini
@@ -51,9 +52,14 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /**
      * @notice RouxEdition storage
      * @custom:storage-location erc7201:rouxEditionFactory.rouxEditionFactoryStorage
+     * @param editions set of editions
+     * @param deployerNonce mapping of deployer to nonce
+     * @param totalEditions total number of editions
      */
     struct RouxEditionFactoryStorage {
         LibBitmap.Bitmap editions;
+        mapping(address => uint256) deployerNonce;
+        uint256 totalEditions;
     }
 
     /* -------------------------------------------- */
@@ -116,6 +122,11 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         return _storage().editions.get(uint256(uint160(edition)));
     }
 
+    /// @inheritdoc IRouxEditionFactory
+    function totalEditions() external view returns (uint256) {
+        return _storage().totalEditions;
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
@@ -124,15 +135,28 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     function create(bytes calldata params) external nonReentrant returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
-        // create edition instance
-        address editionInstance =
-            address(new BeaconProxy(_editionBeacon, abi.encodeWithSignature("initialize(bytes)", params)));
+        // get and increment the deployer's nonce
+        uint256 nonce = $.deployerNonce[msg.sender]++;
+
+        // calculate salt using msg.sender and their nonce
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, nonce));
+
+        // create initialization data for the proxy
+        bytes memory initData = abi.encodeWithSignature("initialize(bytes)", params);
+
+        // deploy proxy using Create2
+        address editionInstance = Create2.deploy(
+            0, salt, abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(_editionBeacon, initData))
+        );
 
         // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);
 
         // add to editions mapping
         $.editions.set(uint256(uint160(editionInstance)));
+
+        // increment total editions
+        $.totalEditions++;
 
         // emit event
         emit EventsLib.NewEdition(editionInstance);
