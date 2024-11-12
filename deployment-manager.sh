@@ -27,6 +27,7 @@ echo "NETWORK: $NETWORK"
 echo "ACCOUNT: $ACCOUNT"
 echo "SENDER: $SENDER"
 echo "KEYSTORE: $KEYSTORE"
+echo "USDC_BASE: $USDC_BASE"
 
 # Path to your JSON file
 JSON_FILE="deployments/$NETWORK.json"
@@ -126,6 +127,7 @@ usage() {
     echo "  upgrade-controller"
     echo "  upgrade-single-edition-collection"
     echo "  upgrade-multi-edition-collection"
+    echo "  upgrade-roux-edition-factory"
     echo "  upgrade-collection-factory"
     echo ""
     echo "Options:"
@@ -311,6 +313,16 @@ case $1 in
 
         echo "Upgrading MultiEditionCollection Implementation"
         run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeMultiEditionCollection.s.sol:UpgradeMultiEditionCollection" "--sig run(address,address,address,address,address) $MULTI_EDITION_COLLECTION_BEACON $ERC_6551_REGISTRY $ERC_6551_ACCOUNT_IMPL $ROUX_EDITION_FACTORY_PROXY $CONTROLLER_PROXY"
+        ;;
+
+    "upgrade-roux-edition-factory")
+        if [ "$#" -ne 1 ]; then
+            echo "Invalid param count; Usage: $0 upgrade-roux-edition-factory"
+            exit 1
+        fi
+
+        echo "Upgrading RouxEditionFactory Implementation"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeRouxEditionFactory.s.sol:UpgradeRouxEditionFactory" "--sig run(address,address) $ROUX_EDITION_FACTORY_PROXY $ROUX_EDITION_BEACON"
         ;;
 
     "upgrade-collection-factory")
