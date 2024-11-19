@@ -47,6 +47,7 @@ if [ -f "$JSON_FILE" ]; then
     ROUX_EDITION_BEACON=$(jq -r '.ROUX_EDITION_BEACON' "$JSON_FILE")
     ROUX_EDITION_FACTORY_IMPL=$(jq -r '.ROUX_EDITION_FACTORY_IMPL' "$JSON_FILE")
     ROUX_EDITION_FACTORY_PROXY=$(jq -r '.ROUX_EDITION_FACTORY_PROXY' "$JSON_FILE")
+    ROUX_EDITION_CO_CREATE_BEACON=$(jq -r '.ROUX_EDITION_CO_CREATE_BEACON' "$JSON_FILE")
     SINGLE_EDITION_COLLECTION_IMPL=$(jq -r '.SINGLE_EDITION_COLLECTION_IMPL' "$JSON_FILE")
     SINGLE_EDITION_COLLECTION_BEACON=$(jq -r '.SINGLE_EDITION_COLLECTION_BEACON' "$JSON_FILE")
     MULTI_EDITION_COLLECTION_IMPL=$(jq -r '.MULTI_EDITION_COLLECTION_IMPL' "$JSON_FILE")
@@ -210,13 +211,13 @@ case $1 in
         fi
 
         # ensure required variables are set
-        if [ -z "$ROUX_EDITION_BEACON" ]; then
+        if [ -z "$ROUX_EDITION_BEACON" ] || [ -z "$ROUX_EDITION_CO_CREATE_BEACON" ]; then
             echo "Error: Required variables are not set."
             exit 1
         fi
 
         echo "Deploying EditionFactory"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address) $ROUX_EDITION_BEACON"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/deploy/DeployEditionFactory.s.sol:DeployEditionFactory" "--sig run(address,address) $ROUX_EDITION_BEACON $ROUX_EDITION_CO_CREATE_BEACON"
         ;;
 
     "deploy-single-edition-collection-impl")
@@ -321,8 +322,14 @@ case $1 in
             exit 1
         fi
 
+        # ensure required variables are set
+        if [ -z "$ROUX_EDITION_BEACON" ] || [ -z "$ROUX_EDITION_CO_CREATE_BEACON" ]; then
+            echo "Error: Required variables are not set."
+            exit 1
+        fi
+
         echo "Upgrading RouxEditionFactory Implementation"
-        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeRouxEditionFactory.s.sol:UpgradeRouxEditionFactory" "--sig run(address,address) $ROUX_EDITION_FACTORY_PROXY $ROUX_EDITION_BEACON"
+        run "$NETWORK" "${NETWORK}_RPC_URL" "script/upgrade/UpgradeRouxEditionFactory.s.sol:UpgradeRouxEditionFactory" "--sig run(address,address,address) $ROUX_EDITION_FACTORY_PROXY $ROUX_EDITION_BEACON $ROUX_EDITION_CO_CREATE_BEACON"
         ;;
 
     "upgrade-collection-factory")

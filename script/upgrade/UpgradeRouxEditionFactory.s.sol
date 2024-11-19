@@ -13,7 +13,8 @@ interface IProxy {
 contract UpgradeRouxEditionFactory is BaseScript {
     function run(
         address proxyAddress,
-        address editionBeacon
+        address editionBeacon,
+        address coCreateBeacon
     )
         public
         broadcast
@@ -31,7 +32,7 @@ contract UpgradeRouxEditionFactory is BaseScript {
 
         // deploy new implementation with the constructor parameters
         console.log("Deploying new RouxEditionFactory implementation...");
-        newRouxEditionFactoryImpl = new RouxEditionFactory(editionBeacon);
+        newRouxEditionFactoryImpl = new RouxEditionFactory(editionBeacon, coCreateBeacon);
 
         console.log("New RouxEditionFactory Implementation: %s", address(newRouxEditionFactoryImpl));
 
