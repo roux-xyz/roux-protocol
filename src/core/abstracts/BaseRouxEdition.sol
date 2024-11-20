@@ -607,6 +607,36 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
     }
 
     /**
+     * @notice set collection
+     * @param collection collection address
+     * @param enable enable or disable collection
+     *
+     * @dev bypasses validation that token is ungated and exists; frontends should
+     *      validate that token exists before calling this function as convenience
+     */
+    function _setCollection(address collection, bool enable) internal {
+        if (enable) {
+            // validate extension is not zero
+            if (collection == address(0)) revert ErrorsLib.RouxEdition_InvalidCollection();
+
+            // owner of the collection must be the caller (safety check)
+            if (Collection(collection).owner() != msg.sender) revert ErrorsLib.RouxEdition_InvalidCollection();
+
+            // validate extension interface support
+            if (!ICollection(collection).supportsInterface(type(ICollection).interfaceId)) {
+                revert ErrorsLib.RouxEdition_InvalidCollection();
+            }
+
+            // set collection
+            _storage().collections.set(uint256(uint160(collection)));
+        } else {
+            // unset collection
+            _storage().collections.unset(uint256(uint160(collection)));
+        }
+        emit EventsLib.CollectionSet(collection, enable);
+    }
+
+    /**
      * @notice preprocess direct mint
      * @param to token receiver
      * @param id token id

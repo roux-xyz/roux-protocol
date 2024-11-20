@@ -10,9 +10,9 @@ import { EditionData } from "src/types/DataTypes.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 
-contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract Add_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -34,17 +34,17 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     function test__RevertWhen_AddToken_AllowlistEnabled_CallerNotAllowlisted() external {
         // enable allowlist
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).enableAllowlist(true);
+        RouxCommunityEdition(address(communityEdition)).enableAllowlist(true);
 
         // attempt to add token
         vm.prank(user);
-        vm.expectRevert(ErrorsLib.RouxEditionCoCreate_NotAllowed.selector);
-        coCreateEdition.add(addParams);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_NotAllowed.selector);
+        communityEdition.add(addParams);
 
         // attempt to add token - creator is not allowlisted
         vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEditionCoCreate_NotAllowed.selector);
-        coCreateEdition.add(addParams);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_NotAllowed.selector);
+        communityEdition.add(addParams);
     }
 
     /* -------------------------------------------- */
@@ -56,51 +56,51 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addParams.maxSupply = type(uint128).max;
 
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.maxSupply(tokenId_), type(uint128).max);
+        assertEq(communityEdition.maxSupply(tokenId_), type(uint128).max);
     }
 
     /// @dev token id is incremented after add
     function test__AddToken_TokenIdIsIncremented() external {
         // cache starting token id
-        uint256 currentTokenId = coCreateEdition.currentToken();
+        uint256 currentTokenId = communityEdition.currentToken();
 
         // add token
         vm.prank(users.creator_2);
-        coCreateEdition.add(addParams);
+        communityEdition.add(addParams);
 
         // token id is incremented
-        assertEq(coCreateEdition.currentToken(), currentTokenId + 1);
+        assertEq(communityEdition.currentToken(), currentTokenId + 1);
     }
 
     /// @dev default price is set after add
     function test__AddToken_DefaultPriceIsSet() external {
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
         // default price is set
-        assertEq(coCreateEdition.defaultPrice(tokenId_), addParams.defaultPrice);
+        assertEq(communityEdition.defaultPrice(tokenId_), addParams.defaultPrice);
     }
 
     /// @dev default mint params are set after add
     function test__AddToken_DefaultMintParamsAreSet() external {
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.defaultMintParams(tokenId_).defaultPrice, addParams.defaultPrice);
-        assertEq(coCreateEdition.defaultMintParams(tokenId_).gate, false);
+        assertEq(communityEdition.defaultMintParams(tokenId_).defaultPrice, addParams.defaultPrice);
+        assertEq(communityEdition.defaultMintParams(tokenId_).gate, false);
     }
 
     /// @dev gate is set after add - false default
     function test__AddToken_GateIsSet_FalseDefault() external {
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.isGated(tokenId_), false);
+        assertEq(communityEdition.isGated(tokenId_), false);
     }
 
     /// @dev gate is set after add - false
@@ -109,9 +109,9 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
 
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.isGated(tokenId_), true);
+        assertEq(communityEdition.isGated(tokenId_), true);
     }
 
     /// @dev token uri is set after add
@@ -125,21 +125,21 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
 
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.uri(tokenId_), newUri);
+        assertEq(communityEdition.uri(tokenId_), newUri);
     }
 
     /// @dev token creator is set after add
     function test__AddToken_CreatorIsSet() external {
         // create edition instance
-        IRouxEdition coCreateEdition_ = _createCoCreateEdition(creator);
+        IRouxEdition communityEdition_ = _createCommunityEdition(creator);
 
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition_.add(addParams);
+        uint256 tokenId_ = communityEdition_.add(addParams);
 
-        assertEq(coCreateEdition_.creator(tokenId_), users.creator_2);
+        assertEq(communityEdition_.creator(tokenId_), users.creator_2);
     }
 
     /// @dev extension is set on add
@@ -147,9 +147,9 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addParams.extension = address(mockExtension);
 
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertTrue(coCreateEdition.isRegisteredExtension(tokenId_, address(mockExtension)));
+        assertTrue(communityEdition.isRegisteredExtension(tokenId_, address(mockExtension)));
     }
 
     /// @dev token max supply is set after add
@@ -161,40 +161,40 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
 
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.maxSupply(tokenId_), maxSupply);
+        assertEq(communityEdition.maxSupply(tokenId_), maxSupply);
     }
 
     /// @dev token is minted to creator after add
     function test__AddToken_TokenIsMintedToCreator() external {
         // add token
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.balanceOf(users.creator_2, tokenId_), 1);
-        assertEq(coCreateEdition.totalSupply(tokenId_), 1);
+        assertEq(communityEdition.balanceOf(users.creator_2, tokenId_), 1);
+        assertEq(communityEdition.totalSupply(tokenId_), 1);
     }
 
     /// @dev event is emitted when token is added
     function test__AddToken_EventIsEmitted() external {
         // get new edition instance
-        IRouxEdition coCreateEdtiion_ = _createCoCreateEdition(users.creator_1);
+        IRouxEdition communityEdition_ = _createCommunityEdition(users.creator_1);
 
         // expect emit
-        vm.expectEmit({ emitter: address(coCreateEdtiion_) });
+        vm.expectEmit({ emitter: address(communityEdition_) });
         emit EventsLib.TokenAdded(1);
 
         // add token
         vm.prank(users.creator_2);
-        coCreateEdtiion_.add(addParams);
+        communityEdition_.add(addParams);
     }
 
     /// @dev token can be added after allowlist is enabled
     function test__AddToken_AllowlistEnabled() external {
         // enable allowlist
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).enableAllowlist(true);
+        RouxCommunityEdition(address(communityEdition)).enableAllowlist(true);
 
         // add users to allowlist
         address[] memory addresses = new address[](2);
@@ -202,20 +202,20 @@ contract Add_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addresses[1] = user;
 
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).addToAllowlist(addresses);
+        RouxCommunityEdition(address(communityEdition)).addToAllowlist(addresses);
 
         // add token
         vm.prank(user);
-        uint256 tokenIdUser_ = coCreateEdition.add(addParams);
+        uint256 tokenIdUser_ = communityEdition.add(addParams);
 
         // add another token
         vm.prank(users.creator_2);
-        uint256 tokenIdCreator_ = coCreateEdition.add(addParams);
+        uint256 tokenIdCreator_ = communityEdition.add(addParams);
 
-        assertEq(coCreateEdition.currentToken(), 3);
+        assertEq(communityEdition.currentToken(), 3);
 
         // token is minted to account that adds token
-        assertEq(coCreateEdition.balanceOf(users.creator_2, tokenIdCreator_), 1);
-        assertEq(coCreateEdition.balanceOf(user, tokenIdUser_), 1);
+        assertEq(communityEdition.balanceOf(users.creator_2, tokenIdCreator_), 1);
+        assertEq(communityEdition.balanceOf(user, tokenIdUser_), 1);
     }
 }

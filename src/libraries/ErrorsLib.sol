@@ -139,18 +139,18 @@ library ErrorsLib {
     error RouxMintPortal_InsufficientBalance();
 
     /* ------------------------------------------------- */
-    /* RouxEditionCoCreate                                */
+    /* RouxCommunityEdition                                */
     /* ------------------------------------------------- */
 
     /// @notice not allowed
-    error RouxEditionCoCreate_NotAllowed();
+    error RouxCommunityEdition_NotAllowed();
 
     /// @notice add window closed
-    error RouxEditionCoCreate_AddWindowClosed();
+    error RouxCommunityEdition_AddWindowClosed();
 
     /// @notice invalid add window
-    error RouxEditionCoCreate_InvalidAddWindow();
+    error RouxCommunityEdition_InvalidAddWindow();
 
     /// @notice max adds per address reached
-    error RouxEditionCoCreate_MaxAddsPerAddressReached();
+    error RouxCommunityEdition_MaxAddsPerAddressReached();
 }

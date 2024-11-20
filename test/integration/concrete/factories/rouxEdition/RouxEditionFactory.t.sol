@@ -24,7 +24,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
         vm.startPrank(users.deployer);
-        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(coCreateBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(communityBeacon));
 
         bytes memory initData = abi.encodeWithSelector(factory.initialize.selector, users.deployer);
 
@@ -60,8 +60,8 @@ contract RouxEditionFactoryTest is BaseTest {
         assertTrue(secondAddress != actualAddress);
     }
 
-    /// @dev test create co-create deterministic
-    function test__CreateCoCreateDeterministic() external {
+    /// @dev test create community deterministic
+    function test__CreateCommunityDeterministic() external {
         bytes memory params = abi.encode(CONTRACT_URI);
 
         // calculate expected address for first deployment
@@ -69,13 +69,13 @@ contract RouxEditionFactoryTest is BaseTest {
         bytes32 salt = keccak256(abi.encodePacked(users.creator_1, nonce));
         bytes memory initData = abi.encodeWithSignature("initialize(bytes)", params);
         bytes memory proxyBytecode =
-            abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(coCreateBeacon), initData));
+            abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(communityBeacon), initData));
 
         address expectedAddress = Create2.computeAddress(salt, keccak256(proxyBytecode), address(factory));
 
         // deploy first edition
         vm.prank(users.creator_1);
-        address actualAddress = factory.createCoCreate(params);
+        address actualAddress = factory.createCommunity(params);
 
         // verify address matches prediction
         assertEq(actualAddress, expectedAddress);
@@ -104,11 +104,11 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
-    /// @dev create co-create
-    function test__CreateCoCreate() external {
+    /// @dev create community
+    function test__CreateCommunity() external {
         vm.prank(creator);
         bytes memory params = abi.encode(CONTRACT_URI);
-        address newEdition = factory.createCoCreate(params);
+        address newEdition = factory.createCommunity(params);
 
         assertEq(factory.isEdition(newEdition), true);
     }
@@ -122,11 +122,11 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.isEdition(newEdition), true);
     }
 
-    /// @dev is co-create true
-    function test__IsCoCreate_True() external {
+    /// @dev is community true
+    function test__IsCommunity_True() external {
         vm.prank(creator);
         bytes memory params = abi.encode(CONTRACT_URI);
-        address newEdition = factory.createCoCreate(params);
+        address newEdition = factory.createCommunity(params);
 
         assertEq(factory.isEdition(newEdition), true);
     }
@@ -148,7 +148,7 @@ contract RouxEditionFactoryTest is BaseTest {
         editions[1] = factory.create(params);
 
         vm.prank(users.creator_2);
-        editions[2] = factory.createCoCreate(params);
+        editions[2] = factory.createCommunity(params);
 
         for (uint256 i = 0; i < 3; i++) {
             assertEq(factory.isEdition(editions[i]), true);
@@ -159,7 +159,7 @@ contract RouxEditionFactoryTest is BaseTest {
     function test__TotalEditions() external {
         uint256 originalTotal = 2;
 
-        // includes co-create edition
+        // includes community edition
         assertEq(factory.totalEditions(), originalTotal);
 
         address[] memory editions = new address[](3);
@@ -172,7 +172,7 @@ contract RouxEditionFactoryTest is BaseTest {
         editions[1] = factory.create(params);
 
         vm.prank(users.creator_2);
-        editions[2] = factory.createCoCreate(params);
+        editions[2] = factory.createCommunity(params);
 
         assertEq(factory.totalEditions(), originalTotal + 3);
     }
@@ -182,7 +182,7 @@ contract RouxEditionFactoryTest is BaseTest {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
         vm.startPrank(users.deployer);
-        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(coCreateBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(communityBeacon));
 
         factory.upgradeToAndCall(address(newFactoryImpl), "");
 

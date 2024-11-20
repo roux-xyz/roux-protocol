@@ -31,9 +31,9 @@ interface IRouxEditionFactory {
     function create(bytes calldata params) external returns (address);
 
     /**
-     * @notice create a new co-create edition
+     * @notice create a new community edition
      * @param params creation parameters - encode contractUri and init data
      * @return new edition instance
      */
-    function createCoCreate(bytes calldata params) external returns (address);
+    function createCommunity(bytes calldata params) external returns (address);
 }

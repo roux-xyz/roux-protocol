@@ -11,7 +11,7 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { REFERRAL_FEE, PLATFORM_FEE } from "src/libraries/FeesLib.sol";
 
-contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract Mint_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     EditionData.AddParams addParams;
 
     /* -------------------------------------------- */
@@ -23,7 +23,7 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addParams = defaultAddParams;
 
         vm.prank(user);
-        mockUSDC.approve(address(coCreateEdition), type(uint256).max);
+        mockUSDC.approve(address(communityEdition), type(uint256).max);
     }
 
     /* -------------------------------------------- */
@@ -34,14 +34,14 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     function test__RevertWhen_Mint_TokenIdIsZero() external {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidTokenId.selector);
-        coCreateEdition.mint(user, 0, 1, address(0), address(0), "");
+        communityEdition.mint(user, 0, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when token id does not exist
     function test__RevertWhen_Mint_TokenIdDoesNotExist() external {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidTokenId.selector);
-        coCreateEdition.mint(user, 2, 1, address(0), address(0), "");
+        communityEdition.mint(user, 2, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when max supply is already minted
@@ -49,11 +49,11 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addParams.maxSupply = 1;
 
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_MaxSupplyExceeded.selector);
-        coCreateEdition.mint(user, tokenId_, 1, address(0), address(0), "");
+        communityEdition.mint(user, tokenId_, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when mint is gated and extension not provided
@@ -61,18 +61,18 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         addParams.gate = true;
 
         vm.prank(users.creator_2);
-        uint256 tokenId_ = coCreateEdition.add(addParams);
+        uint256 tokenId_ = communityEdition.add(addParams);
 
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_GatedMint.selector);
-        coCreateEdition.mint(user, tokenId_, 1, address(0), address(0), "");
+        communityEdition.mint(user, tokenId_, 1, address(0), address(0), "");
     }
 
     /// @dev reverts when included extension is not registered
     function test__RevertWhen_Mint_InvalidExtension() external {
         vm.prank(user);
         vm.expectRevert(ErrorsLib.RouxEdition_InvalidExtension.selector);
-        coCreateEdition.mint(user, 1, 1, address(mockExtension), address(0), "");
+        communityEdition.mint(user, 1, 1, address(mockExtension), address(0), "");
     }
 
     /* -------------------------------------------- */
@@ -86,10 +86,10 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         uint256 startingCreatorControllerBalance = _getUserControllerBalance(creator);
 
         vm.prank(user);
-        coCreateEdition.mint(user, 1, 1, address(0), address(0), "");
+        communityEdition.mint(user, 1, 1, address(0), address(0), "");
 
-        assertEq(coCreateEdition.balanceOf(user, 1), 1);
-        assertEq(coCreateEdition.totalSupply(1), 2);
+        assertEq(communityEdition.balanceOf(user, 1), 1);
+        assertEq(communityEdition.totalSupply(1), 2);
 
         // verify user balance
         assertEq(mockUSDC.balanceOf(user), startingUserBalance - addParams.defaultPrice);
@@ -99,21 +99,21 @@ contract Mint_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     /// @dev mints multiple quantity of tokens
     function test__Mint_MultipleTokens() external {
         vm.prank(user);
-        coCreateEdition.mint(user, 1, 2, address(0), address(0), "");
+        communityEdition.mint(user, 1, 2, address(0), address(0), "");
 
-        assertEq(coCreateEdition.balanceOf(user, 1), 2);
-        assertEq(coCreateEdition.totalSupply(1), 3);
+        assertEq(communityEdition.balanceOf(user, 1), 2);
+        assertEq(communityEdition.totalSupply(1), 3);
     }
 
     /// @dev mint event is emitted
     function test__Mint_EventEmits() external {
         vm.prank(user);
-        mockUSDC.approve(address(coCreateEdition), type(uint256).max);
+        mockUSDC.approve(address(communityEdition), type(uint256).max);
 
-        vm.expectEmit({ emitter: address(coCreateEdition) });
+        vm.expectEmit({ emitter: address(communityEdition) });
         emit TransferSingle({ operator: user, from: address(0), to: user, id: 1, amount: 1 });
 
         vm.prank(user);
-        coCreateEdition.mint(user, 1, 1, address(0), address(0), "");
+        communityEdition.mint(user, 1, 1, address(0), address(0), "");
     }
 }

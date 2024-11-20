@@ -242,12 +242,12 @@ library EventsLib {
     event CollectionMintRedemption(address indexed to, address indexed collection);
 
     /* ------------------------------------------------- */
-    /* RouxEditionCoCreate                                */
+    /* RouxCommunityEdition                                */
     /* ------------------------------------------------- */
 
     /**
      * @notice allowlist enabled
      * @param enable enable
      */
-    event CoCreateAllowlistEnabled(bool enable);
+    event CommunityAllowlistEnabled(bool enable);
 }

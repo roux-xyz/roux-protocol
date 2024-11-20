@@ -14,7 +14,7 @@ library EditionData {
     enum EditionType {
         None,
         Standard,
-        CoCreate
+        Community
     }
 
     /**

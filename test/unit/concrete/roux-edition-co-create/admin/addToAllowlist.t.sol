@@ -3,10 +3,10 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 
-contract EnableAllowlist_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract EnableAllowlist_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -28,7 +28,7 @@ contract EnableAllowlist_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     function test__RevertWhen_OnlyOwner() external {
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        RouxEditionCoCreate(address(coCreateEdition)).addToAllowlist(addresses);
+        RouxCommunityEdition(address(communityEdition)).addToAllowlist(addresses);
     }
 
     /* -------------------------------------------- */
@@ -39,16 +39,16 @@ contract EnableAllowlist_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     function test__AddToAllowlist() external {
         // enable allowlist
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).enableAllowlist(true);
+        RouxCommunityEdition(address(communityEdition)).enableAllowlist(true);
 
         // check initial state
-        assertEq(RouxEditionCoCreate(address(coCreateEdition)).isAllowlisted(creator), false);
-        assertEq(RouxEditionCoCreate(address(coCreateEdition)).isAllowlisted(user), false);
+        assertEq(RouxCommunityEdition(address(communityEdition)).isAllowlisted(creator), false);
+        assertEq(RouxCommunityEdition(address(communityEdition)).isAllowlisted(user), false);
 
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).addToAllowlist(addresses);
+        RouxCommunityEdition(address(communityEdition)).addToAllowlist(addresses);
 
-        assertEq(RouxEditionCoCreate(address(coCreateEdition)).isAllowlisted(creator), true);
-        assertEq(RouxEditionCoCreate(address(coCreateEdition)).isAllowlisted(user), true);
+        assertEq(RouxCommunityEdition(address(communityEdition)).isAllowlisted(creator), true);
+        assertEq(RouxCommunityEdition(address(communityEdition)).isAllowlisted(user), true);
     }
 }

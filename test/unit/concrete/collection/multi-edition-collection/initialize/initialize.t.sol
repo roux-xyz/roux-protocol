@@ -185,11 +185,11 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
     }
 
     /// @dev successfully initializes collection
-    function test__Initialize_MixedWithCoCreate() external {
+    function test__Initialize_MixedWithCommunity() external {
         // create new editions
         address edition_ = address(_createEdition(creator));
         address edition2_ = address(_createEdition(creator));
-        address coCreateEdition_ = address(_createCoCreateEdition(creator));
+        address communityEdition_ = address(_createCommunityEdition(creator));
 
         // add 3 tokens
         _addMultipleTokens(RouxEdition(edition_), 3);
@@ -198,7 +198,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         _addMultipleTokens(RouxEdition(edition2_), 5);
 
         // add 2 tokens
-        _addMultipleTokens(RouxEdition(coCreateEdition_), 1);
+        _addMultipleTokens(RouxEdition(communityEdition_), 1);
 
         // create array of item targets
         address[] memory itemTargets = new address[](9);
@@ -210,7 +210,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         itemTargets[5] = address(edition2_);
         itemTargets[6] = address(edition2_);
         itemTargets[7] = address(edition2_);
-        itemTargets[8] = address(coCreateEdition_);
+        itemTargets[8] = address(communityEdition_);
 
         // create array of item ids
         uint256[] memory itemIds = new uint256[](9);
@@ -256,7 +256,7 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         assertEq(itemTargets_[5], edition2_);
         assertEq(itemTargets_[6], edition2_);
         assertEq(itemTargets_[7], edition2_);
-        assertEq(itemTargets_[8], coCreateEdition_);
+        assertEq(itemTargets_[8], communityEdition_);
         assertEq(itemIds_[0], 1);
         assertEq(itemIds_[1], 2);
         assertEq(itemIds_[2], 3);

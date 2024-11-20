@@ -26,14 +26,14 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
  */
 
 /**
- * @title roux edition co-create
+ * @title roux edition community
  * @author roux
  * @custom:security-contact security@roux.app
  *
- * @dev co-create is a special edition type that does not enforce an `onlyOwner` modifier
+ * @dev roux community edition is a special edition type that does not enforce an `onlyOwner` modifier
  * on `add`. an allowlist can be optionally enabled and set for group co-creation.
  */
-contract RouxEditionCoCreate is BaseRouxEdition {
+contract RouxCommunityEdition is BaseRouxEdition {
     using LibBitmap for LibBitmap.Bitmap;
 
     /* ------------------------------------------------- */
@@ -41,20 +41,20 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     /* ------------------------------------------------- */
 
     /**
-     * @notice RouxEdition storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxEditionCoCreate.rouxEditionCoCreateStorage")) - 1)) &
+     * @notice RouxCommunityEdition storage slot
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxCommunityEdition.rouxCommunityEditionStorage")) - 1)) &
      * ~bytes32(uint256(0xff));
      */
-    bytes32 internal constant ROUX_EDITION_CO_CREATE_STORAGE_SLOT =
-        0xf8ba7ec7e39a3e47b5b1fcdc921632116b09fd1c7349da6a756bf89cc05f3b00;
+    bytes32 internal constant ROUX_COMMUNITY_EDITION_STORAGE_SLOT =
+        0x856d5c392d13026bc2723f4319adbd96ce80b3e18403d4874ff5a642b699de00;
 
     /* ------------------------------------------------- */
     /* structures                                     */
     /* ------------------------------------------------- */
 
     /**
-     * @notice RouxEditionCoCreate storage
-     * @custom:storage-location erc7201:rouxEditionCoCreate.rouxEditionCoCreateStorage
+     * @notice RouxCommunityEdition storage
+     * @custom:storage-location erc7201:rouxCommunityEdition.rouxCommunityEditionStorage
      * @param addWindowStart add window start
      * @param addWindowEnd add window end
      * @param maxAddsPerAddress max adds per address
@@ -62,7 +62,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param allowListEnabled allowlist enabled
      * @param allowedAddresses allowed addresses
      */
-    struct RouxEditionCoCreateStorage {
+    struct RouxCommunityEditionStorage {
         uint40 addWindowStart;
         uint40 addWindowEnd;
         uint32 maxAddsPerAddress;
@@ -96,7 +96,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     /* ------------------------------------------------- */
 
     /**
-     * @notice initialize RouxEditionCoCreate
+     * @notice initialize RouxCommunityEdition
      * @param params encoded parameters
      */
     function initialize(bytes calldata params) external override initializer {
@@ -104,7 +104,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
         _initialize(params);
 
         // get storage
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
 
         // set default values
         $$.addWindowStart = uint40(block.timestamp);
@@ -117,12 +117,12 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     /* ------------------------------------------------- */
 
     /**
-     * @notice get RouxEditionCoCreate storage location
-     * @return $ RouxEditionCoCreate storage location
+     * @notice get RouxCommunityEdition storage location
+     * @return $ RouxCommunityEdition storage location
      */
-    function _storageCoCreate() internal pure returns (RouxEditionCoCreateStorage storage $) {
+    function _storageCommunity() internal pure returns (RouxCommunityEditionStorage storage $) {
         assembly {
-            $.slot := ROUX_EDITION_CO_CREATE_STORAGE_SLOT
+            $.slot := ROUX_COMMUNITY_EDITION_STORAGE_SLOT
         }
     }
 
@@ -132,7 +132,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
 
     /// @inheritdoc IRouxEdition
     function editionType() external pure override returns (EditionData.EditionType) {
-        return EditionData.EditionType.CoCreate;
+        return EditionData.EditionType.Community;
     }
 
     /**
@@ -140,7 +140,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @return allowlist enabled
      */
     function isAllowlistEnabled() external view returns (bool) {
-        return _storageCoCreate().allowListEnabled;
+        return _storageCommunity().allowListEnabled;
     }
 
     /**
@@ -149,7 +149,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @return allowlisted
      */
     function isAllowlisted(address account) external view returns (bool) {
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
         return !$$.allowListEnabled || $$.allowedAddresses.get(uint256(uint160(account)));
     }
 
@@ -159,7 +159,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @return add window end
      */
     function addWindow() external view returns (uint40, uint40) {
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
         return ($$.addWindowStart, $$.addWindowEnd);
     }
 
@@ -168,7 +168,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @return max adds per address
      */
     function maxAddsPerAddress() external view returns (uint32) {
-        return _storageCoCreate().maxAddsPerAddress;
+        return _storageCommunity().maxAddsPerAddress;
     }
 
     /**
@@ -177,7 +177,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @return adds per address
      */
     function getAddsPerAddress(address account) external view returns (uint32) {
-        return _storageCoCreate().addsPerAddress[account];
+        return _storageCommunity().addsPerAddress[account];
     }
 
     /* ------------------------------------------------- */
@@ -186,21 +186,21 @@ contract RouxEditionCoCreate is BaseRouxEdition {
 
     /// @inheritdoc IRouxEdition
     function add(EditionData.AddParams calldata p) external override nonReentrant returns (uint256) {
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
 
         // check add window
         if (block.timestamp < $$.addWindowStart || block.timestamp > $$.addWindowEnd) {
-            revert ErrorsLib.RouxEditionCoCreate_AddWindowClosed();
+            revert ErrorsLib.RouxCommunityEdition_AddWindowClosed();
         }
 
         // check allowlist
         if ($$.allowListEnabled && !$$.allowedAddresses.get(uint256(uint160(msg.sender)))) {
-            revert ErrorsLib.RouxEditionCoCreate_NotAllowed();
+            revert ErrorsLib.RouxCommunityEdition_NotAllowed();
         }
 
         // check max adds per address
         if ($$.addsPerAddress[msg.sender] >= $$.maxAddsPerAddress) {
-            revert ErrorsLib.RouxEditionCoCreate_MaxAddsPerAddressReached();
+            revert ErrorsLib.RouxCommunityEdition_MaxAddsPerAddressReached();
         }
 
         // update adds per address
@@ -218,9 +218,9 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param enable enable
      */
     function enableAllowlist(bool enable) external onlyOwner {
-        _storageCoCreate().allowListEnabled = enable;
+        _storageCommunity().allowListEnabled = enable;
 
-        emit EventsLib.CoCreateAllowlistEnabled(enable);
+        emit EventsLib.CommunityAllowlistEnabled(enable);
     }
 
     /**
@@ -228,7 +228,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param addresses addresses
      */
     function addToAllowlist(address[] calldata addresses) external onlyOwner {
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
         for (uint256 i = 0; i < addresses.length; ++i) {
             $$.allowedAddresses.set(uint256(uint160(addresses[i])));
         }
@@ -239,7 +239,7 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param account account
      */
     function removeFromAllowlist(address account) external onlyOwner {
-        _storageCoCreate().allowedAddresses.unset(uint256(uint160(account)));
+        _storageCommunity().allowedAddresses.unset(uint256(uint160(account)));
     }
 
     /**
@@ -248,9 +248,9 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param addWindowEnd add window end
      */
     function updateAddWindow(uint40 addWindowStart, uint40 addWindowEnd) external onlyOwner {
-        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        RouxCommunityEditionStorage storage $$ = _storageCommunity();
         if (addWindowStart >= addWindowEnd) {
-            revert ErrorsLib.RouxEditionCoCreate_InvalidAddWindow();
+            revert ErrorsLib.RouxCommunityEdition_InvalidAddWindow();
         }
 
         $$.addWindowStart = addWindowStart;
@@ -262,11 +262,11 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      * @param maxAddsPerAddress_ max adds per address
      */
     function updateMaxAddsPerAddress(uint32 maxAddsPerAddress_) external onlyOwner {
-        _storageCoCreate().maxAddsPerAddress = maxAddsPerAddress_;
+        _storageCommunity().maxAddsPerAddress = maxAddsPerAddress_;
     }
 
-    /// @dev collections not allowed for co-create editions
+    /// @dev collections not allowed for community editions
     function setCollection(address, bool) external view override onlyOwner {
-        revert ErrorsLib.RouxEditionCoCreate_NotAllowed();
+        revert ErrorsLib.RouxCommunityEdition_NotAllowed();
     }
 }

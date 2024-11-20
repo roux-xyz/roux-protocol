@@ -10,7 +10,7 @@ import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 
-contract SetCollection_RouxEditionCoCreate_Integration_Concrete_Test is CollectionBase {
+contract SetCollection_RouxCommunityEdition_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
     /* setup                                       */
     /* -------------------------------------------- */
@@ -26,7 +26,7 @@ contract SetCollection_RouxEditionCoCreate_Integration_Concrete_Test is Collecti
     /// @dev only owner can set collection
     function test__RevertWhen_SetCollection() external {
         vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEditionCoCreate_NotAllowed.selector);
-        coCreateEdition.setCollection(address(singleEditionCollection), true);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_NotAllowed.selector);
+        communityEdition.setCollection(address(singleEditionCollection), true);
     }
 }

@@ -5,9 +5,9 @@ import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 
-contract UpdateAddWindow_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract UpdateAddWindow_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -24,7 +24,7 @@ contract UpdateAddWindow_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
     function test__RevertWhen_UpdateAddWindow_NotOwner() external {
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        RouxEditionCoCreate(address(coCreateEdition)).updateAddWindow(
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(
             uint40(block.timestamp), uint40(block.timestamp + 1 days)
         );
     }
@@ -35,8 +35,8 @@ contract UpdateAddWindow_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         uint40 endTime = uint40(block.timestamp + 1 days);
 
         vm.prank(creator);
-        vm.expectRevert(ErrorsLib.RouxEditionCoCreate_InvalidAddWindow.selector);
-        RouxEditionCoCreate(address(coCreateEdition)).updateAddWindow(startTime, endTime);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_InvalidAddWindow.selector);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
     }
 
     /* -------------------------------------------- */
@@ -49,9 +49,9 @@ contract UpdateAddWindow_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         uint40 endTime = uint40(block.timestamp + 2 days);
 
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).updateAddWindow(startTime, endTime);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
 
-        (uint40 newStart, uint40 newEnd) = RouxEditionCoCreate(address(coCreateEdition)).addWindow();
+        (uint40 newStart, uint40 newEnd) = RouxCommunityEdition(address(communityEdition)).addWindow();
         assertEq(newStart, startTime);
         assertEq(newEnd, endTime);
     }

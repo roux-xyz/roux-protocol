@@ -69,8 +69,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /// @notice edition beacon
     address internal immutable _editionBeacon;
 
-    /// @notice co-create beacon
-    address internal immutable _coCreateBeacon;
+    /// @notice community beacon
+    address internal immutable _communityBeacon;
 
     /* -------------------------------------------- */
     /* constructor                                  */
@@ -79,17 +79,17 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /**
      * @notice constructor
      * @param editionBeacon edition beacon
-     * @param coCreateBeacon co-create beacon
+     * @param communityBeacon community beacon
      */
-    constructor(address editionBeacon, address coCreateBeacon) {
+    constructor(address editionBeacon, address communityBeacon) {
         // disable initialization of implementation contract
         _disableInitializers();
 
         // set edition beacon
         _editionBeacon = editionBeacon;
 
-        // set co-create beacon
-        _coCreateBeacon = coCreateBeacon;
+        // set community beacon
+        _communityBeacon = communityBeacon;
 
         // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
@@ -144,8 +144,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     }
 
     /// @inheritdoc IRouxEditionFactory
-    function createCoCreate(bytes calldata params) external nonReentrant returns (address) {
-        return _create(params, _coCreateBeacon);
+    function createCommunity(bytes calldata params) external nonReentrant returns (address) {
+        return _create(params, _communityBeacon);
     }
 
     /* -------------------------------------------- */

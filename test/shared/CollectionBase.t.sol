@@ -47,7 +47,7 @@ abstract contract CollectionBase is BaseTest {
     // multi edition collection create params
     CollectionData.MultiEditionCreateParams multiEditionCollectionParams;
 
-    // mixed multi edition collection - with co-created tokens
+    // mixed multi edition collection - with communityd tokens
     RouxEdition[] mixedMultiEditionItemTargets = new RouxEdition[](3);
     uint256[] mixedMultiEditionItemIds = new uint256[](3);
     MultiEditionCollection mixedMultiEditionCollection;
@@ -149,7 +149,7 @@ abstract contract CollectionBase is BaseTest {
     function _createMixedMultiEditionItems() internal {
         mixedMultiEditionItemTargets[0] = _createEdition(creator);
         mixedMultiEditionItemTargets[1] = _createEdition(users.creator_1);
-        mixedMultiEditionItemTargets[2] = _createCoCreateEdition(users.creator_2);
+        mixedMultiEditionItemTargets[2] = _createCommunityEdition(users.creator_2);
 
         (, mixedMultiEditionItemIds[0]) = _addToken(mixedMultiEditionItemTargets[0]);
         (, mixedMultiEditionItemIds[1]) = _addToken(mixedMultiEditionItemTargets[1]);

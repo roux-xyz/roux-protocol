@@ -5,10 +5,10 @@ import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
-import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
-contract UpdateMaxAddsPerAddress_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract UpdateMaxAddsPerAddress_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     EditionData.AddParams addParams;
     /* -------------------------------------------- */
     /* setup                                        */
@@ -27,7 +27,7 @@ contract UpdateMaxAddsPerAddress_RouxEditionCoCreate_Unit_Concrete_Test is BaseT
     function test__RevertWhen_UpdateMaxAddsPerAddress_NotOwner() external {
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        RouxEditionCoCreate(address(coCreateEdition)).updateMaxAddsPerAddress(2);
+        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(2);
     }
 
     /* -------------------------------------------- */
@@ -39,14 +39,14 @@ contract UpdateMaxAddsPerAddress_RouxEditionCoCreate_Unit_Concrete_Test is BaseT
         uint32 newMaxAdds = 2;
 
         vm.prank(creator);
-        RouxEditionCoCreate(address(coCreateEdition)).updateMaxAddsPerAddress(newMaxAdds);
+        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(newMaxAdds);
 
-        assertEq(RouxEditionCoCreate(address(coCreateEdition)).maxAddsPerAddress(), newMaxAdds);
-
-        vm.prank(users.creator_2);
-        coCreateEdition.add(addParams);
+        assertEq(RouxCommunityEdition(address(communityEdition)).maxAddsPerAddress(), newMaxAdds);
 
         vm.prank(users.creator_2);
-        coCreateEdition.add(addParams);
+        communityEdition.add(addParams);
+
+        vm.prank(users.creator_2);
+        communityEdition.add(addParams);
     }
 }

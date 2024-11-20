@@ -14,7 +14,7 @@ contract UpgradeRouxEditionFactory is BaseScript {
     function run(
         address proxyAddress,
         address editionBeacon,
-        address coCreateBeacon
+        address communityBeacon
     )
         public
         broadcast
@@ -32,7 +32,7 @@ contract UpgradeRouxEditionFactory is BaseScript {
 
         // deploy new implementation with the constructor parameters
         console.log("Deploying new RouxEditionFactory implementation...");
-        newRouxEditionFactoryImpl = new RouxEditionFactory(editionBeacon, coCreateBeacon);
+        newRouxEditionFactoryImpl = new RouxEditionFactory(editionBeacon, communityBeacon);
 
         console.log("New RouxEditionFactory Implementation: %s", address(newRouxEditionFactoryImpl));
 

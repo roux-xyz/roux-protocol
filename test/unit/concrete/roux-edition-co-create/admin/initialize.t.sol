@@ -3,10 +3,10 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
-import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 
-contract Initialize_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
+contract Initialize_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
     /* setup                                        */
     /* -------------------------------------------- */
@@ -21,10 +21,10 @@ contract Initialize_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when already initialized
     function test__RevertWhen_AlreadyInitialized() external {
-        bytes memory initData = abi.encodeWithSelector(coCreateEdition.initialize.selector, CONTRACT_URI);
+        bytes memory initData = abi.encodeWithSelector(communityEdition.initialize.selector, CONTRACT_URI);
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        coCreateEdition.initialize(initData);
+        communityEdition.initialize(initData);
     }
 
     /* -------------------------------------------- */
@@ -36,7 +36,7 @@ contract Initialize_RouxEditionCoCreate_Unit_Concrete_Test is BaseTest {
         bytes memory initData = abi.encode(CONTRACT_URI);
 
         vm.prank(users.creator_1);
-        RouxEditionCoCreate newEdition = RouxEditionCoCreate(factory.createCoCreate(initData));
+        RouxCommunityEdition newEdition = RouxCommunityEdition(factory.createCommunity(initData));
 
         uint256 allowance = mockUSDC.allowance(address(newEdition), address(controller));
         assertEq(allowance, type(uint256).max);
