@@ -131,20 +131,8 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
      * @notice initialize RouxEdition
      * @param params encoded parameters
      */
-    function initialize(bytes calldata params) external initializer nonReentrant {
-        RouxEditionStorage storage $ = _storage();
-
-        // editionFactory transfers ownership to caller after initialization
-        _initializeOwner(msg.sender);
-
-        // approve controller
-        _currency.safeApprove(address(_controller), type(uint256).max);
-
-        // decode params
-        string memory contractURI_ = abi.decode(params, (string));
-
-        // set contract uri
-        $.contractURI = contractURI_;
+    function initialize(bytes calldata params) external virtual initializer nonReentrant {
+        _initialize(params);
     }
 
     /* ------------------------------------------------- */
@@ -353,7 +341,6 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
         bytes calldata /*  data */
     )
         external
-        payable
         nonReentrant
     {
         // validate caller
@@ -370,7 +357,7 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
     }
 
     /// @inheritdoc IRouxEdition
-    function collectionMultiMint(address to, uint256 id, bytes calldata /* data */ ) external payable nonReentrant {
+    function collectionMultiMint(address to, uint256 id, bytes calldata /* data */ ) external nonReentrant {
         // validate caller is collection
         if (!_collectionFactory.isCollection(msg.sender)) revert ErrorsLib.RouxEdition_InvalidCaller();
 
@@ -426,7 +413,6 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
     function add(EditionData.AddParams calldata p) external virtual returns (uint256);
 
     /**
-     * a
      * @notice update uri
      * @param id token id to update
      * @param ipfsHash new uri
@@ -486,35 +472,8 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
         IExtension(extension).setMintParams(id, params);
     }
 
-    /**
-     * @notice set collection
-     * @param collection collection address
-     * @param enable enable or disable collection
-     *
-     * @dev bypasses validation that token is ungated and exists; frontends should
-     *      validate that token exists before calling this function as convenience
-     */
-    function setCollection(address collection, bool enable) external onlyOwner {
-        if (enable) {
-            // validate extension is not zero
-            if (collection == address(0)) revert ErrorsLib.RouxEdition_InvalidCollection();
-
-            // owner of the collection must be the caller (safety check)
-            if (Collection(collection).owner() != msg.sender) revert ErrorsLib.RouxEdition_InvalidCollection();
-
-            // validate extension interface support
-            if (!ICollection(collection).supportsInterface(type(ICollection).interfaceId)) {
-                revert ErrorsLib.RouxEdition_InvalidCollection();
-            }
-
-            // set collection
-            _storage().collections.set(uint256(uint160(collection)));
-        } else {
-            // unset collection
-            _storage().collections.unset(uint256(uint160(collection)));
-        }
-        emit EventsLib.CollectionSet(collection, enable);
-    }
+    /// @dev set collection - only available in RouxEdition
+    function setCollection(address collection, bool enable) external virtual;
 
     /**
      * @notice update default price
@@ -571,6 +530,26 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
     /* ------------------------------------------------- */
     /* internal                                          */
     /* ------------------------------------------------- */
+
+    /**
+     * @notice internal function to initialize RouxEdition
+     * @param params encoded parameters
+     */
+    function _initialize(bytes calldata params) internal {
+        RouxEditionStorage storage $ = _storage();
+
+        // editionFactory transfers ownership to caller after initialization
+        _initializeOwner(msg.sender);
+
+        // approve controller
+        _currency.safeApprove(address(_controller), type(uint256).max);
+
+        // decode params
+        string memory contractURI_ = abi.decode(params, (string));
+
+        // set contract uri
+        $.contractURI = contractURI_;
+    }
 
     /**
      * @notice add token internal function

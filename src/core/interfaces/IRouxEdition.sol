@@ -134,6 +134,12 @@ interface IRouxEdition {
      */
     function hasParent(uint256 id) external view returns (bool);
 
+    /**
+     * @notice edition type
+     * @return edition type
+     */
+    function editionType() external view returns (EditionData.EditionType);
+
     /* -------------------------------------------- */
     /* write functions                              */
     /* -------------------------------------------- */
@@ -200,7 +206,7 @@ interface IRouxEdition {
      *        only be minted as part of a collection
      *      - bypasses validation that token exists
      */
-    function collectionSingleMint(address to, uint256[] memory ids, bytes calldata data) external payable;
+    function collectionSingleMint(address to, uint256[] memory ids, bytes calldata data) external;
 
     /**
      * @notice mint a token for a multi edition collection
@@ -212,7 +218,7 @@ interface IRouxEdition {
      *      - validates that collection was created by `CollectionFactory`
      *      - validates that token exists
      */
-    function collectionMultiMint(address to, uint256 id, bytes calldata data) external payable;
+    function collectionMultiMint(address to, uint256 id, bytes calldata data) external;
 
     /**
      * @notice admin mint tokens

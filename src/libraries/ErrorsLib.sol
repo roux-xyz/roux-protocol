@@ -144,4 +144,13 @@ library ErrorsLib {
 
     /// @notice not allowed
     error RouxEditionCoCreate_NotAllowed();
+
+    /// @notice add window closed
+    error RouxEditionCoCreate_AddWindowClosed();
+
+    /// @notice invalid add window
+    error RouxEditionCoCreate_InvalidAddWindow();
+
+    /// @notice max adds per address reached
+    error RouxEditionCoCreate_MaxAddsPerAddressReached();
 }
