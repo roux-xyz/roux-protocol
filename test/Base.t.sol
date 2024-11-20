@@ -258,7 +258,7 @@ abstract contract BaseTest is Test, Events, Defaults {
         edition = _deployEdition();
 
         // deploy test co-create edition
-        coCreateEdition = RouxEdition(address(_createCoCreateEdition(creator)));
+        coCreateEdition = _createCoCreateEdition(creator);
 
         // add default token
         _addToken(edition);
@@ -269,13 +269,16 @@ abstract contract BaseTest is Test, Events, Defaults {
         // approve users
         vm.prank(user);
         mockUSDC.approve(address(edition), type(uint256).max);
-
         vm.prank(users.user_1);
         mockUSDC.approve(address(edition), type(uint256).max);
 
         vm.prank(user);
-        mockUSDC.approve(address(mintPortal), type(uint256).max);
+        mockUSDC.approve(address(coCreateEdition), type(uint256).max);
+        vm.prank(users.user_1);
+        mockUSDC.approve(address(coCreateEdition), type(uint256).max);
 
+        vm.prank(user);
+        mockUSDC.approve(address(mintPortal), type(uint256).max);
         vm.prank(users.user_1);
         mockUSDC.approve(address(mintPortal), type(uint256).max);
     }
@@ -561,13 +564,13 @@ abstract contract BaseTest is Test, Events, Defaults {
     }
 
     /// @dev create co-create edition
-    function _createCoCreateEdition(address user_) internal returns (RouxEditionCoCreate) {
+    function _createCoCreateEdition(address user_) internal returns (RouxEdition) {
         vm.startPrank(user_);
 
         bytes memory params = abi.encode(CONTRACT_URI);
 
         // create edition instance
-        RouxEditionCoCreate coCreateEdition_ = RouxEditionCoCreate(factory.createCoCreate(params));
+        RouxEdition coCreateEdition_ = RouxEdition(factory.createCoCreate(params));
         vm.label({ account: address(coCreateEdition_), newLabel: "New Edition" });
 
         vm.stopPrank();

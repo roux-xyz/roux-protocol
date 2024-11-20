@@ -149,7 +149,8 @@ contract CollectionFactoryTest is CollectionBase {
 
     /// @dev total collections
     function test__TotalCollections() external {
-        assertEq(collectionFactory.totalCollections(), 2);
+        uint256 initialTotal = 3;
+        assertEq(collectionFactory.totalCollections(), initialTotal);
 
         address[] memory collections = new address[](3);
 
@@ -162,6 +163,6 @@ contract CollectionFactoryTest is CollectionBase {
         vm.prank(curator);
         collections[2] = collectionFactory.createMulti(multiEditionCollectionParams);
 
-        assertEq(collectionFactory.totalCollections(), 5);
+        assertEq(collectionFactory.totalCollections(), initialTotal + 3);
     }
 }
