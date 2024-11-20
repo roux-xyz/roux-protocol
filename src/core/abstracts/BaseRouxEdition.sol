@@ -43,8 +43,7 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
 
     /**
      * @notice RouxEdition storage slot
-     * @dev keccak256(abi.encode(uint256(keccak256("rouxEdition.rouxEditionStorage")) - 1)) &
-     * ~bytes32(uint256(0xff));
+     * @dev keccak256(abi.encode(uint256(keccak256("rouxEdition.rouxEditionStorage")) - 1)) & ~bytes32(uint256(0xff));
      */
     bytes32 internal constant ROUX_EDITION_STORAGE_SLOT =
         0xef2f5668c8b56b992983464f11901aec8635a37d61a520221ade259ca1a88200;
@@ -83,7 +82,7 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
 
     /**
      * @notice RouxEdition storage
-     * @custom:storage-location erc7201:rouxEdition.rouxEditionStorages
+     * @custom:storage-location erc7201:rouxEdition.rouxEditionStorage
      * @param tokenId current token id
      * @param contractURI contract uri
      * @param collections mapping of enabled collections

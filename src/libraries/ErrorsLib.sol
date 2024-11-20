@@ -137,4 +137,11 @@ library ErrorsLib {
 
     /// @notice insufficient balance
     error RouxMintPortal_InsufficientBalance();
+
+    /* ------------------------------------------------- */
+    /* RouxEditionCoCreate                                */
+    /* ------------------------------------------------- */
+
+    /// @notice not allowed
+    error RouxEditionCoCreate_NotAllowed();
 }
