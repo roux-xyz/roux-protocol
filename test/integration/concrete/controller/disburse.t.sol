@@ -34,6 +34,21 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE);
     }
 
+    /// @dev successfully disburses funds - community edition
+    function test__Disburse_Mint_Community() external {
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.Deposited({
+            edition: address(communityEdition),
+            tokenId: 1,
+            recipient: controller.fundsRecipient(address(communityEdition), 1),
+            amount: TOKEN_PRICE
+        });
+
+        _mintToken(communityEdition, 1, user);
+
+        assertEq(controller.balance(controller.fundsRecipient(address(communityEdition), 1)), TOKEN_PRICE);
+    }
+
     /// @dev successfully disburses funds on mint with referral
     function test__Disburse_Mint_Referral() external {
         uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
@@ -42,6 +57,17 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         edition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: user, data: "" });
 
         assertEq(controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee);
+        assertEq(controller.balance(user), referralFee);
+    }
+
+    /// @dev successfully disburses funds on mint with referral - community edition
+    function test__Disburse_Mint_Referral_Community() external {
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
+
+        vm.prank(user);
+        communityEdition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: user, data: "" });
+
+        assertEq(controller.balance(controller.fundsRecipient(address(communityEdition), 1)), TOKEN_PRICE - referralFee);
         assertEq(controller.balance(user), referralFee);
     }
 
@@ -59,6 +85,26 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
 
         assertEq(
             controller.balance(controller.fundsRecipient(address(edition), 1)), TOKEN_PRICE - referralFee - platformFee
+        );
+        assertEq(controller.balance(users.user_1), referralFee);
+        assertEq(controller.platformFeeBalance(), platformFee);
+    }
+
+    /// @dev successfully disburses funds on mint with referral and platform fee - community edition
+    function test__Disburse_Mint_ReferralAndPlatformFee_Community() external {
+        // set platform fee
+        vm.prank(users.deployer);
+        controller.enablePlatformFee(true);
+
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
+        uint256 platformFee = (TOKEN_PRICE * PLATFORM_FEE) / 10_000;
+
+        vm.prank(user);
+        communityEdition.mint({ to: user, id: 1, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
+
+        assertEq(
+            controller.balance(controller.fundsRecipient(address(communityEdition), 1)),
+            TOKEN_PRICE - referralFee - platformFee
         );
         assertEq(controller.balance(users.user_1), referralFee);
         assertEq(controller.platformFeeBalance(), platformFee);
@@ -89,6 +135,31 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         assertEq(controller.pending(address(edition), 1), parentShare);
     }
 
+    /// @dev successfully disburses funds on mint of fork - community edition
+    function test__Disburse_Mint_Fork_Community() external {
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(communityEdition, 1, users.creator_1);
+
+        _approveToken(address(forkEdition), user);
+
+        (uint256 parentShare, uint256 childShare) = _computeSplit(communityEdition, tokenId, TOKEN_PRICE);
+
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.Deposited({
+            edition: address(forkEdition),
+            tokenId: 1,
+            recipient: controller.fundsRecipient(address(forkEdition), 1),
+            amount: childShare
+        });
+
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.PendingUpdated({ parent: address(communityEdition), parentTokenId: 1, amount: parentShare });
+
+        _mintToken(forkEdition, tokenId, user);
+
+        assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), 1)), childShare);
+        assertEq(controller.pending(address(communityEdition), 1), parentShare);
+    }
+
     /// @dev successfully disburses funds on mint of fork with referral
     function test__Disburse_Mint_Fork_Referral() external {
         // create fork
@@ -110,6 +181,30 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase, Collec
         // check balances
         assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), tokenId)), childShare);
         assertEq(controller.pending(address(edition), 1), parentShare);
+        assertEq(controller.balance(users.user_1), referralFee);
+    }
+
+    /// @dev successfully disburses funds on mint of fork with referral - community edition
+    function test__Disburse_Mint_Fork_Referral_Community() external {
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(communityEdition, 1, users.creator_1);
+
+        // approve fork
+        _approveToken(address(forkEdition), user);
+
+        // compute referral fee
+        uint256 referralFee = (TOKEN_PRICE * REFERRAL_FEE) / 10_000;
+
+        // mint with referral
+        vm.prank(user);
+        forkEdition.mint({ to: user, id: tokenId, quantity: 1, extension: address(0), referrer: users.user_1, data: "" });
+
+        // compute split
+        (uint256 parentShare, uint256 childShare) = _computeSplit(communityEdition, tokenId, TOKEN_PRICE - referralFee);
+
+        // check balances
+        assertEq(controller.balance(controller.fundsRecipient(address(forkEdition), tokenId)), childShare);
+        assertEq(controller.pending(address(communityEdition), 1), parentShare);
         assertEq(controller.balance(users.user_1), referralFee);
     }
 

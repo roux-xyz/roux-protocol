@@ -135,6 +135,9 @@ contract Add_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
         // create edition instance
         IRouxEdition communityEdition_ = _createCommunityEdition(creator);
 
+        // owner is creator
+        assertEq(Ownable(address(communityEdition_)).owner(), creator);
+
         // add token
         vm.prank(users.creator_2);
         uint256 tokenId_ = communityEdition_.add(addParams);
