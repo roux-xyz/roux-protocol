@@ -26,7 +26,7 @@ import { EventsLib } from "src/libraries/EventsLib.sol";
  */
 
 /**
- * @title roux edition co-cocreate
+ * @title roux edition co-create
  * @author roux
  * @custom:security-contact security@roux.app
  *
@@ -49,16 +49,24 @@ contract RouxEditionCoCreate is BaseRouxEdition {
         0xf8ba7ec7e39a3e47b5b1fcdc921632116b09fd1c7349da6a756bf89cc05f3b00;
 
     /* ------------------------------------------------- */
-    /* structures                                    */
+    /* structures                                     */
     /* ------------------------------------------------- */
 
     /**
      * @notice RouxEditionCoCreate storage
      * @custom:storage-location erc7201:rouxEditionCoCreate.rouxEditionCoCreateStorage
-     * @param enabled enabled
+     * @param addWindowStart add window start
+     * @param addWindowEnd add window end
+     * @param maxAddsPerAddress max adds per address
+     * @param addsPerAddress adds per address
+     * @param allowListEnabled allowlist enabled
      * @param allowedAddresses allowed addresses
      */
     struct RouxEditionCoCreateStorage {
+        uint40 addWindowStart;
+        uint40 addWindowEnd;
+        uint32 maxAddsPerAddress;
+        mapping(address => uint32) addsPerAddress;
         bool allowListEnabled;
         LibBitmap.Bitmap allowedAddresses;
     }
@@ -84,6 +92,27 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     { }
 
     /* ------------------------------------------------- */
+    /* initializer                                       */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice initialize RouxEditionCoCreate
+     * @param params encoded parameters
+     */
+    function initialize(bytes calldata params) external override initializer {
+        // call parent initialize first
+        _initialize(params);
+
+        // get storage
+        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+
+        // set default values
+        $$.addWindowStart = uint40(block.timestamp);
+        $$.addWindowEnd = uint40(block.timestamp + 14 days);
+        $$.maxAddsPerAddress = 1;
+    }
+
+    /* ------------------------------------------------- */
     /* storage                                           */
     /* ------------------------------------------------- */
 
@@ -100,6 +129,11 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     /* ------------------------------------------------- */
     /* view                                              */
     /* ------------------------------------------------- */
+
+    /// @inheritdoc IRouxEdition
+    function editionType() external pure override returns (EditionData.EditionType) {
+        return EditionData.EditionType.CoCreate;
+    }
 
     /**
      * @notice is allowlist enabled
@@ -119,6 +153,33 @@ contract RouxEditionCoCreate is BaseRouxEdition {
         return !$$.allowListEnabled || $$.allowedAddresses.get(uint256(uint160(account)));
     }
 
+    /**
+     * @notice get add window
+     * @return add window start
+     * @return add window end
+     */
+    function addWindow() external view returns (uint40, uint40) {
+        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        return ($$.addWindowStart, $$.addWindowEnd);
+    }
+
+    /**
+     * @notice get max adds per address
+     * @return max adds per address
+     */
+    function maxAddsPerAddress() external view returns (uint32) {
+        return _storageCoCreate().maxAddsPerAddress;
+    }
+
+    /**
+     * @notice get adds per address
+     * @param account account
+     * @return adds per address
+     */
+    function getAddsPerAddress(address account) external view returns (uint32) {
+        return _storageCoCreate().addsPerAddress[account];
+    }
+
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
@@ -127,9 +188,23 @@ contract RouxEditionCoCreate is BaseRouxEdition {
     function add(EditionData.AddParams calldata p) external override nonReentrant returns (uint256) {
         RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
 
+        // check add window
+        if (block.timestamp < $$.addWindowStart || block.timestamp > $$.addWindowEnd) {
+            revert ErrorsLib.RouxEditionCoCreate_AddWindowClosed();
+        }
+
+        // check allowlist
         if ($$.allowListEnabled && !$$.allowedAddresses.get(uint256(uint160(msg.sender)))) {
             revert ErrorsLib.RouxEditionCoCreate_NotAllowed();
         }
+
+        // check max adds per address
+        if ($$.addsPerAddress[msg.sender] >= $$.maxAddsPerAddress) {
+            revert ErrorsLib.RouxEditionCoCreate_MaxAddsPerAddressReached();
+        }
+
+        // update adds per address
+        $$.addsPerAddress[msg.sender]++;
 
         return _add(p);
     }
@@ -165,5 +240,33 @@ contract RouxEditionCoCreate is BaseRouxEdition {
      */
     function removeFromAllowlist(address account) external onlyOwner {
         _storageCoCreate().allowedAddresses.unset(uint256(uint160(account)));
+    }
+
+    /**
+     * @notice update add window
+     * @param addWindowStart add window start
+     * @param addWindowEnd add window end
+     */
+    function updateAddWindow(uint40 addWindowStart, uint40 addWindowEnd) external onlyOwner {
+        RouxEditionCoCreateStorage storage $$ = _storageCoCreate();
+        if (addWindowStart >= addWindowEnd) {
+            revert ErrorsLib.RouxEditionCoCreate_InvalidAddWindow();
+        }
+
+        $$.addWindowStart = addWindowStart;
+        $$.addWindowEnd = addWindowEnd;
+    }
+
+    /**
+     * @notice update max adds per address
+     * @param maxAddsPerAddress_ max adds per address
+     */
+    function updateMaxAddsPerAddress(uint32 maxAddsPerAddress_) external onlyOwner {
+        _storageCoCreate().maxAddsPerAddress = maxAddsPerAddress_;
+    }
+
+    /// @dev collections not allowed for co-create editions
+    function setCollection(address, bool) external view override onlyOwner {
+        revert ErrorsLib.RouxEditionCoCreate_NotAllowed();
     }
 }
