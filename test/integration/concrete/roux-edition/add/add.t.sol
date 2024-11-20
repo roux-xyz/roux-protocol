@@ -28,7 +28,7 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev controller data is set after add
-    function test__AddToken_ControllerDataIsSet() external useEditionAdmin(edition) {
+    function test__AddToken_ControllerDataIsSet() external useEditionAdmin(address(edition)) {
         address fundsRecipient = users.split;
         uint256 profitShare = 5_000;
 
@@ -45,7 +45,7 @@ contract Add_RouxEdition_Integration_Concrete_Test is BaseTest {
     }
 
     /// @dev registry data is correctly set after add - not a fork
-    function test__AddToken_RegistryDataIsSet() external useEditionAdmin(edition) {
+    function test__AddToken_RegistryDataIsSet() external useEditionAdmin(address(edition)) {
         uint256 tokenId_ = edition.add(addParams);
 
         (address parentEdition_, uint256 parentTokenId_, uint256 idx) = registry.attribution(address(edition), tokenId_);

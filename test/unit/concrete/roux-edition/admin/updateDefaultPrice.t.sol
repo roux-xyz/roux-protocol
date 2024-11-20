@@ -32,7 +32,7 @@ contract UpdateDefaultPrice_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates default price
-    function test__UpdateDefaultPrice() external useEditionAdmin(edition) {
+    function test__UpdateDefaultPrice() external useEditionAdmin(address(edition)) {
         uint128 currentPrice = edition.defaultPrice(1);
         uint128 newPrice = 5 * 10 ** 5;
 

@@ -31,7 +31,7 @@ contract UpdateExtensionParams_RouxEdition_Integration_Concrete_Test is BaseTest
     /* -------------------------------------------- */
 
     /// @dev successfully updates extension params
-    function test__UpdateExtensionParams() external useEditionAdmin(edition) {
+    function test__UpdateExtensionParams() external useEditionAdmin(address(edition)) {
         uint128 customPrice = 5 * 10 ** 5; // $0.50 USDC
 
         // add extension to token

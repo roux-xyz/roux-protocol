@@ -58,7 +58,7 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully sets extension
-    function test__SetExtension() external useEditionAdmin(edition) {
+    function test__SetExtension() external useEditionAdmin(address(edition)) {
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.ExtensionSet(address(mockExtension), 1, true);
 
@@ -68,7 +68,7 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
     }
 
     /// @dev successfully disables extension
-    function test__DisableExtension() external useEditionAdmin(edition) {
+    function test__DisableExtension() external useEditionAdmin(address(edition)) {
         edition.setExtension(1, address(mockExtension), true, "");
 
         assertTrue(edition.isRegisteredExtension(1, address(mockExtension)));
@@ -82,7 +82,7 @@ contract SetExtension_RouxEdition_Integration_Concrete_Test is BaseTest {
     }
 
     /// @dev set extension with mint params
-    function test__SetExtension_WithMintParams() external useEditionAdmin(edition) {
+    function test__SetExtension_WithMintParams() external useEditionAdmin(address(edition)) {
         uint128 customPrice = 5 * 10 ** 5;
 
         edition.setExtension(1, address(mockExtension), true, abi.encode(customPrice));
