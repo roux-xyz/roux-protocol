@@ -13,6 +13,7 @@ import { IRegistry } from "src/core/interfaces/IRegistry.sol";
 import { Registry } from "src/core/Registry.sol";
 import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/core/RouxEdition.sol";
+import { RouxEditionCoCreate } from "src/core/RouxEditionCoCreate.sol";
 import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
 import { NoOp } from "src/periphery/NoOp.sol";
 
@@ -75,11 +76,20 @@ abstract contract BaseTest is Test, Events, Defaults {
     Controller internal controllerImpl;
     Controller internal controller;
 
-    // edition
+    // no-op
     NoOp internal noOpImpl;
+
+    // edition
     RouxEdition internal editionImpl;
     UpgradeableBeacon internal editionBeacon;
     RouxEdition internal edition;
+
+    // co-create edition
+    RouxEdition internal coCreateEditionImpl;
+    UpgradeableBeacon internal coCreateBeacon;
+    RouxEdition internal coCreateEdition;
+
+    // edition factory
     RouxEditionFactory internal factoryImpl;
     RouxEditionFactory internal factory;
 
@@ -165,11 +175,17 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy token bound contracts
         (erc6551Registry, accountImpl) = _deployTokenBoundContracts();
 
-        // deploy roux edition beacon
+        // deploy roux edition beacon with no-op implementation
         editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(noOpImpl) });
 
+        // deploy co-create edition beacon with no-op implementation
+        coCreateBeacon = _deployCoCreateEditionBeacon({ coCreateEditionImpl_: address(noOpImpl) });
+
         // deploy roux edition factory impl
-        factoryImpl = _deployEditionFactoryImpl({ editionBeacon_: address(editionBeacon) });
+        factoryImpl = _deployEditionFactoryImpl({
+            editionBeacon_: address(editionBeacon),
+            coCreateBeacon_: address(coCreateBeacon)
+        });
 
         // deploy roux edition factory proxy
         factory = _deployEditionFactoryProxy({ factoryImpl_: address(factoryImpl) });
@@ -215,8 +231,23 @@ abstract contract BaseTest is Test, Events, Defaults {
             registry_: address(registry)
         });
 
+        // deploy co-create edition impl
+        coCreateEditionImpl = RouxEdition(
+            address(
+                _deployCoCreateEditionImpl({
+                    editionFactory_: address(factory),
+                    collectionFactory_: address(collectionFactory),
+                    controller_: address(controller),
+                    registry_: address(registry)
+                })
+            )
+        );
+
         // upgrade edition beacon
         editionBeacon.upgradeTo(address(editionImpl));
+
+        // upgrade co-create edition beacon
+        coCreateBeacon.upgradeTo(address(coCreateEditionImpl));
 
         // deploy mint portal
         mintPortal = _deployMintPortal(address(mockUSDC), address(factory), address(collectionFactory));
@@ -226,8 +257,14 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy test edition
         edition = _deployEdition();
 
+        // deploy test co-create edition
+        coCreateEdition = RouxEdition(address(_createCoCreateEdition(creator)));
+
         // add default token
         _addToken(edition);
+
+        // add default token to co-create edition
+        _addToken(coCreateEdition);
 
         // approve users
         vm.prank(user);
@@ -316,14 +353,43 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev deploy edition beacon
     function _deployEditionBeacon(address rouxEditionImpl_) internal returns (UpgradeableBeacon editionBeacon_) {
-        //TODO: check if can use msg.msg.sender
         editionBeacon_ = new UpgradeableBeacon(address(rouxEditionImpl_), users.deployer);
         vm.label({ account: address(editionBeacon_), newLabel: "EditionBeacon" });
     }
 
+    /// @dev deploy co-create edition implementation
+    function _deployCoCreateEditionImpl(
+        address editionFactory_,
+        address collectionFactory_,
+        address controller_,
+        address registry_
+    )
+        internal
+        returns (RouxEditionCoCreate coCreateEditionImpl_)
+    {
+        coCreateEditionImpl_ =
+            RouxEditionCoCreate(new RouxEditionCoCreate(editionFactory_, collectionFactory_, controller_, registry_));
+        vm.label({ account: address(coCreateEditionImpl_), newLabel: "RouxEditionCoCreateImpl" });
+    }
+
+    /// @dev deploy co-create edition beacon
+    function _deployCoCreateEditionBeacon(address coCreateEditionImpl_)
+        internal
+        returns (UpgradeableBeacon coCreateBeacon_)
+    {
+        coCreateBeacon_ = new UpgradeableBeacon(address(coCreateEditionImpl_), users.deployer);
+        vm.label({ account: address(coCreateBeacon_), newLabel: "CoCreateEditionBeacon" });
+    }
+
     /// @dev deploy edition factory implementation
-    function _deployEditionFactoryImpl(address editionBeacon_) internal returns (RouxEditionFactory factoryImpl_) {
-        factoryImpl_ = new RouxEditionFactory(editionBeacon_);
+    function _deployEditionFactoryImpl(
+        address editionBeacon_,
+        address coCreateBeacon_
+    )
+        internal
+        returns (RouxEditionFactory factoryImpl_)
+    {
+        factoryImpl_ = new RouxEditionFactory(editionBeacon_, coCreateBeacon_);
         vm.label({ account: address(factoryImpl_), newLabel: "RouxEditionFactoryImpl" });
     }
 
@@ -485,18 +551,28 @@ abstract contract BaseTest is Test, Events, Defaults {
 
         bytes memory params = abi.encode(CONTRACT_URI);
 
-        // compute address
-        // address addr = factory.getAddress(user_, params);
-
         // create edition instance
         RouxEdition edition_ = RouxEdition(factory.create(params));
         vm.label({ account: address(edition), newLabel: "New Edition" });
 
-        // assertEq(addr, address(edition_));
-
         vm.stopPrank();
 
         return edition_;
+    }
+
+    /// @dev create co-create edition
+    function _createCoCreateEdition(address user_) internal returns (RouxEditionCoCreate) {
+        vm.startPrank(user_);
+
+        bytes memory params = abi.encode(CONTRACT_URI);
+
+        // create edition instance
+        RouxEditionCoCreate coCreateEdition_ = RouxEditionCoCreate(factory.createCoCreate(params));
+        vm.label({ account: address(coCreateEdition_), newLabel: "New Edition" });
+
+        vm.stopPrank();
+
+        return coCreateEdition_;
     }
 
     /// @dev add token
@@ -673,7 +749,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     /* modifiers                                    */
     /* -------------------------------------------- */
 
-    modifier useEditionAdmin(RouxEdition edition_) {
+    modifier useEditionAdmin(address edition_) {
         address admin = Ownable(address(edition_)).owner();
 
         vm.startPrank(admin);
