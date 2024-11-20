@@ -2501,7 +2501,7 @@ export const rouxEditionAbi = [
     ],
     name: 'collectionMultiMint',
     outputs: [],
-    stateMutability: 'payable',
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -2512,7 +2512,7 @@ export const rouxEditionAbi = [
     ],
     name: 'collectionSingleMint',
     outputs: [],
-    stateMutability: 'payable',
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -2588,6 +2588,15 @@ export const rouxEditionAbi = [
     name: 'disableGate',
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'editionType',
+    outputs: [
+      { name: '', internalType: 'enum EditionData.EditionType', type: 'uint8' },
+    ],
+    stateMutability: 'pure',
   },
   {
     type: 'function',
@@ -3179,6 +3188,7 @@ export const rouxEditionFactoryAbi = [
     type: 'constructor',
     inputs: [
       { name: 'editionBeacon', internalType: 'address', type: 'address' },
+      { name: 'communityBeacon', internalType: 'address', type: 'address' },
     ],
     stateMutability: 'nonpayable',
   },
@@ -3209,6 +3219,13 @@ export const rouxEditionFactoryAbi = [
     type: 'function',
     inputs: [{ name: 'params', internalType: 'bytes', type: 'bytes' }],
     name: 'create',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'params', internalType: 'bytes', type: 'bytes' }],
+    name: 'createCommunity',
     outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'nonpayable',
   },
