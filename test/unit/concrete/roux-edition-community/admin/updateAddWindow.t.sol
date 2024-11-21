@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import { BaseTest } from "test/Base.t.sol";
 import { Ownable } from "solady/auth/Ownable.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EventsLib } from "src/libraries/EventsLib.sol";
 import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
@@ -22,6 +23,20 @@ contract UpdateAddWindow_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
 
     /// @dev reverts when not owner
     function test__RevertWhen_UpdateAddWindow_NotOwner() external {
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(
+            uint40(block.timestamp), uint40(block.timestamp + 1 days)
+        );
+    }
+
+    /// @dev reverts when incorrect role is granted
+    function test__RevertWhen_IncorrectRoleGranted() external {
+        uint256 ROLE = RouxCommunityEdition(address(communityEdition)).ALLOWLIST_ADMIN_ROLE();
+
+        vm.prank(creator);
+        OwnableRoles(address(communityEdition)).grantRoles(user, ROLE);
+
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
         RouxCommunityEdition(address(communityEdition)).updateAddWindow(
@@ -49,6 +64,24 @@ contract UpdateAddWindow_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
         uint40 endTime = uint40(block.timestamp + 2 days);
 
         vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
+
+        (uint40 newStart, uint40 newEnd) = RouxCommunityEdition(address(communityEdition)).addWindow();
+        assertEq(newStart, startTime);
+        assertEq(newEnd, endTime);
+    }
+
+    /// @dev update add window - admin role
+    function test__UpdateAddWindow_AdminRole() external {
+        uint40 startTime = uint40(block.timestamp + 1 days);
+        uint40 endTime = uint40(block.timestamp + 2 days);
+
+        uint256 ROLE = RouxCommunityEdition(address(communityEdition)).ADMIN_ROLE();
+
+        vm.prank(creator);
+        OwnableRoles(address(communityEdition)).grantRoles(user, ROLE);
+
+        vm.prank(user);
         RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
 
         (uint40 newStart, uint40 newEnd) = RouxCommunityEdition(address(communityEdition)).addWindow();

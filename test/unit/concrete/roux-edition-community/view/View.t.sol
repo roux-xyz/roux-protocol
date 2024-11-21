@@ -62,4 +62,9 @@ contract View_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     function test__AddsPerAddress() external view {
         assertEq(RouxCommunityEdition(address(communityEdition)).getAddsPerAddress(address(0)), 0);
     }
+
+    /// @dev returns correct max tokens
+    function test__MaxTokens() external view {
+        assertEq(RouxCommunityEdition(address(communityEdition)).maxTokens(), type(uint256).max);
+    }
 }

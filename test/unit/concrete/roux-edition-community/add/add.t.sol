@@ -30,6 +30,92 @@ contract Add_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     /* reverts                                      */
     /* -------------------------------------------- */
 
+    /// @dev reverts when add window has not started
+    function test__RevertWhen_AddToken_WindowNotStarted() external {
+        uint40 startTime = uint40(block.timestamp + 1 days);
+        uint40 endTime = uint40(block.timestamp + 2 days);
+
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
+
+        vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_AddWindowClosed.selector);
+        communityEdition.add(addParams);
+    }
+
+    /// @dev reverts when add window has ended
+    function test__RevertWhen_AddToken_WindowEnded() external {
+        uint40 startTime = uint40(block.timestamp);
+        uint40 endTime = uint40(block.timestamp + 1 days);
+
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).updateAddWindow(startTime, endTime);
+
+        // advance time past end
+        vm.warp(block.timestamp + 2 days);
+
+        vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_AddWindowClosed.selector);
+        communityEdition.add(addParams);
+    }
+
+    /// @dev reverts when max adds per account is exceeded
+    function test__RevertWhen_AddToken_MaxAddsPerAccountExceeded() external {
+        uint256 maxAdds = RouxCommunityEdition(address(communityEdition)).maxAddsPerAddress();
+
+        // add tokens up to max
+        for (uint256 i = 0; i < maxAdds; i++) {
+            vm.prank(users.creator_2);
+            communityEdition.add(addParams);
+        }
+
+        // attempt to add one more
+        vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_ExceedsMaxAddsPerAddress.selector);
+        communityEdition.add(addParams);
+    }
+
+    /// @dev reverts when max tokens is exceeded
+    function test__RevertWhen_AddToken_MaxTokensExceeded() external {
+        // update max tokens
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).updateMaxTokens(2);
+
+        // first add makes 2
+        vm.prank(users.creator_2);
+        communityEdition.add(addParams);
+
+        assertEq(communityEdition.currentToken(), 2);
+
+        // attempt to add one more token
+        vm.prank(users.creator_3);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_ExceedsMaxTokens.selector);
+        communityEdition.add(addParams);
+    }
+
+    /// @dev reverts when allowlist enabled and caller was removed from allowlist
+    function test__RevertWhen_AddToken_AllowlistEnabled_CallerRemoved() external {
+        // enable allowlist
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).enableAllowlist(true);
+
+        // add user to allowlist
+        address[] memory addresses = new address[](1);
+        addresses[0] = users.creator_2;
+
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).addToAllowlist(addresses);
+
+        // remove user from allowlist
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).removeFromAllowlist(users.creator_2);
+
+        // attempt to add token
+        vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_NotAllowed.selector);
+        communityEdition.add(addParams);
+    }
+
     /// @dev reverts when allowlist enabled and caller is not allowlisted
     function test__RevertWhen_AddToken_AllowlistEnabled_CallerNotAllowlisted() external {
         // enable allowlist

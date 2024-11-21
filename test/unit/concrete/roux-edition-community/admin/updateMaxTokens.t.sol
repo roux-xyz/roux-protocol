@@ -9,7 +9,7 @@ import { ErrorsLib } from "src/libraries/ErrorsLib.sol";
 import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 import { EditionData } from "src/types/DataTypes.sol";
 
-contract UpdateMaxAddsPerAddress_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
+contract UpdateMaxTokens_RouxCommunityEdition_Unit_Concrete_Test is BaseTest {
     EditionData.AddParams addParams;
     /* -------------------------------------------- */
     /* setup                                        */
@@ -18,6 +18,9 @@ contract UpdateMaxAddsPerAddress_RouxCommunityEdition_Unit_Concrete_Test is Base
     function setUp() public override {
         BaseTest.setUp();
         addParams = defaultAddParams;
+
+        vm.prank(creator);
+        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(10);
     }
 
     /* -------------------------------------------- */
@@ -25,10 +28,10 @@ contract UpdateMaxAddsPerAddress_RouxCommunityEdition_Unit_Concrete_Test is Base
     /* -------------------------------------------- */
 
     /// @dev reverts when not owner
-    function test__RevertWhen_UpdateMaxAddsPerAddress_NotOwner() external {
+    function test__RevertWhen_UpdateMaxTokens_NotOwner() external {
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(2);
+        RouxCommunityEdition(address(communityEdition)).updateMaxTokens(100);
     }
 
     /// @dev reverts when incorrect role is granted
@@ -40,41 +43,53 @@ contract UpdateMaxAddsPerAddress_RouxCommunityEdition_Unit_Concrete_Test is Base
 
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
-        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(2);
+        RouxCommunityEdition(address(communityEdition)).updateMaxTokens(10);
     }
 
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */
 
-    /// @dev successfully updates max adds per address
-    function test__UpdateMaxAddsPerAddress() external {
-        uint32 newMaxAdds = 2;
+    /// @dev successfully updates max tokens
+    function test__UpdateMaxTokens() external {
+        uint32 newMaxTokens = 2;
 
         vm.prank(creator);
-        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(newMaxAdds);
+        RouxCommunityEdition(address(communityEdition)).updateMaxTokens(newMaxTokens);
 
-        assertEq(RouxCommunityEdition(address(communityEdition)).maxAddsPerAddress(), newMaxAdds);
+        assertEq(RouxCommunityEdition(address(communityEdition)).maxTokens(), newMaxTokens);
 
         vm.prank(users.creator_2);
         communityEdition.add(addParams);
 
+        assertEq(communityEdition.currentToken(), 2);
+
         vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_ExceedsMaxTokens.selector);
         communityEdition.add(addParams);
     }
 
     /// @dev update max adds per address - admin role
-    function test__UpdateMaxAddsPerAddress_AdminRole() external {
-        uint32 newMaxAdds = 2;
-
+    function test__UpdateMaxTokens_AdminRole() external {
         uint256 ROLE = RouxCommunityEdition(address(communityEdition)).ADMIN_ROLE();
 
         vm.prank(creator);
         OwnableRoles(address(communityEdition)).grantRoles(user, ROLE);
 
-        vm.prank(user);
-        RouxCommunityEdition(address(communityEdition)).updateMaxAddsPerAddress(newMaxAdds);
+        uint32 newMaxTokens = 2;
 
-        assertEq(RouxCommunityEdition(address(communityEdition)).maxAddsPerAddress(), newMaxAdds);
+        vm.prank(user);
+        RouxCommunityEdition(address(communityEdition)).updateMaxTokens(newMaxTokens);
+
+        assertEq(RouxCommunityEdition(address(communityEdition)).maxTokens(), newMaxTokens);
+
+        vm.prank(users.creator_2);
+        communityEdition.add(addParams);
+
+        assertEq(communityEdition.currentToken(), 2);
+
+        vm.prank(users.creator_2);
+        vm.expectRevert(ErrorsLib.RouxCommunityEdition_ExceedsMaxTokens.selector);
+        communityEdition.add(addParams);
     }
 }
