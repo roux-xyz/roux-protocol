@@ -61,6 +61,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @param addsPerAddress adds per address
      * @param allowListEnabled allowlist enabled
      * @param allowedAddresses allowed addresses
+     * @param maxTokens max tokens
      */
     struct RouxCommunityEditionStorage {
         uint40 addWindowStart;
@@ -69,6 +70,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
         mapping(address => uint32) addsPerAddress;
         bool allowListEnabled;
         LibBitmap.Bitmap allowedAddresses;
+        uint256 maxTokens;
     }
 
     /* ------------------------------------------------- */
@@ -110,6 +112,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
         $$.addWindowStart = uint40(block.timestamp);
         $$.addWindowEnd = uint40(block.timestamp + 14 days);
         $$.maxAddsPerAddress = 1;
+        $$.maxTokens = type(uint256).max;
     }
 
     /* ------------------------------------------------- */
@@ -180,12 +183,21 @@ contract RouxCommunityEdition is BaseRouxEdition {
         return _storageCommunity().addsPerAddress[account];
     }
 
+    /**
+     * @notice get max tokens
+     * @return max tokens
+     */
+    function maxTokens() external view returns (uint256) {
+        return _storageCommunity().maxTokens;
+    }
+
     /* ------------------------------------------------- */
     /* write                                             */
     /* ------------------------------------------------- */
 
     /// @inheritdoc IRouxEdition
     function add(EditionData.AddParams calldata p) external override nonReentrant returns (uint256) {
+        RouxEditionStorage storage $ = _storage();
         RouxCommunityEditionStorage storage $$ = _storageCommunity();
 
         // check add window
@@ -200,7 +212,12 @@ contract RouxCommunityEdition is BaseRouxEdition {
 
         // check max adds per address
         if ($$.addsPerAddress[msg.sender] >= $$.maxAddsPerAddress) {
-            revert ErrorsLib.RouxCommunityEdition_MaxAddsPerAddressReached();
+            revert ErrorsLib.RouxCommunityEdition_ExceedsMaxAddsPerAddress();
+        }
+
+        // check max tokens
+        if ($.tokenId + 1 > $$.maxTokens) {
+            revert ErrorsLib.RouxCommunityEdition_ExceedsMaxTokens();
         }
 
         // update adds per address
@@ -217,7 +234,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @notice enable allowlist
      * @param enable enable
      */
-    function enableAllowlist(bool enable) external onlyOwner {
+    function enableAllowlist(bool enable) external onlyOwnerOrRoles(ADMIN_ROLE) {
         _storageCommunity().allowListEnabled = enable;
 
         emit EventsLib.CommunityAllowlistEnabled(enable);
@@ -227,7 +244,10 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @notice add to allowlist
      * @param addresses addresses
      */
-    function addToAllowlist(address[] calldata addresses) external onlyOwner {
+    function addToAllowlist(address[] calldata addresses)
+        external
+        onlyOwnerOrRoles(ADMIN_ROLE | ALLOWLIST_ADMIN_ROLE)
+    {
         RouxCommunityEditionStorage storage $$ = _storageCommunity();
         for (uint256 i = 0; i < addresses.length; ++i) {
             $$.allowedAddresses.set(uint256(uint160(addresses[i])));
@@ -238,7 +258,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @notice remove from allowlist
      * @param account account
      */
-    function removeFromAllowlist(address account) external onlyOwner {
+    function removeFromAllowlist(address account) external onlyOwnerOrRoles(ADMIN_ROLE | ALLOWLIST_ADMIN_ROLE) {
         _storageCommunity().allowedAddresses.unset(uint256(uint160(account)));
     }
 
@@ -247,7 +267,7 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @param addWindowStart add window start
      * @param addWindowEnd add window end
      */
-    function updateAddWindow(uint40 addWindowStart, uint40 addWindowEnd) external onlyOwner {
+    function updateAddWindow(uint40 addWindowStart, uint40 addWindowEnd) external onlyOwnerOrRoles(ADMIN_ROLE) {
         RouxCommunityEditionStorage storage $$ = _storageCommunity();
         if (addWindowStart >= addWindowEnd) {
             revert ErrorsLib.RouxCommunityEdition_InvalidAddWindow();
@@ -261,8 +281,16 @@ contract RouxCommunityEdition is BaseRouxEdition {
      * @notice update max adds per address
      * @param maxAddsPerAddress_ max adds per address
      */
-    function updateMaxAddsPerAddress(uint32 maxAddsPerAddress_) external onlyOwner {
+    function updateMaxAddsPerAddress(uint32 maxAddsPerAddress_) external onlyOwnerOrRoles(ADMIN_ROLE) {
         _storageCommunity().maxAddsPerAddress = maxAddsPerAddress_;
+    }
+
+    /**
+     * @notice update max tokens
+     * @param maxTokens_ max tokens
+     */
+    function updateMaxTokens(uint256 maxTokens_) external onlyOwnerOrRoles(ADMIN_ROLE) {
+        _storageCommunity().maxTokens = maxTokens_;
     }
 
     /// @dev collections not allowed for community editions

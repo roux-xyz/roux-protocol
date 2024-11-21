@@ -151,6 +151,9 @@ library ErrorsLib {
     /// @notice invalid add window
     error RouxCommunityEdition_InvalidAddWindow();
 
-    /// @notice max adds per address reached
-    error RouxCommunityEdition_MaxAddsPerAddressReached();
+    /// @notice max adds per address exceeded
+    error RouxCommunityEdition_ExceedsMaxAddsPerAddress();
+
+    /// @notice exceeds max tokens
+    error RouxCommunityEdition_ExceedsMaxTokens();
 }
