@@ -23,6 +23,7 @@ contract UpgradeRouxEditionFactory is BaseScript {
         console.log("Arguments: ");
         console.log("proxyAddress: %s", proxyAddress);
         console.log("editionBeacon: %s", editionBeacon);
+        console.log("communityBeacon: %s", communityBeacon);
         console.log("\n");
 
         // read the current implementation address

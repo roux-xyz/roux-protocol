@@ -77,7 +77,7 @@ else
     exit 1
 fi
 
-# Function to deploy a contract
+# deploy contract
 run() {
     local network="$1"
     local rpc_url_var="$2"
@@ -98,18 +98,18 @@ run() {
                 exit 1
             fi
             echo "Running on $network"
-            if [ ! -z $KEYSTORE ]; then
-            echo "Running with keystore $KEYSTORE"
-            forge script "$contract" --rpc-url "$rpc_url" --keystore "$KEYSTORE" --sender "$SENDER" --broadcast --verify -vvvv $args
-            elif [ ! -z $ACCOUNT ]; then
-                echo "Running with account $ACCOUNT"
-                # We use both --account and --sender to ensure the signing account and simulated sender are the same
+
+            if [[ $network == "base" && ! -z $KEYSTORE ]]; then
+                echo "Running with keystore $KEYSTORE on base network"
+                forge script "$contract" --rpc-url "$rpc_url" --keystore "$KEYSTORE" --sender "$SENDER" --broadcast --verify -vvvv $args
+            elif [[ $network == "base_sepolia" && ! -z $ACCOUNT ]]; then
+                echo "Running with account $ACCOUNT on base_sepolia network"
                 forge script "$contract" --rpc-url "$rpc_url" --account "$ACCOUNT" --sender "$SENDER" --broadcast -vvvv $args
             elif [ ! -z $PRIVATE_KEY ]; then
                 echo "Running with private key"
                 forge script "$contract" --rpc-url "$rpc_url" --private-key "$PRIVATE_KEY" --broadcast -vvvv $args
             else
-                echo "No account specified. Please set ACCOUNT, PRIVATE_KEY, or configure a Ledger."
+                echo "No valid credentials specified for $network. Please set appropriate values for KEYSTORE, ACCOUNT, or PRIVATE_KEY."
                 exit 1
             fi
             ;;
