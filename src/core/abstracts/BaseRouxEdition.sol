@@ -48,8 +48,14 @@ abstract contract BaseRouxEdition is IRouxEdition, ERC1155, ERC165, Initializabl
     bytes32 internal constant ROUX_EDITION_STORAGE_SLOT =
         0xef2f5668c8b56b992983464f11901aec8635a37d61a520221ade259ca1a88200;
 
-    /// @notice roles
-    uint256 private constant URI_SETTER_ROLE = 1;
+    /// @notice uri setter role
+    uint256 private constant URI_SETTER_ROLE = _ROLE_0;
+
+    /// @notice add admin role (used in community edition)
+    uint256 public constant ADMIN_ROLE = _ROLE_1;
+
+    /// @notice allowlist admin role (used in community edition)
+    uint256 public constant ALLOWLIST_ADMIN_ROLE = _ROLE_2;
 
     /// @notice version
     string public constant VERSION = "1.1";
