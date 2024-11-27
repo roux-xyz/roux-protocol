@@ -13,6 +13,7 @@ import { IRegistry } from "src/core/interfaces/IRegistry.sol";
 import { Registry } from "src/core/Registry.sol";
 import { IRouxEdition } from "src/core/interfaces/IRouxEdition.sol";
 import { RouxEdition } from "src/core/RouxEdition.sol";
+import { RouxCommunityEdition } from "src/core/RouxCommunityEdition.sol";
 import { RouxEditionFactory } from "src/core/RouxEditionFactory.sol";
 import { NoOp } from "src/periphery/NoOp.sol";
 
@@ -75,11 +76,20 @@ abstract contract BaseTest is Test, Events, Defaults {
     Controller internal controllerImpl;
     Controller internal controller;
 
-    // edition
+    // no-op
     NoOp internal noOpImpl;
+
+    // edition
     RouxEdition internal editionImpl;
     UpgradeableBeacon internal editionBeacon;
     RouxEdition internal edition;
+
+    // community edition
+    RouxEdition internal communityEditionImpl;
+    UpgradeableBeacon internal communityBeacon;
+    RouxEdition internal communityEdition;
+
+    // edition factory
     RouxEditionFactory internal factoryImpl;
     RouxEditionFactory internal factory;
 
@@ -165,11 +175,17 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy token bound contracts
         (erc6551Registry, accountImpl) = _deployTokenBoundContracts();
 
-        // deploy roux edition beacon
+        // deploy roux edition beacon with no-op implementation
         editionBeacon = _deployEditionBeacon({ rouxEditionImpl_: address(noOpImpl) });
 
+        // deploy community edition beacon with no-op implementation
+        communityBeacon = _deployCommunityEditionBeacon({ communityEditionImpl_: address(noOpImpl) });
+
         // deploy roux edition factory impl
-        factoryImpl = _deployEditionFactoryImpl({ editionBeacon_: address(editionBeacon) });
+        factoryImpl = _deployEditionFactoryImpl({
+            editionBeacon_: address(editionBeacon),
+            communityBeacon_: address(communityBeacon)
+        });
 
         // deploy roux edition factory proxy
         factory = _deployEditionFactoryProxy({ factoryImpl_: address(factoryImpl) });
@@ -215,8 +231,23 @@ abstract contract BaseTest is Test, Events, Defaults {
             registry_: address(registry)
         });
 
+        // deploy community edition impl
+        communityEditionImpl = RouxEdition(
+            address(
+                _deployCommunityEditionImpl({
+                    editionFactory_: address(factory),
+                    collectionFactory_: address(collectionFactory),
+                    controller_: address(controller),
+                    registry_: address(registry)
+                })
+            )
+        );
+
         // upgrade edition beacon
         editionBeacon.upgradeTo(address(editionImpl));
+
+        // upgrade community edition beacon
+        communityBeacon.upgradeTo(address(communityEditionImpl));
 
         // deploy mint portal
         mintPortal = _deployMintPortal(address(mockUSDC), address(factory), address(collectionFactory));
@@ -226,19 +257,28 @@ abstract contract BaseTest is Test, Events, Defaults {
         // deploy test edition
         edition = _deployEdition();
 
+        // deploy test community edition
+        communityEdition = _createCommunityEdition(creator);
+
         // add default token
         _addToken(edition);
+
+        // add default token to community edition
+        _addToken(communityEdition);
 
         // approve users
         vm.prank(user);
         mockUSDC.approve(address(edition), type(uint256).max);
-
         vm.prank(users.user_1);
         mockUSDC.approve(address(edition), type(uint256).max);
 
         vm.prank(user);
-        mockUSDC.approve(address(mintPortal), type(uint256).max);
+        mockUSDC.approve(address(communityEdition), type(uint256).max);
+        vm.prank(users.user_1);
+        mockUSDC.approve(address(communityEdition), type(uint256).max);
 
+        vm.prank(user);
+        mockUSDC.approve(address(mintPortal), type(uint256).max);
         vm.prank(users.user_1);
         mockUSDC.approve(address(mintPortal), type(uint256).max);
     }
@@ -316,14 +356,43 @@ abstract contract BaseTest is Test, Events, Defaults {
 
     /// @dev deploy edition beacon
     function _deployEditionBeacon(address rouxEditionImpl_) internal returns (UpgradeableBeacon editionBeacon_) {
-        //TODO: check if can use msg.msg.sender
         editionBeacon_ = new UpgradeableBeacon(address(rouxEditionImpl_), users.deployer);
         vm.label({ account: address(editionBeacon_), newLabel: "EditionBeacon" });
     }
 
+    /// @dev deploy community edition implementation
+    function _deployCommunityEditionImpl(
+        address editionFactory_,
+        address collectionFactory_,
+        address controller_,
+        address registry_
+    )
+        internal
+        returns (RouxCommunityEdition communityEditionImpl_)
+    {
+        communityEditionImpl_ =
+            RouxCommunityEdition(new RouxCommunityEdition(editionFactory_, collectionFactory_, controller_, registry_));
+        vm.label({ account: address(communityEditionImpl_), newLabel: "RouxCommunityEditionImpl" });
+    }
+
+    /// @dev deploy community edition beacon
+    function _deployCommunityEditionBeacon(address communityEditionImpl_)
+        internal
+        returns (UpgradeableBeacon communityBeacon_)
+    {
+        communityBeacon_ = new UpgradeableBeacon(address(communityEditionImpl_), users.deployer);
+        vm.label({ account: address(communityBeacon_), newLabel: "CommunityEditionBeacon" });
+    }
+
     /// @dev deploy edition factory implementation
-    function _deployEditionFactoryImpl(address editionBeacon_) internal returns (RouxEditionFactory factoryImpl_) {
-        factoryImpl_ = new RouxEditionFactory(editionBeacon_);
+    function _deployEditionFactoryImpl(
+        address editionBeacon_,
+        address communityBeacon_
+    )
+        internal
+        returns (RouxEditionFactory factoryImpl_)
+    {
+        factoryImpl_ = new RouxEditionFactory(editionBeacon_, communityBeacon_);
         vm.label({ account: address(factoryImpl_), newLabel: "RouxEditionFactoryImpl" });
     }
 
@@ -485,18 +554,28 @@ abstract contract BaseTest is Test, Events, Defaults {
 
         bytes memory params = abi.encode(CONTRACT_URI);
 
-        // compute address
-        // address addr = factory.getAddress(user_, params);
-
         // create edition instance
         RouxEdition edition_ = RouxEdition(factory.create(params));
         vm.label({ account: address(edition), newLabel: "New Edition" });
 
-        // assertEq(addr, address(edition_));
-
         vm.stopPrank();
 
         return edition_;
+    }
+
+    /// @dev create community edition
+    function _createCommunityEdition(address user_) internal returns (RouxEdition) {
+        vm.startPrank(user_);
+
+        bytes memory params = abi.encode(CONTRACT_URI);
+
+        // create edition instance
+        RouxEdition communityEdition_ = RouxEdition(factory.createCommunity(params));
+        vm.label({ account: address(communityEdition_), newLabel: "New Edition" });
+
+        vm.stopPrank();
+
+        return communityEdition_;
     }
 
     /// @dev add token
@@ -673,7 +752,7 @@ abstract contract BaseTest is Test, Events, Defaults {
     /* modifiers                                    */
     /* -------------------------------------------- */
 
-    modifier useEditionAdmin(RouxEdition edition_) {
+    modifier useEditionAdmin(address edition_) {
         address admin = Ownable(address(edition_)).owner();
 
         vm.startPrank(admin);

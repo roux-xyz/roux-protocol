@@ -30,7 +30,7 @@ contract UpdateProfitShare_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates profit share
-    function test__UpdateProfitShare() external useEditionAdmin(edition) {
+    function test__UpdateProfitShare() external useEditionAdmin(address(edition)) {
         uint256 originalProfitShare = controller.profitShare(address(edition), 1);
         uint16 newProfitShare = PROFIT_SHARE + 1;
 

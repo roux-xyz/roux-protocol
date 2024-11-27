@@ -92,7 +92,7 @@ contract UpgradeTest is BaseTest {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
         // deploy new roux edition factory implementation
-        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(communityBeacon));
 
         vm.prank(user);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -105,7 +105,7 @@ contract UpgradeTest is BaseTest {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
         // deploy new roux edition factory implementation
-        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(communityBeacon));
 
         bytes memory initData = abi.encodeWithSelector(RouxEditionFactory.initialize.selector, users.deployer);
         vm.prank(users.deployer);
@@ -182,7 +182,7 @@ contract UpgradeTest is BaseTest {
         assertEq(factory.getImplementation(), address(factoryImpl));
 
         // deploy new controller implementation
-        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon));
+        RouxEditionFactory newFactoryImpl = new RouxEditionFactory(address(editionBeacon), address(communityBeacon));
 
         vm.prank(users.deployer);
         factory.upgradeToAndCall(address(newFactoryImpl), "");

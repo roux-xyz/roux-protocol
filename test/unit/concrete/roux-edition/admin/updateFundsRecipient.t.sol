@@ -30,7 +30,7 @@ contract UpdateFundsRecipient_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates funds recipient
-    function test__UpdateFundsRecipient() external useEditionAdmin(edition) {
+    function test__UpdateFundsRecipient() external useEditionAdmin(address(edition)) {
         address originalRecipient = controller.fundsRecipient(address(edition), 1);
         address newRecipient = users.user_1;
 

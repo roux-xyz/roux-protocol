@@ -140,6 +140,66 @@ contract Mint_MultiEditionCollection_Integration_Concrete_Test is CollectionBase
         );
     }
 
+    /// @dev successfully mints collection with mixed editions, standard and community
+    function test__Mint_MultiEditionCollection_MixedEditions_StandardAndCommunity() external {
+        // get erc6551 account
+        address erc6551account = _getERC6551AccountMultiEdition(address(mixedMultiEditionCollection), 1);
+
+        // emit erc721 transfer event
+        vm.expectEmit({ emitter: address(mixedMultiEditionCollection) });
+        emit Transfer({ from: address(0), to: user, tokenId: 1 });
+
+        // get total price
+        uint256 totalPrice = mixedMultiEditionCollection.price();
+
+        // calculate collection fee
+        uint256 curatorFee = (totalPrice * CURATOR_FEE) / 10_000;
+
+        uint256 edition1CollectionFee =
+            RouxEdition(mixedMultiEditionItemTargets[0]).defaultPrice(1) * CURATOR_FEE / 10_000;
+        uint256 edition2CollectionFee =
+            RouxEdition(mixedMultiEditionItemTargets[1]).defaultPrice(1) * CURATOR_FEE / 10_000;
+        uint256 edition3CollectionFee =
+            RouxEdition(mixedMultiEditionItemTargets[2]).defaultPrice(1) * CURATOR_FEE / 10_000;
+
+        // mint
+        vm.prank(user);
+        mixedMultiEditionCollection.mint({ to: user, extension: address(0), referrer: address(0), data: "" });
+
+        assertEq(mixedMultiEditionCollection.ownerOf(1), user);
+        assertEq(mixedMultiEditionCollection.totalSupply(), 1);
+        assertEq(mixedMultiEditionCollection.balanceOf(user), 1);
+
+        // assert balances
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[0]).balanceOf(erc6551account, 1), 1);
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[1]).balanceOf(erc6551account, 1), 1);
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[2]).balanceOf(erc6551account, 1), 1);
+
+        // assert total supply
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[0]).totalSupply(1), 2);
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[1]).totalSupply(1), 2);
+        assertEq(RouxEdition(mixedMultiEditionItemTargets[2]).totalSupply(1), 2);
+
+        // verify balances
+        assertEq(mockUSDC.balanceOf(user), startingUserBalance - totalPrice);
+        assertEq(_getUserControllerBalance(curator), startingBalanceCurator + curatorFee);
+        assertEq(
+            _getUserControllerBalance(edition1FundsRecipient),
+            startingBalanceEdition1FundsRecipient + RouxEdition(mixedMultiEditionItemTargets[0]).defaultPrice(1)
+                - edition1CollectionFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition2FundsRecipient),
+            startingBalanceEdition2FundsRecipient + RouxEdition(mixedMultiEditionItemTargets[1]).defaultPrice(1)
+                - edition2CollectionFee
+        );
+        assertEq(
+            _getUserControllerBalance(edition3FundsRecipient),
+            startingBalanceEdition3FundsRecipient + RouxEdition(mixedMultiEditionItemTargets[2]).defaultPrice(1)
+                - edition3CollectionFee
+        );
+    }
+
     /// @dev successfully mints collection with platform fee
     function test__Mint_MultiEditionCollection_WithPlatformFee() external {
         // enable platform fee

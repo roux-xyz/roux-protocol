@@ -183,4 +183,88 @@ contract Initialize_MultiEditionCollection_Unit_Concrete_Test is CollectionBase 
         assertEq(itemIds_[6], 4);
         assertEq(itemIds_[7], 5);
     }
+
+    /// @dev successfully initializes collection
+    function test__Initialize_MixedWithCommunity() external {
+        // create new editions
+        address edition_ = address(_createEdition(creator));
+        address edition2_ = address(_createEdition(creator));
+        address communityEdition_ = address(_createCommunityEdition(creator));
+
+        // add 3 tokens
+        _addMultipleTokens(RouxEdition(edition_), 3);
+
+        // add 5 tokens
+        _addMultipleTokens(RouxEdition(edition2_), 5);
+
+        // add 2 tokens
+        _addMultipleTokens(RouxEdition(communityEdition_), 1);
+
+        // create array of item targets
+        address[] memory itemTargets = new address[](9);
+        itemTargets[0] = address(edition_);
+        itemTargets[1] = address(edition_);
+        itemTargets[2] = address(edition_);
+        itemTargets[3] = address(edition2_);
+        itemTargets[4] = address(edition2_);
+        itemTargets[5] = address(edition2_);
+        itemTargets[6] = address(edition2_);
+        itemTargets[7] = address(edition2_);
+        itemTargets[8] = address(communityEdition_);
+
+        // create array of item ids
+        uint256[] memory itemIds = new uint256[](9);
+        itemIds[0] = 1;
+        itemIds[1] = 2;
+        itemIds[2] = 3;
+        itemIds[3] = 1;
+        itemIds[4] = 2;
+        itemIds[5] = 3;
+        itemIds[6] = 4;
+        itemIds[7] = 5;
+        itemIds[8] = 1;
+
+        // copy params
+        CollectionData.MultiEditionCreateParams memory params = multiEditionCollectionParams;
+
+        // modify params
+        params.itemTargets = itemTargets;
+        params.itemIds = itemIds;
+
+        // create collection
+        vm.prank(curator);
+        MultiEditionCollection collectionInstance = MultiEditionCollection(collectionFactory.createMulti(params));
+
+        // assert collection state
+        assertEq(collectionInstance.name(), COLLECTION_NAME);
+        assertEq(collectionInstance.symbol(), COLLECTION_SYMBOL);
+        assertEq(collectionInstance.tokenURI(1), COLLECTION_URI);
+        assertEq(collectionInstance.price(), TOKEN_PRICE * 9);
+        assertEq(collectionInstance.currency(), address(mockUSDC));
+        assertEq(collectionInstance.totalSupply(), 0);
+        assertEq(collectionInstance.isRegisteredExtension(address(mockExtension)), false);
+        assertEq(collectionInstance.curator(), address(curator));
+
+        (address[] memory itemTargets_, uint256[] memory itemIds_) = collectionInstance.collection();
+        assertEq(itemTargets_.length, 9);
+        assertEq(itemIds_.length, 9);
+        assertEq(itemTargets_[0], edition_);
+        assertEq(itemTargets_[1], edition_);
+        assertEq(itemTargets_[2], edition_);
+        assertEq(itemTargets_[3], edition2_);
+        assertEq(itemTargets_[4], edition2_);
+        assertEq(itemTargets_[5], edition2_);
+        assertEq(itemTargets_[6], edition2_);
+        assertEq(itemTargets_[7], edition2_);
+        assertEq(itemTargets_[8], communityEdition_);
+        assertEq(itemIds_[0], 1);
+        assertEq(itemIds_[1], 2);
+        assertEq(itemIds_[2], 3);
+        assertEq(itemIds_[3], 1);
+        assertEq(itemIds_[4], 2);
+        assertEq(itemIds_[5], 3);
+        assertEq(itemIds_[6], 4);
+        assertEq(itemIds_[7], 5);
+        assertEq(itemIds_[8], 1);
+    }
 }

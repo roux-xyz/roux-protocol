@@ -137,4 +137,23 @@ library ErrorsLib {
 
     /// @notice insufficient balance
     error RouxMintPortal_InsufficientBalance();
+
+    /* ------------------------------------------------- */
+    /* RouxCommunityEdition                                */
+    /* ------------------------------------------------- */
+
+    /// @notice not allowed
+    error RouxCommunityEdition_NotAllowed();
+
+    /// @notice add window closed
+    error RouxCommunityEdition_AddWindowClosed();
+
+    /// @notice invalid add window
+    error RouxCommunityEdition_InvalidAddWindow();
+
+    /// @notice max adds per address exceeded
+    error RouxCommunityEdition_ExceedsMaxAddsPerAddress();
+
+    /// @notice exceeds max tokens
+    error RouxCommunityEdition_ExceedsMaxTokens();
 }

@@ -11,6 +11,7 @@ export default defineConfig({
         'Registry.sol/**',
         'Controller.sol/**',
         'RouxEdition.sol/**',
+        'RouxCommunityEdition.sol/**',
         'Collection.sol/**',
         'SingleEditionCollection.sol/**',
         'MultiEditionCollection.sol/**',

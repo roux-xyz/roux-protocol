@@ -24,6 +24,16 @@ contract UpdateUri_RouxEdition_Unit_Concrete_Test is BaseTest {
         edition.updateUri(1, IPFS_HASH_DIGEST);
     }
 
+    /// @dev reverts when incorrect role is granted
+    function test__RevertWhen_IncorrectRoleGranted() external {
+        vm.prank(creator);
+        edition.grantRoles(user, 2);
+
+        vm.prank(user);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        edition.updateUri(1, IPFS_HASH_DIGEST);
+    }
+
     /* -------------------------------------------- */
     /* write                                        */
     /* -------------------------------------------- */

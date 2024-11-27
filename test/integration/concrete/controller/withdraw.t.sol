@@ -37,6 +37,30 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase {
         assertEq(mockUSDC.balanceOf(fundsRecipient), fundsRecipientStartingBalance + TOKEN_PRICE);
     }
 
+    function test__Withdraw_Community() external {
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(communityEdition), 1);
+
+        // cache starting balance
+        uint256 fundsRecipientStartingBalance = mockUSDC.balanceOf(fundsRecipient);
+
+        // mint
+        _mintToken(communityEdition, 1, user);
+
+        // check balance
+        assertEq(controller.balance(fundsRecipient), TOKEN_PRICE);
+
+        // expect withdrawal to be emitted
+        vm.expectEmit({ emitter: address(controller) });
+        emit EventsLib.Withdrawn({ recipient: fundsRecipient, amount: TOKEN_PRICE });
+
+        // withdraw
+        controller.withdraw(fundsRecipient);
+
+        // check balance
+        assertEq(mockUSDC.balanceOf(fundsRecipient), fundsRecipientStartingBalance + TOKEN_PRICE);
+    }
+
     function test__Withdraw_Fork_1() external {
         // cache starting balance
         uint256 creator0StartingBalance = mockUSDC.balanceOf(creator);
@@ -71,6 +95,46 @@ contract Disburse_Controller_Integration_Concrete_Test is ControllerBase {
         // withdraw - original
         vm.prank(creator);
         controller.withdraw(controller.fundsRecipient(address(edition), 1));
+
+        // check balances
+        assertEq(mockUSDC.balanceOf(address(creator)), creator0StartingBalance + parentShare);
+        assertEq(mockUSDC.balanceOf(address(users.creator_1)), creator1StartingBalance + childShare);
+    }
+
+    function test__Withdraw_Fork_1_Community() external {
+        // cache starting balance
+        uint256 creator0StartingBalance = mockUSDC.balanceOf(creator);
+        uint256 creator1StartingBalance = mockUSDC.balanceOf(users.creator_1);
+
+        // create fork
+        (RouxEdition forkEdition, uint256 tokenId) = _createFork(communityEdition, 1, users.creator_1);
+
+        // approve fork
+        _approveToken(address(forkEdition), user);
+
+        // compute split
+        (uint256 parentShare, uint256 childShare) = _computeSplit(communityEdition, tokenId, TOKEN_PRICE);
+
+        // mint
+        _mintToken(forkEdition, tokenId, user);
+
+        // disburse pending from original edition
+        controller.distributePending(address(communityEdition), tokenId);
+
+        // get funds recipient
+        address fundsRecipient = controller.fundsRecipient(address(communityEdition), 1);
+
+        // check balances
+        assertEq(controller.pending(address(communityEdition), 1), 0);
+        assertEq(controller.balance(fundsRecipient), parentShare);
+
+        // withdraw - fork
+        vm.prank(users.creator_1);
+        controller.withdraw(controller.fundsRecipient(address(forkEdition), 1));
+
+        // withdraw - original
+        vm.prank(creator);
+        controller.withdraw(controller.fundsRecipient(address(communityEdition), 1));
 
         // check balances
         assertEq(mockUSDC.balanceOf(address(creator)), creator0StartingBalance + parentShare);

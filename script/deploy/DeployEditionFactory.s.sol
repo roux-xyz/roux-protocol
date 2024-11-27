@@ -8,7 +8,10 @@ import { BaseScript } from "script/Base.s.sol";
 import "forge-std/Script.sol";
 
 contract DeployEditionFactory is BaseScript {
-    function run(address editionBeacon)
+    function run(
+        address editionBeacon,
+        address communityBeacon
+    )
         public
         broadcast
         returns (RouxEditionFactory editionFactoryImpl, RouxEditionFactory editionFactoryProxy)
@@ -16,7 +19,7 @@ contract DeployEditionFactory is BaseScript {
         console.log("Deploying RouxEditionFactory implementation...\n");
 
         // deploy edition factory implementation contract
-        editionFactoryImpl = new RouxEditionFactory(editionBeacon);
+        editionFactoryImpl = new RouxEditionFactory(editionBeacon, communityBeacon);
 
         console.log("RouxEditionFactory implementation: %s\n", address(editionFactoryImpl));
         console.log("Deploying RouxEditionFactory proxy...\n");

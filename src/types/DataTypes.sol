@@ -11,6 +11,12 @@ import { LibBitmap } from "solady/utils/LibBitmap.sol";
 library EditionData {
     using LibBitmap for LibBitmap.Bitmap;
 
+    enum EditionType {
+        None,
+        Standard,
+        Community
+    }
+
     /**
      * @notice mint params
      * @param defaultPrice default price

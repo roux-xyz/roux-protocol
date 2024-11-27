@@ -47,6 +47,14 @@ abstract contract CollectionBase is BaseTest {
     // multi edition collection create params
     CollectionData.MultiEditionCreateParams multiEditionCollectionParams;
 
+    // mixed multi edition collection - with communityd tokens
+    RouxEdition[] mixedMultiEditionItemTargets = new RouxEdition[](3);
+    uint256[] mixedMultiEditionItemIds = new uint256[](3);
+    MultiEditionCollection mixedMultiEditionCollection;
+
+    // mixed multi edition collection create params
+    CollectionData.MultiEditionCreateParams mixedMultiEditionCollectionParams;
+
     // mock collection extension
     MockCollectionExtension mockCollectionExtension;
 
@@ -59,6 +67,7 @@ abstract contract CollectionBase is BaseTest {
         _setupAgents();
         _setupSingleEditionCollection();
         _setupMultiEditionCollection();
+        _setupMixedMultiEditionCollection();
         _setupMockCollectionExtension();
     }
 
@@ -91,9 +100,19 @@ abstract contract CollectionBase is BaseTest {
     function _setupMultiEditionCollection() internal {
         _createMultiEditionItems();
 
-        _setMultiEditionCollectionParams();
+        _setMultiEditionCollectionParams(_convertToAddressArray(multiEditionItemTargets), multiEditionItemIds);
         multiEditionCollection = _createMultiEditionCollection(multiEditionItemTargets, multiEditionItemIds);
         _approveToken(address(multiEditionCollection), user);
+    }
+
+    /// @dev setup mixed multi edition collection
+    function _setupMixedMultiEditionCollection() internal {
+        _createMixedMultiEditionItems();
+
+        _setMultiEditionCollectionParams(_convertToAddressArray(mixedMultiEditionItemTargets), mixedMultiEditionItemIds);
+        mixedMultiEditionCollection =
+            _createMultiEditionCollection(mixedMultiEditionItemTargets, mixedMultiEditionItemIds);
+        _approveToken(address(mixedMultiEditionCollection), user);
     }
 
     /// @dev setup mock collection extension
@@ -126,8 +145,19 @@ abstract contract CollectionBase is BaseTest {
         (, multiEditionItemIds[2]) = _addToken(multiEditionItemTargets[2]);
     }
 
+    /// @dev create mixed multi edition items
+    function _createMixedMultiEditionItems() internal {
+        mixedMultiEditionItemTargets[0] = _createEdition(creator);
+        mixedMultiEditionItemTargets[1] = _createEdition(users.creator_1);
+        mixedMultiEditionItemTargets[2] = _createCommunityEdition(users.creator_2);
+
+        (, mixedMultiEditionItemIds[0]) = _addToken(mixedMultiEditionItemTargets[0]);
+        (, mixedMultiEditionItemIds[1]) = _addToken(mixedMultiEditionItemTargets[1]);
+        (, mixedMultiEditionItemIds[2]) = _addToken(mixedMultiEditionItemTargets[2]);
+    }
+
     /// @dev set multi edition collection params
-    function _setMultiEditionCollectionParams() internal {
+    function _setMultiEditionCollectionParams(address[] memory itemTargets, uint256[] memory itemIds) internal {
         multiEditionCollectionParams = CollectionData.MultiEditionCreateParams({
             name: COLLECTION_NAME,
             symbol: COLLECTION_SYMBOL,
@@ -135,8 +165,8 @@ abstract contract CollectionBase is BaseTest {
             uri: COLLECTION_URI,
             mintStart: uint40(block.timestamp),
             mintEnd: uint40(block.timestamp + MINT_DURATION),
-            itemTargets: _convertToAddressArray(multiEditionItemTargets),
-            itemIds: multiEditionItemIds
+            itemTargets: itemTargets,
+            itemIds: itemIds
         });
     }
 

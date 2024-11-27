@@ -240,4 +240,14 @@ library EventsLib {
      * @param collection collection
      */
     event CollectionMintRedemption(address indexed to, address indexed collection);
+
+    /* ------------------------------------------------- */
+    /* RouxCommunityEdition                                */
+    /* ------------------------------------------------- */
+
+    /**
+     * @notice allowlist enabled
+     * @param enable enable
+     */
+    event CommunityAllowlistEnabled(bool enable);
 }

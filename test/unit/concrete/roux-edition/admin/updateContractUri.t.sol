@@ -32,7 +32,7 @@ contract UpdateContractUri_RouxEdition_Unit_Concrete_Test is BaseTest {
     /* -------------------------------------------- */
 
     /// @dev successfully updates uri
-    function test__UpdateContractUri_AsOwner() external useEditionAdmin(edition) {
+    function test__UpdateContractUri_AsOwner() external useEditionAdmin(address(edition)) {
         string memory currentUri = edition.contractURI();
         string memory newUri = "https://new.com";
 

@@ -49,7 +49,7 @@ contract SetCollection_RouxEdition_Integration_Concrete_Test is CollectionBase {
     /* -------------------------------------------- */
 
     /// @dev set collection
-    function test__SetCollection() external useEditionAdmin(edition) {
+    function test__SetCollection() external useEditionAdmin(address(edition)) {
         vm.expectEmit({ emitter: address(edition) });
         emit EventsLib.CollectionSet(address(singleEditionCollection), true);
 
@@ -59,7 +59,7 @@ contract SetCollection_RouxEdition_Integration_Concrete_Test is CollectionBase {
     }
 
     /// @dev set collection - disable
-    function test__SetCollection_Disable() external useEditionAdmin(edition) {
+    function test__SetCollection_Disable() external useEditionAdmin(address(edition)) {
         edition.setCollection(address(singleEditionCollection), true);
 
         assertTrue(edition.isRegisteredCollection(address(singleEditionCollection)));

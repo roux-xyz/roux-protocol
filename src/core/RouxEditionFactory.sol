@@ -43,7 +43,7 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         0x13ea773dc95198298e0d9b6bbd2aef489fb654cd1810ac18d17a86ab80293a00;
 
     /// @notice version
-    string public constant VERSION = "1.0";
+    string public constant VERSION = "1.1";
 
     /* -------------------------------------------- */
     /* structures                                   */
@@ -69,6 +69,9 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /// @notice edition beacon
     address internal immutable _editionBeacon;
 
+    /// @notice community beacon
+    address internal immutable _communityBeacon;
+
     /* -------------------------------------------- */
     /* constructor                                  */
     /* -------------------------------------------- */
@@ -76,13 +79,17 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
     /**
      * @notice constructor
      * @param editionBeacon edition beacon
+     * @param communityBeacon community beacon
      */
-    constructor(address editionBeacon) {
+    constructor(address editionBeacon, address communityBeacon) {
         // disable initialization of implementation contract
         _disableInitializers();
 
         // set edition beacon
         _editionBeacon = editionBeacon;
+
+        // set community beacon
+        _communityBeacon = communityBeacon;
 
         // renounce ownership of implementation contract
         _initializeOwner(msg.sender);
@@ -133,6 +140,19 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
 
     /// @inheritdoc IRouxEditionFactory
     function create(bytes calldata params) external nonReentrant returns (address) {
+        return _create(params, _editionBeacon);
+    }
+
+    /// @inheritdoc IRouxEditionFactory
+    function createCommunity(bytes calldata params) external nonReentrant returns (address) {
+        return _create(params, _communityBeacon);
+    }
+
+    /* -------------------------------------------- */
+    /* internal                                     */
+    /* -------------------------------------------- */
+
+    function _create(bytes calldata params, address beacon) internal returns (address) {
         RouxEditionFactoryStorage storage $ = _storage();
 
         // get and increment the deployer's nonce
@@ -145,9 +165,8 @@ contract RouxEditionFactory is IRouxEditionFactory, Initializable, Ownable, Reen
         bytes memory initData = abi.encodeWithSignature("initialize(bytes)", params);
 
         // deploy proxy using Create2
-        address editionInstance = Create2.deploy(
-            0, salt, abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(_editionBeacon, initData))
-        );
+        address editionInstance =
+            Create2.deploy(0, salt, abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(beacon, initData)));
 
         // transfer ownership to caller
         Ownable(editionInstance).transferOwnership(msg.sender);
